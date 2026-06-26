@@ -365,7 +365,12 @@ async function performDownloadAndInstall(asset) {
     // Give the renderer a moment to show the "installer opened" message, and
     // give the installer/mounted DMG a moment to actually finish launching,
     // before we tear down the app it's about to replace.
-    setTimeout(() => app.quit(), 1500);
+    setTimeout(() => {
+      app.quit();
+      // app.quit() asks windows to close gracefully first; if anything holds
+      // that up (or it's a no-op for any platform-specific reason), force it.
+      setTimeout(() => app.exit(0), 2000);
+    }, 1500);
     return { ok: true, opened: true, path: downloadPath };
   } catch (error) {
     shell.showItemInFolder(downloadPath);
@@ -449,26 +454,12 @@ function stripQuarantine(filePath) {
   });
 }
 
-function openInstaller(filePath) {
-  return new Promise((resolve, reject) => {
-    const command = process.platform === 'darwin' ? 'open' : 'cmd.exe';
-    const args = process.platform === 'darwin'
-      ? [filePath]
-      : ['/c', 'start', 'ClovaChat Installer', filePath];
-    const child = spawn(command, args, {
-      detached: false,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      windowsHide: false,
-    });
-    let output = '';
-    child.stdout?.on('data', (chunk) => { output += chunk; });
-    child.stderr?.on('data', (chunk) => { output += chunk; });
-    child.once('error', reject);
-    child.once('close', (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`Installer opener exited with code ${code}.${output.trim() ? ` ${output.trim()}` : ''}`));
-    });
-  });
+async function openInstaller(filePath) {
+  // shell.openPath hands the file to the OS's own file-open mechanics (Finder/
+  // LaunchServices on macOS, the shell association on Windows) instead of us
+  // manually spawning `open`/`cmd.exe start` and guessing at their quirks.
+  const error = await shell.openPath(filePath);
+  if (error) throw new Error(error);
 }
 
 function fetchJson(url) {
