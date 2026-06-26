@@ -321,28 +321,45 @@ ipcMain.handle('app:getVersion', () => app.getVersion());
 
 ipcMain.handle('updates:check', async () => checkForUpdates());
 
+let activeUpdateDownload = null;
+
 ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
+  // Guard against overlapping calls (e.g. the silent startup check and a manual
+  // "Check for Updates" click both landing around the same time) racing on the
+  // same downloaded file — one call's cleanup/retry logic could delete the file
+  // out from under another call right as it tries to open it.
+  if (activeUpdateDownload) return activeUpdateDownload;
+  activeUpdateDownload = performDownloadAndInstall(asset);
+  try {
+    return await activeUpdateDownload;
+  } finally {
+    activeUpdateDownload = null;
+  }
+});
+
+async function performDownloadAndInstall(asset) {
   const url = String(asset.url || '');
   const name = path.basename(String(asset.name || ''));
   if (!isAllowedReleaseAsset(url, name)) {
     return { ok: false, error: 'Unsupported update asset.' };
   }
 
-  const downloadPath = path.join(os.tmpdir(), name);
+  // Each download gets its own directory so a concurrent or stale download
+  // attempt can never collide with (and delete) this one's file.
+  const downloadDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'clovachat-update-'));
+  const downloadPath = path.join(downloadDir, name);
   try {
     await downloadFile(url, downloadPath);
   } catch (error) {
     return { ok: false, error: error.message };
   }
 
+  if (!fs.existsSync(downloadPath)) {
+    return { ok: false, error: `Downloaded file went missing before it could be opened: ${downloadPath}` };
+  }
+
   if (process.platform === 'darwin') await stripQuarantine(downloadPath);
 
-  // The build is signed locally but not Apple-notarized. Gatekeeper tracks
-  // quarantine for downloaded disk images partly outside the file's own xattr
-  // (a system-level assessment, not just the com.apple.quarantine flag), so
-  // even after stripping that flag a silent `open` can still get refused.
-  // Rather than fight Gatekeeper programmatically, reveal the file and let the
-  // user do the one-time "right-click > Open" approval themselves.
   try {
     await openInstaller(downloadPath);
     return { ok: true, opened: true, path: downloadPath };
@@ -350,7 +367,7 @@ ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
     shell.showItemInFolder(downloadPath);
     return { ok: true, opened: false, path: downloadPath, openError: error.message };
   }
-});
+}
 
 async function checkForUpdates() {
   const currentVersion = app.getVersion();
