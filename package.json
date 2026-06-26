@@ -1,0 +1,55 @@
+{
+  "name": "clovachat",
+  "version": "1.0.0",
+  "description": "A mIRC-inspired desktop IRC client for macOS with Twitch support.",
+  "main": "src/main/main.js",
+  "author": "Kevin Poulos",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --mac dmg zip",
+    "dist:mac": "electron-builder --mac dmg zip",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.kevinpoulos.clovachat",
+    "productName": "ClovaChat",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "images/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.social-networking",
+      "icon": "build/icon.png",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "dmg": {
+      "artifactName": "ClovaChat-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "ClovaChat-Setup-${version}-${arch}.${ext}"
+    }
+  }
+}

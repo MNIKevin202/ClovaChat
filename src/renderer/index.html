@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClovaChat</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://player.twitch.tv/js/embed/v1.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <img class="brand-mark" src="../../images/logo.png" alt="ClovaChat" />
+          <span id="sidebarVersion" class="brand-version">ClovaChat</span>
+        </div>
+
+        <div class="connection-status" id="connectionStatus">
+          <span class="status-dot"></span>
+          <span id="connectionState">Offline</span>
+        </div>
+
+        <button id="streamSidebarButton" class="stream-sidebar-button" type="button">Watch Active Stream</button>
+
+        <section id="streamPanel" class="stream-panel" hidden>
+          <div class="stream-toolbar">
+            <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
+            <span id="streamTitle">Stream</span>
+            <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
+            <button id="streamPlayButton" type="button">Pause</button>
+            <button id="streamMuteButton" type="button">Mute</button>
+            <button id="streamToggleButton" type="button">Hide</button>
+          </div>
+          <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
+        </section>
+
+        <nav class="tabs" aria-label="Workspace">
+          <button class="tab is-active" data-tab="chat">Chat</button>
+          <button class="tab" data-tab="bot">Bot</button>
+          <button class="tab" data-tab="commands">Commands</button>
+          <button class="tab" data-tab="popups">Popups</button>
+          <button class="tab" data-tab="timers">Timers</button>
+          <button class="tab" data-tab="raw">Raw</button>
+          <button class="tab" data-tab="docs">Docs</button>
+          <button class="tab" data-tab="settings">Settings</button>
+        </nav>
+
+        <section class="connect-panel">
+          <details class="connection-details">
+            <summary>Auto Join</summary>
+            <div class="auto-join-panel">
+              <div id="autoJoinList" class="auto-join-list"></div>
+              <form id="autoJoinForm" class="auto-join-form">
+                <input id="autoJoinChannel" placeholder="#channel" autocomplete="off" />
+                <button type="submit">Add</button>
+              </form>
+            </div>
+          </details>
+
+          <details class="connection-details">
+            <summary>Server Connection</summary>
+            <div class="connection-fields">
+              <label>Server<input id="host" autocomplete="off" /></label>
+              <div class="two-col">
+                <label>Port<input id="port" type="number" min="1" max="65535" /></label>
+                <label class="check-row"><input id="tls" type="checkbox" /> TLS</label>
+              </div>
+              <label>Nick<input id="nick" autocomplete="username" /></label>
+              <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="oauth:... for Twitch" /></label>
+              <div class="button-row twitch-tools">
+                <button id="twitchPresetButton" type="button">Twitch Preset</button>
+                <button id="twitchTokenButton" type="button">Get Token</button>
+              </div>
+              <label>Channel<input id="channel" autocomplete="off" /></label>
+              <div class="button-row">
+                <button id="connectButton" class="primary">Connect</button>
+                <button id="disconnectButton">Disconnect</button>
+              </div>
+            </div>
+          </details>
+        </section>
+
+      </aside>
+
+      <main class="main">
+        <section id="chatTab" class="view is-active">
+          <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
+          <div id="topicBar" class="topic-bar">No active channel</div>
+          <div class="chat-body">
+            <div id="messages" class="messages" aria-live="polite"></div>
+            <aside class="roster-panel" aria-label="Users in chat">
+              <header>
+                <h2>Users</h2>
+                <span id="rosterCount">0</span>
+              </header>
+              <div id="roster" class="roster-list"></div>
+            </aside>
+          </div>
+          <div id="popupBar" class="popup-bar"></div>
+          <div class="chat-action-bar">
+            <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
+          </div>
+          <form id="inputForm" class="input-row">
+            <input id="messageInput" autocomplete="off" placeholder="Type a message or /command or /join #channel" />
+            <div id="nickSuggest" class="nick-suggest" hidden></div>
+            <button type="submit">Send</button>
+          </form>
+        </section>
+
+        <section id="botTab" class="view settings-view">
+          <header>
+            <h2>Bot Builder</h2>
+            <p>Build self-hosted bot responses for one channel or every channel, using simple replies or optional Python.</p>
+          </header>
+          <section class="bot-wizard">
+            <div>
+              <h3>Quick Setup</h3>
+              <p>Describe the bot action in plain language, then review the fields before creating it.</p>
+            </div>
+            <div class="bot-wizard-controls">
+              <input id="botIntentInput" placeholder='Try "when someone types !discord, share my Discord in this channel"' autocomplete="off" />
+              <button id="botWizardButton" type="button">Fill Rule</button>
+            </div>
+            <div id="botWizardPreview" class="bot-wizard-preview">No setup drafted yet.</div>
+          </section>
+          <div id="botRuleList" class="editor-list"></div>
+          <form id="botRuleForm" class="bot-rule-form">
+            <label>Name<input id="botRuleName" placeholder="Welcome viewers" autocomplete="off" /></label>
+            <label>Channels
+              <select id="botChannelScope">
+                <option value="all">All channels</option>
+                <option value="current">This channel</option>
+                <option value="specific">Specific channel</option>
+              </select>
+            </label>
+            <label id="botSpecificChannelLabel">Channel(s)<input id="botSpecificChannel" placeholder="#channel, #other" autocomplete="off" /></label>
+            <label>When
+              <select id="botTriggerType">
+                <option value="command">Chat command</option>
+                <option value="contains">Message contains</option>
+                <option value="exact">Message is exactly</option>
+                <option value="any">Any message</option>
+              </select>
+            </label>
+            <label>Text<input id="botTriggerValue" placeholder="!hello" autocomplete="off" /></label>
+            <label>Reply type
+              <select id="botResponseType">
+                <option value="reply">Simple reply</option>
+                <option value="python">Advanced Python</option>
+              </select>
+            </label>
+            <label class="bot-response-field">Reply<textarea id="botResponse" placeholder="Hi {user}!"></textarea></label>
+            <button type="submit">Create Bot Rule</button>
+          </form>
+        </section>
+
+        <section id="commandsTab" class="view settings-view">
+          <header>
+            <h2>Command Scripts</h2>
+            <p>Create slash commands with mIRC-style replacements or Python. Python commands can print one command per line.</p>
+          </header>
+          <div id="aliasList" class="editor-list"></div>
+          <form id="aliasForm" class="editor-form script-form">
+            <input id="aliasName" placeholder="command name" autocomplete="off" />
+            <select id="aliasMode" aria-label="Command language">
+              <option value="mirc">mIRC</option>
+              <option value="python">Python</option>
+            </select>
+            <textarea id="aliasOutput" placeholder="/me waves&#10;Hello $*"></textarea>
+            <button type="submit">Add</button>
+          </form>
+        </section>
+
+        <section id="popupsTab" class="view settings-view">
+          <header>
+            <h2>Popup Actions</h2>
+            <p>Buttons for frequent channel actions.</p>
+          </header>
+          <div id="popupList" class="editor-list"></div>
+          <form id="popupForm" class="editor-form">
+            <input id="popupLabel" placeholder="button label" autocomplete="off" />
+            <input id="popupCommand" placeholder="/me waves" autocomplete="off" />
+            <button type="submit">Add</button>
+          </form>
+        </section>
+
+        <section id="timersTab" class="view settings-view">
+          <header>
+            <h2>Timed Messages</h2>
+            <p>Send a message or slash command to a specific channel on an interval.</p>
+          </header>
+          <div id="timerList" class="editor-list"></div>
+          <form id="timerForm" class="timer-form">
+            <label>Channel<select id="timerChannel"></select></label>
+            <label>Minutes<input id="timerMinutes" type="number" min="0" value="10" /></label>
+            <label>Seconds<input id="timerSeconds" type="number" min="0" max="59" value="0" /></label>
+            <label>Message<textarea id="timerMessage" placeholder="Remember to follow the channel."></textarea></label>
+            <button type="submit">Add Timer</button>
+          </form>
+        </section>
+
+        <section id="rawTab" class="view settings-view">
+          <header>
+            <h2>Raw IRC</h2>
+            <p>Protocol traffic and server notices.</p>
+          </header>
+          <div id="rawLog" class="raw-log"></div>
+        </section>
+
+        <section id="docsTab" class="view docs-view">
+          <aside class="docs-nav" aria-label="Docs categories">
+            <h2>Docs</h2>
+            <a href="#docs-start">Getting Started</a>
+            <a href="#docs-chat">Chat</a>
+            <a href="#docs-channels">Channels</a>
+            <a href="#docs-streams">Streams</a>
+            <a href="#docs-emotes">Emotes</a>
+            <a href="#docs-roles">Mods &amp; VIPs</a>
+            <a href="#docs-roster">Roster Tools</a>
+            <a href="#docs-popups">Popups</a>
+            <a href="#docs-timers">Timers</a>
+            <a href="#docs-commands">Commands</a>
+            <a href="#docs-bot">Bot Builder</a>
+            <a href="#docs-logs">Logs &amp; Backups</a>
+            <a href="#docs-troubleshooting">Troubleshooting</a>
+          </aside>
+
+          <article class="docs-content">
+            <header>
+              <h2>ClovaChat Docs</h2>
+              <p>Step-by-step help for connecting, chatting, moderating, and building self-hosted chat tools.</p>
+            </header>
+
+            <section id="docs-start" class="docs-section">
+              <h3>Getting Started</h3>
+              <ol>
+                <li>Open Server Connection in the left sidebar.</li>
+                <li>Use Twitch Preset for Twitch chat, or enter your own IRC server details.</li>
+                <li>Enter your nick and password. For Twitch, the password should be an OAuth token that starts with oauth:.</li>
+                <li>Enter a starting channel such as #mnikevin202.</li>
+                <li>Click Connect. Server events appear in the Server tab, and joined channels appear across the top of Chat.</li>
+              </ol>
+            </section>
+
+            <section id="docs-chat" class="docs-section">
+              <h3>Chat</h3>
+              <ol>
+                <li>Select a channel tab.</li>
+                <li>Type a message in the box at the bottom and press Send.</li>
+                <li>Use slash commands in the same box, such as /me waves, /join #channel, /part #channel, or custom commands you create.</li>
+                <li>Type @ and part of a name to use nickname suggestions from the current roster and recent chatters.</li>
+                <li>Messages that mention your nick can trigger desktop notifications when that setting is enabled.</li>
+              </ol>
+            </section>
+
+            <section id="docs-channels" class="docs-section">
+              <h3>Channels</h3>
+              <ol>
+                <li>Join a channel once by typing /join #channel in the message box.</li>
+                <li>Add a channel to Auto Join from the sidebar, or use Add #channel to Auto Join when viewing a channel that is not already saved.</li>
+                <li>Drag channel tabs to reorder them. The order is remembered.</li>
+                <li>Move live channel tabs to the front is enabled by default in Settings.</li>
+                <li>When enabled, live channels temporarily move before offline channels while Server always stays first.</li>
+                <li>When a live channel goes offline, it returns to its saved manual tab position.</li>
+                <li>Right-click a channel tab and choose Leave #channel to part from it.</li>
+                <li>Use the Server tab for connection messages, notices, and errors.</li>
+                <li>The Server tab is status-only, so it does not show the roster, popup buttons, auto-join actions, or the message composer.</li>
+              </ol>
+            </section>
+
+            <section id="docs-streams" class="docs-section">
+              <h3>Streams</h3>
+              <ol>
+                <li>Open a channel tab, then click Watch Active Stream.</li>
+                <li>Use Prev and Next to move between joined or auto-join channels that can be watched.</li>
+                <li>Use the app controls for quick play, pause, mute, and unmute.</li>
+                <li>Use the Twitch player controls inside the video for volume, settings, theater-style controls, and fullscreen.</li>
+                <li>Muted, paused, volume, and playing state are remembered per channel when switching tabs or streams.</li>
+              </ol>
+            </section>
+
+            <section id="docs-emotes" class="docs-section">
+              <h3>Emotes</h3>
+              <ol>
+                <li>Twitch emotes show automatically when Twitch sends emote data with chat messages.</li>
+                <li>7TV emotes load per channel when 7TV Emotes is enabled in Settings.</li>
+                <li>If a channel has no 7TV room or 7TV returns an error, normal chat still works.</li>
+                <li>Turn 7TV Emotes off in Settings if you want plain text for third-party emotes.</li>
+              </ol>
+            </section>
+
+            <section id="docs-roles" class="docs-section">
+              <h3>Mods &amp; VIPs</h3>
+              <ol>
+                <li>Moderator and VIP badges are detected from Twitch IRC tags when users chat.</li>
+                <li>Known mod and VIP status is remembered per channel so the roster can keep useful role information between messages.</li>
+                <li>When someone chats again, ClovaChat checks their current tags and updates the remembered role if it changed.</li>
+                <li>Super moderators and lead moderators are treated as moderator roles in the roster.</li>
+              </ol>
+            </section>
+
+            <section id="docs-roster" class="docs-section">
+              <h3>Roster Tools</h3>
+              <ol>
+                <li>Open a channel and look at the Users list on the right side of Chat.</li>
+                <li>Click a username to insert that name into the message box for a quick reply.</li>
+                <li>Right-click a username and choose Monitor to highlight that user's messages in chat.</li>
+                <li>When you monitor someone, ClovaChat can also save a separate log file of that user's messages if you choose a file.</li>
+                <li>Right-click a monitored user again and choose Unmonitor to stop highlighting and logging new messages for them.</li>
+                <li>Right-click a username and choose Hide Chats to mute that user's messages in the current channel view.</li>
+                <li>Hidden chats are remembered per channel. Choose Unhide Chats from the same right-click menu to show them again.</li>
+              </ol>
+            </section>
+
+            <section id="docs-popups" class="docs-section">
+              <h3>Popups</h3>
+              <ol>
+                <li>Open Popups.</li>
+                <li>Enter a button label, such as Wave or Discord.</li>
+                <li>Enter the message or slash command the button should run.</li>
+                <li>Click Add. The button appears above the message box in Chat.</li>
+                <li>Use $channel inside a popup command to insert the active channel.</li>
+              </ol>
+            </section>
+
+            <section id="docs-timers" class="docs-section">
+              <h3>Timed Messages</h3>
+              <ol>
+                <li>Open Timers.</li>
+                <li>Select the channel, interval, and message.</li>
+                <li>Click Add Timer.</li>
+                <li>Use the Enabled or Paused switch on each timer to start or stop it.</li>
+                <li>The Chat topic bar shows Timers Active or Timers Inactive when the current channel has timers.</li>
+              </ol>
+            </section>
+
+            <section id="docs-commands" class="docs-section">
+              <h3>Commands</h3>
+              <ol>
+                <li>Open Commands.</li>
+                <li>Enter a command name without the slash, such as hello.</li>
+                <li>Choose mIRC for simple replacements or Python for advanced logic.</li>
+                <li>For mIRC commands, use $channel, $nick, $*, or numbered args like $1 and $2.</li>
+                <li>For Python commands, print or send one output line per command or message you want ClovaChat to run.</li>
+              </ol>
+            </section>
+
+            <section id="docs-bot" class="docs-section">
+              <h3>Bot Builder</h3>
+              <ol>
+                <li>Open Bot.</li>
+                <li>Use Quick Setup to describe what you want, then review the fields it fills in.</li>
+                <li>Choose whether the rule applies to all channels, this channel, or specific channels.</li>
+                <li>Choose a trigger: chat command, message contains, exact message, or any message.</li>
+                <li>Choose Simple reply for templates like Hi {user}, or Advanced Python for custom scripts.</li>
+                <li>Use {user}, {channel}, {message}, and {args} in simple replies.</li>
+                <li>Turn a rule off without deleting it by using its On or Off checkbox.</li>
+              </ol>
+            </section>
+
+            <section id="docs-logs" class="docs-section">
+              <h3>Logs &amp; Backups</h3>
+              <ol>
+                <li>Open Settings.</li>
+                <li>Enable Save chat history between sessions to keep recent chat in the app.</li>
+                <li>Enable channel logs and choose a folder to save channel log files.</li>
+                <li>Move live channel tabs to the front is enabled by default and can be turned off under Notifications.</li>
+                <li>Notify when a channel goes live controls desktop alerts; live tab sorting can work with or without desktop alerts.</li>
+                <li>Use Backup Settings to export your settings, commands, popups, timers, and bot rules.</li>
+                <li>Use Import Settings to restore a backup. Reconnect afterward so server settings can apply cleanly.</li>
+              </ol>
+            </section>
+
+            <section id="docs-troubleshooting" class="docs-section">
+              <h3>Troubleshooting</h3>
+              <ol>
+                <li>If messages will not send, confirm you are connected and viewing a channel tab, not Server.</li>
+                <li>If /join does not open a tab immediately, check Server for Twitch notices or connection errors.</li>
+                <li>If the user list is incomplete, wait for chat activity or make sure the Twitch token has permission to read chatters.</li>
+                <li>If 7TV emotes do not load, confirm 7TV Emotes is enabled and check Server for 7TV status lines.</li>
+                <li>If timed messages continue after changes, pause the timer, reconnect, and verify the timer still exists only once.</li>
+              </ol>
+            </section>
+          </article>
+        </section>
+
+        <section id="settingsTab" class="view settings-view">
+          <header>
+            <h2>Settings</h2>
+            <p>App preferences, backups, and version info.</p>
+          </header>
+
+          <div class="settings-groups">
+            <section class="settings-group">
+              <h3>Appearance</h3>
+              <label class="switch-row">
+                <span>Dark Mode</span>
+                <input id="darkModeToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>7TV Emotes</span>
+                <input id="sevenTvToggle" type="checkbox" />
+              </label>
+            </section>
+
+            <section class="settings-group">
+              <h3>Connection</h3>
+              <label class="switch-row">
+                <span>Connect on Open</span>
+                <input id="connectOnOpenToggle" type="checkbox" />
+              </label>
+            </section>
+
+            <section class="settings-group">
+              <h3>Chat History</h3>
+              <label class="switch-row">
+                <span>Save chat history between sessions</span>
+                <input id="chatHistoryToggle" type="checkbox" />
+              </label>
+              <div class="button-row">
+                <button id="clearHistoryButton" type="button">Clear Saved History</button>
+              </div>
+            </section>
+
+            <section class="settings-group">
+              <h3>Channel Logs</h3>
+              <label class="switch-row">
+                <span>Keep a log file for each channel</span>
+                <input id="channelLogToggle" type="checkbox" />
+              </label>
+              <p id="channelLogFolder" class="settings-hint">No folder selected.</p>
+              <div class="button-row">
+                <button id="channelLogFolderButton" type="button">Choose Log Folder</button>
+              </div>
+            </section>
+
+            <section class="settings-group">
+              <h3>Notifications</h3>
+              <label class="switch-row">
+                <span>Desktop notification when mentioned</span>
+                <input id="mentionNotifyToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Notify when a channel goes live</span>
+                <input id="liveNotifyToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Move live channel tabs to the front</span>
+                <input id="liveTabSortToggle" type="checkbox" />
+              </label>
+              <p class="settings-hint">Checks your joined and auto-join channels every minute while connected to Twitch.</p>
+            </section>
+
+            <section class="settings-group">
+              <h3>Backup &amp; Restore</h3>
+              <p class="settings-hint">Export or import every setting, alias, popup, and timer as a JSON file.</p>
+              <div class="button-row">
+                <button id="exportSettingsButton" type="button">Backup Settings</button>
+                <button id="importSettingsButton" type="button">Import Settings</button>
+              </div>
+            </section>
+
+            <section class="settings-group">
+              <h3>About</h3>
+              <p id="appVersion" class="settings-hint">ClovaChat</p>
+              <div class="button-row">
+                <button id="checkUpdatesButton" type="button">Check for Updates</button>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+      <div id="streamResizeHandle" class="stream-resize-handle" role="separator" aria-orientation="vertical"></div>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
