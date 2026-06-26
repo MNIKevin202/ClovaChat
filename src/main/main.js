@@ -331,8 +331,7 @@ ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
   const downloadPath = path.join(os.tmpdir(), name);
   try {
     await downloadFile(url, downloadPath);
-    const openError = await shell.openPath(downloadPath);
-    if (openError) return { ok: false, error: openError };
+    await openInstaller(downloadPath);
     setTimeout(() => app.quit(), 1500);
     return { ok: true, path: downloadPath };
   } catch (error) {
@@ -402,6 +401,23 @@ function compareVersions(left, right) {
   return 0;
 }
 
+function openInstaller(filePath) {
+  return new Promise((resolve, reject) => {
+    const command = process.platform === 'darwin' ? 'open' : filePath;
+    const args = process.platform === 'darwin' ? [filePath] : [];
+    const child = spawn(command, args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+    });
+    child.once('error', reject);
+    child.once('spawn', () => {
+      child.unref();
+      resolve();
+    });
+  });
+}
+
 function fetchJson(url) {
   return new Promise((resolve, reject) => {
     const request = https.get(url, {
@@ -444,7 +460,8 @@ function downloadFile(url, destination) {
       if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
         file.close();
         fs.rm(destination, { force: true }, () => {});
-        downloadFile(response.headers.location, destination).then(resolve, reject);
+        const nextUrl = new URL(response.headers.location, url).toString();
+        downloadFile(nextUrl, destination).then(resolve, reject);
         return;
       }
       if (response.statusCode < 200 || response.statusCode >= 300) {
