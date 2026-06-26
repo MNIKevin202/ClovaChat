@@ -115,6 +115,7 @@ const el = {
   importSettingsButton: document.querySelector('#importSettingsButton'),
   sidebarVersion: document.querySelector('#sidebarVersion'),
   appVersion: document.querySelector('#appVersion'),
+  updateStatus: document.querySelector('#updateStatus'),
   checkUpdatesButton: document.querySelector('#checkUpdatesButton'),
 };
 
@@ -129,6 +130,7 @@ async function init() {
   window.macIRC.onIrcEvent(handleIrcEvent);
   await loadChatHistory();
   loadAppVersion();
+  setTimeout(() => checkForUpdates({ silent: true }), 1800);
 }
 
 async function loadChatHistory() {
@@ -176,6 +178,52 @@ async function loadAppVersion() {
   const label = `ClovaChat v${version}`;
   el.sidebarVersion.textContent = label;
   el.appVersion.textContent = label;
+}
+
+async function checkForUpdates({ silent = false } = {}) {
+  el.checkUpdatesButton.disabled = true;
+  if (!silent) el.updateStatus.textContent = 'Checking GitHub for updates...';
+
+  const result = await window.macIRC.checkForUpdates();
+  el.checkUpdatesButton.disabled = false;
+
+  if (!result.ok) {
+    if (!silent) el.updateStatus.textContent = `Could not check updates: ${result.error}`;
+    return;
+  }
+
+  if (!result.updateAvailable) {
+    if (!silent) el.updateStatus.textContent = `You're up to date on ClovaChat v${result.currentVersion}.`;
+    return;
+  }
+
+  if (!result.asset?.url) {
+    const message = `ClovaChat v${result.latestVersion} is available, but no installer was attached for this computer.`;
+    el.updateStatus.textContent = message;
+    if (!silent) appendStatus(message, 'error');
+    return;
+  }
+
+  el.updateStatus.textContent = `ClovaChat v${result.latestVersion} is available.`;
+  const wantsUpdate = window.confirm(
+    `ClovaChat v${result.latestVersion} is available.\n\nDownload and open the installer now? ClovaChat will close after the installer opens.`
+  );
+  if (!wantsUpdate) return;
+
+  await downloadAndInstallUpdate(result.asset);
+}
+
+async function downloadAndInstallUpdate(asset) {
+  el.checkUpdatesButton.disabled = true;
+  el.updateStatus.textContent = `Downloading ${asset.name}...`;
+  const result = await window.macIRC.downloadAndInstallUpdate(asset);
+  el.checkUpdatesButton.disabled = false;
+  if (!result.ok) {
+    el.updateStatus.textContent = `Update download failed: ${result.error}`;
+    appendStatus(`Update download failed: ${result.error}`, 'error');
+    return;
+  }
+  el.updateStatus.textContent = 'Installer opened. ClovaChat will close.';
 }
 
 function ensureSettingsShape() {
@@ -415,8 +463,7 @@ function bindEvents() {
     appendStatus('Settings imported. Reconnect to apply server changes.', 'info');
   });
   el.checkUpdatesButton.addEventListener('click', async () => {
-    const version = await window.macIRC.getVersion();
-    appendStatus(`You're running ClovaChat v${version}. There's no auto-update server set up yet, so check back for a new DMG.`, 'info');
+    await checkForUpdates({ silent: false });
   });
   el.streamToggleButton.addEventListener('click', async () => {
     saveCurrentStreamPlayerState();

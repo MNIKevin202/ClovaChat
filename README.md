@@ -34,6 +34,18 @@ The `Build Installers` workflow builds:
 
 Artifacts are uploaded from each workflow run.
 
+The `Release Installers` workflow runs when a version tag is pushed, creates a GitHub Release, and attaches the macOS DMG/zip plus Windows EXE. ClovaChat checks GitHub Releases for updates.
+
+To publish a new app version:
+
+```bash
+npm version patch
+git push
+git push --tags
+```
+
+Use `npm version minor` or `npm version major` for larger releases.
+
 ## Twitch setup
 
 Use:

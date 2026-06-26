@@ -2,11 +2,15 @@ const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron')
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
+const os = require('os');
 const { spawn } = require('child_process');
 const Store = require('electron-store');
 const { IrcManager } = require('./services/irc-manager');
 
 app.setName('ClovaChat');
+
+const UPDATE_REPO = 'MNIKevin202/ClovaChat';
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -314,6 +318,156 @@ ipcMain.handle('settings:import', async () => {
 });
 
 ipcMain.handle('app:getVersion', () => app.getVersion());
+
+ipcMain.handle('updates:check', async () => checkForUpdates());
+
+ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
+  const url = String(asset.url || '');
+  const name = path.basename(String(asset.name || ''));
+  if (!isAllowedReleaseAsset(url, name)) {
+    return { ok: false, error: 'Unsupported update asset.' };
+  }
+
+  const downloadPath = path.join(os.tmpdir(), name);
+  try {
+    await downloadFile(url, downloadPath);
+    const openError = await shell.openPath(downloadPath);
+    if (openError) return { ok: false, error: openError };
+    setTimeout(() => app.quit(), 1500);
+    return { ok: true, path: downloadPath };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+});
+
+async function checkForUpdates() {
+  const currentVersion = app.getVersion();
+  try {
+    const release = await fetchJson(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`);
+    const latestVersion = normalizeVersion(release.tag_name || release.name || '');
+    if (!latestVersion) return { ok: true, currentVersion, updateAvailable: false };
+
+    const asset = selectUpdateAsset(release.assets || []);
+    const updateAvailable = compareVersions(latestVersion, currentVersion) > 0;
+    return {
+      ok: true,
+      currentVersion,
+      latestVersion,
+      updateAvailable,
+      releaseUrl: release.html_url || '',
+      releaseName: release.name || release.tag_name || `v${latestVersion}`,
+      asset,
+    };
+  } catch (error) {
+    return { ok: false, currentVersion, error: error.message };
+  }
+}
+
+function selectUpdateAsset(assets) {
+  const candidates = assets.map((asset) => ({
+    name: String(asset.name || ''),
+    url: String(asset.browser_download_url || ''),
+    size: Number(asset.size || 0),
+  }));
+
+  if (process.platform === 'win32') {
+    return candidates.find((asset) => /ClovaChat-Setup-.*\.exe$/i.test(asset.name)) || null;
+  }
+
+  if (process.platform === 'darwin') {
+    return candidates.find((asset) => /ClovaChat-.*\.dmg$/i.test(asset.name)) || null;
+  }
+
+  return null;
+}
+
+function isAllowedReleaseAsset(url, name) {
+  if (!url.startsWith(`https://github.com/${UPDATE_REPO}/releases/download/`)) return false;
+  if (process.platform === 'win32') return /ClovaChat-Setup-.*\.exe$/i.test(name);
+  if (process.platform === 'darwin') return /ClovaChat-.*\.dmg$/i.test(name);
+  return false;
+}
+
+function normalizeVersion(version) {
+  return String(version || '').trim().replace(/^v/i, '').match(/^\d+\.\d+\.\d+/)?.[0] || '';
+}
+
+function compareVersions(left, right) {
+  const a = normalizeVersion(left).split('.').map(Number);
+  const b = normalizeVersion(right).split('.').map(Number);
+  for (let index = 0; index < 3; index += 1) {
+    const diff = (a[index] || 0) - (b[index] || 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+function fetchJson(url) {
+  return new Promise((resolve, reject) => {
+    const request = https.get(url, {
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': `ClovaChat/${app.getVersion()}`,
+      },
+    }, (response) => {
+      let body = '';
+      response.on('data', (chunk) => { body += chunk.toString(); });
+      response.on('end', () => {
+        if (response.statusCode === 404) {
+          resolve({});
+          return;
+        }
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          reject(new Error(`GitHub returned ${response.statusCode}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(body));
+        } catch (error) {
+          reject(error);
+        }
+      });
+    });
+    request.on('error', reject);
+    request.setTimeout(15000, () => {
+      request.destroy(new Error('Update check timed out.'));
+    });
+  });
+}
+
+function downloadFile(url, destination) {
+  return new Promise((resolve, reject) => {
+    const file = fs.createWriteStream(destination);
+    const request = https.get(url, {
+      headers: { 'User-Agent': `ClovaChat/${app.getVersion()}` },
+    }, (response) => {
+      if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
+        file.close();
+        fs.rm(destination, { force: true }, () => {});
+        downloadFile(response.headers.location, destination).then(resolve, reject);
+        return;
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        file.close();
+        fs.rm(destination, { force: true }, () => {});
+        reject(new Error(`Download returned ${response.statusCode}`));
+        return;
+      }
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close(resolve);
+      });
+    });
+    request.on('error', (error) => {
+      file.close();
+      fs.rm(destination, { force: true }, () => {});
+      reject(error);
+    });
+    request.setTimeout(60000, () => {
+      request.destroy(new Error('Download timed out.'));
+    });
+  });
+}
 
 function runPythonCommand(payload) {
   return new Promise((resolve) => {

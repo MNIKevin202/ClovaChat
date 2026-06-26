@@ -18,6 +18,8 @@ contextBridge.exposeInMainWorld('macIRC', {
   exportSettings: () => ipcRenderer.invoke('settings:export'),
   importSettings: () => ipcRenderer.invoke('settings:import'),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  checkForUpdates: () => ipcRenderer.invoke('updates:check'),
+  downloadAndInstallUpdate: (asset) => ipcRenderer.invoke('updates:downloadAndInstall', asset),
   onIrcEvent: (callback) => {
     const listener = (_event, payload) => callback(payload);
     ipcRenderer.on('irc:event', listener);
