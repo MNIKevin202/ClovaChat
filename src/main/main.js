@@ -362,6 +362,10 @@ async function performDownloadAndInstall(asset) {
 
   try {
     await openInstaller(downloadPath);
+    // Give the renderer a moment to show the "installer opened" message, and
+    // give the installer/mounted DMG a moment to actually finish launching,
+    // before we tear down the app it's about to replace.
+    setTimeout(() => app.quit(), 1500);
     return { ok: true, opened: true, path: downloadPath };
   } catch (error) {
     shell.showItemInFolder(downloadPath);
