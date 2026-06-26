@@ -331,12 +331,24 @@ ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
   const downloadPath = path.join(os.tmpdir(), name);
   try {
     await downloadFile(url, downloadPath);
-    if (process.platform === 'darwin') await stripQuarantine(downloadPath);
-    await openInstaller(downloadPath);
-    return { ok: true, path: downloadPath };
   } catch (error) {
-    shell.showItemInFolder(downloadPath);
     return { ok: false, error: error.message };
+  }
+
+  if (process.platform === 'darwin') await stripQuarantine(downloadPath);
+
+  // The build is signed locally but not Apple-notarized. Gatekeeper tracks
+  // quarantine for downloaded disk images partly outside the file's own xattr
+  // (a system-level assessment, not just the com.apple.quarantine flag), so
+  // even after stripping that flag a silent `open` can still get refused.
+  // Rather than fight Gatekeeper programmatically, reveal the file and let the
+  // user do the one-time "right-click > Open" approval themselves.
+  try {
+    await openInstaller(downloadPath);
+    return { ok: true, opened: true, path: downloadPath };
+  } catch {
+    shell.showItemInFolder(downloadPath);
+    return { ok: true, opened: false, path: downloadPath };
   }
 });
 

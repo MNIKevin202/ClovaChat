@@ -223,7 +223,11 @@ async function downloadAndInstallUpdate(asset) {
     appendStatus(`Update download failed: ${result.error}`, 'error');
     return;
   }
-  el.updateStatus.textContent = `Installer opened from ${result.path}. Finish the installer to update ClovaChat.`;
+  if (result.opened) {
+    el.updateStatus.textContent = `Installer opened from ${result.path}. Finish the installer to update ClovaChat.`;
+    return;
+  }
+  el.updateStatus.textContent = `Downloaded to ${result.path}. macOS blocked opening it automatically (unsigned by Apple) — Finder is showing the file; right-click it and choose "Open" once to install.`;
 }
 
 function ensureSettingsShape() {
