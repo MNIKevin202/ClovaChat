@@ -332,9 +332,9 @@ ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
   try {
     await downloadFile(url, downloadPath);
     await openInstaller(downloadPath);
-    setTimeout(() => app.quit(), 1500);
     return { ok: true, path: downloadPath };
   } catch (error) {
+    shell.showItemInFolder(downloadPath);
     return { ok: false, error: error.message };
   }
 });
@@ -403,17 +403,19 @@ function compareVersions(left, right) {
 
 function openInstaller(filePath) {
   return new Promise((resolve, reject) => {
-    const command = process.platform === 'darwin' ? 'open' : filePath;
-    const args = process.platform === 'darwin' ? [filePath] : [];
+    const command = process.platform === 'darwin' ? 'open' : 'cmd.exe';
+    const args = process.platform === 'darwin'
+      ? [filePath]
+      : ['/c', 'start', 'ClovaChat Installer', filePath];
     const child = spawn(command, args, {
-      detached: true,
+      detached: false,
       stdio: 'ignore',
       windowsHide: false,
     });
     child.once('error', reject);
-    child.once('spawn', () => {
-      child.unref();
-      resolve();
+    child.once('close', (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`Installer opener exited with code ${code}.`));
     });
   });
 }

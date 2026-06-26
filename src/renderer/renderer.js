@@ -223,7 +223,7 @@ async function downloadAndInstallUpdate(asset) {
     appendStatus(`Update download failed: ${result.error}`, 'error');
     return;
   }
-  el.updateStatus.textContent = 'Installer opened. ClovaChat will close.';
+  el.updateStatus.textContent = `Installer opened from ${result.path}. Finish the installer to update ClovaChat.`;
 }
 
 function ensureSettingsShape() {
