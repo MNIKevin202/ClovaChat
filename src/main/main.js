@@ -502,31 +502,35 @@ function fetchJson(url) {
 
 function downloadFile(url, destination) {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destination);
+    // Redirect responses arrive before we ever open the destination file, so
+    // defer creating the write stream until we know this is the real download —
+    // otherwise a redirect's cleanup-delete can race the next attempt's create
+    // and unlink the file out from under it after it's already been written.
+    let file = null;
     const request = https.get(url, {
       headers: { 'User-Agent': `ClovaChat/${app.getVersion()}` },
     }, (response) => {
       if ([301, 302, 303, 307, 308].includes(response.statusCode)) {
-        file.close();
-        fs.rm(destination, { force: true }, () => {});
         const nextUrl = new URL(response.headers.location, url).toString();
         downloadFile(nextUrl, destination).then(resolve, reject);
         return;
       }
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        file.close();
-        fs.rm(destination, { force: true }, () => {});
         reject(new Error(`Download returned ${response.statusCode}`));
         return;
       }
+      file = fs.createWriteStream(destination);
       response.pipe(file);
       file.on('finish', () => {
         file.close(resolve);
       });
+      file.on('error', (error) => {
+        fs.rm(destination, { force: true }, () => {});
+        reject(error);
+      });
     });
     request.on('error', (error) => {
-      file.close();
-      fs.rm(destination, { force: true }, () => {});
+      file?.close();
       reject(error);
     });
     request.setTimeout(60000, () => {
