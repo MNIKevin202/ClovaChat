@@ -36,6 +36,12 @@ Artifacts are uploaded from each workflow run.
 
 The `Release Installers` workflow runs when a version tag is pushed, creates a GitHub Release, and attaches the macOS DMG/zip plus Windows EXE. ClovaChat checks GitHub Releases for updates.
 
+macOS release downloads must be signed with a Developer ID certificate and notarized by Apple to open normally after downloading. Until notarization is configured, macOS may report that the downloaded app is damaged. For local testing only, copy ClovaChat to Applications, then run:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/ClovaChat.app
+```
+
 To publish a new app version:
 
 ```bash

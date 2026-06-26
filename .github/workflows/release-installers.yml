@@ -26,6 +26,10 @@ jobs:
     name: Release macOS DMG
     runs-on: macos-latest
     needs: create-release
+    # These assets build correctly, but normal macOS downloads require Apple
+    # Developer ID signing plus notarization to avoid Gatekeeper warnings.
+    # Add Developer ID certificate/notary secrets before treating DMGs as
+    # end-user-ready macOS releases.
     steps:
       - name: Checkout
         uses: actions/checkout@v4
