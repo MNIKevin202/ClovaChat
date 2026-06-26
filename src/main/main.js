@@ -331,6 +331,7 @@ ipcMain.handle('updates:downloadAndInstall', async (_event, asset = {}) => {
   const downloadPath = path.join(os.tmpdir(), name);
   try {
     await downloadFile(url, downloadPath);
+    if (process.platform === 'darwin') await stripQuarantine(downloadPath);
     await openInstaller(downloadPath);
     return { ok: true, path: downloadPath };
   } catch (error) {
@@ -399,6 +400,20 @@ function compareVersions(left, right) {
     if (diff !== 0) return diff;
   }
   return 0;
+}
+
+function stripQuarantine(filePath) {
+  // The DMG is signed locally but not Apple-notarized, so the quarantine flag
+  // macOS attaches to anything downloaded from the network makes Gatekeeper
+  // refuse to open it ("ClovaChat is damaged and can't be opened"). We just
+  // downloaded this file ourselves over HTTPS from our own GitHub release, so
+  // clearing the flag here is safe — same trick the release guide documents
+  // as a manual workaround, just applied automatically.
+  return new Promise((resolve) => {
+    const child = spawn('xattr', ['-dr', 'com.apple.quarantine', filePath], { stdio: 'ignore' });
+    child.once('error', () => resolve());
+    child.once('close', () => resolve());
+  });
 }
 
 function openInstaller(filePath) {
