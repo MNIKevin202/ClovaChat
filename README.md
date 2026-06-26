@@ -29,12 +29,11 @@ Installers are written to `dist/`.
 
 The `Build Installers` workflow builds:
 
-- macOS `.dmg` and macOS `.zip` on `macos-latest`
 - Windows `.exe` installer on `windows-latest`
 
-Artifacts are uploaded from each workflow run.
+Windows artifacts are uploaded from each workflow run. macOS DMG/zip files should be built locally from the Mac that has the signing identity.
 
-The `Release Installers` workflow runs when a version tag is pushed, creates a GitHub Release, and attaches the macOS DMG/zip plus Windows EXE. ClovaChat checks GitHub Releases for updates.
+The `Release Installers` workflow runs when a version tag is pushed, creates a GitHub Release, and attaches the Windows EXE. ClovaChat checks GitHub Releases for updates. Upload the locally built macOS DMG/zip to the same release after the workflow creates it.
 
 macOS release downloads must be signed with a Developer ID certificate and notarized by Apple to open normally after downloading. Until notarization is configured, macOS may report that the downloaded app is damaged. For local testing only, copy ClovaChat to Applications, then run:
 
@@ -48,6 +47,8 @@ To publish a new app version:
 npm version patch
 git push
 git push --tags
+npm run dist:mac
+gh release upload vX.Y.Z dist/ClovaChat-X.Y.Z-arm64.dmg dist/ClovaChat-X.Y.Z-arm64-mac.zip --clobber
 ```
 
 Use `npm version minor` or `npm version major` for larger releases.
