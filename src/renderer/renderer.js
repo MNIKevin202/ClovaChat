@@ -13,6 +13,7 @@ const state = {
   },
   recentChatters: [],
   nickSuggestion: '',
+  commandSuggestion: '',
   timerHandles: new Map(),
   timerExpiryHandles: new Map(),
   timerNextFire: new Map(),
@@ -37,6 +38,10 @@ const state = {
   userDrawer: { open: false, channel: '', nick: '' },
   commandPalette: { open: false, query: '', selectedIndex: 0, results: [] },
   channelSettings: { open: false, channel: '' },
+  onboarding: { open: false, step: 0, draft: {} },
+  sentMessages: [],
+  sentMessageIndex: -1,
+  pendingNewMessages: 0,
 };
 
 const el = {
@@ -91,6 +96,7 @@ const el = {
   inputForm: document.querySelector('#inputForm'),
   messageInput: document.querySelector('#messageInput'),
   nickSuggest: document.querySelector('#nickSuggest'),
+  newMessagesButton: document.querySelector('#newMessagesButton'),
   aliasList: document.querySelector('#aliasList'),
   aliasForm: document.querySelector('#aliasForm'),
   aliasName: document.querySelector('#aliasName'),
@@ -136,6 +142,19 @@ const el = {
   exportSettingsButton: document.querySelector('#exportSettingsButton'),
   importSettingsButton: document.querySelector('#importSettingsButton'),
   channelSettingsList: document.querySelector('#channelSettingsList'),
+  showTimestampsToggle: document.querySelector('#showTimestampsToggle'),
+  showBadgesToggle: document.querySelector('#showBadgesToggle'),
+  showEmotesToggle: document.querySelector('#showEmotesToggle'),
+  showSystemMessagesToggle: document.querySelector('#showSystemMessagesToggle'),
+  highlightMentionsToggle: document.querySelector('#highlightMentionsToggle'),
+  groupMessagesToggle: document.querySelector('#groupMessagesToggle'),
+  hoverActionsToggle: document.querySelector('#hoverActionsToggle'),
+  hoverModToolsToggle: document.querySelector('#hoverModToolsToggle'),
+  reducedMotionToggle: document.querySelector('#reducedMotionToggle'),
+  chatDensitySelect: document.querySelector('#chatDensitySelect'),
+  chatFontSizeInput: document.querySelector('#chatFontSizeInput'),
+  runOnboardingButton: document.querySelector('#runOnboardingButton'),
+  resetAppButton: document.querySelector('#resetAppButton'),
   sidebarVersion: document.querySelector('#sidebarVersion'),
   appVersion: document.querySelector('#appVersion'),
   updateStatus: document.querySelector('#updateStatus'),
@@ -170,6 +189,21 @@ const el = {
   channelSettingsApplyAllButton: document.querySelector('#channelSettingsApplyAllButton'),
   channelSettingsResetButton: document.querySelector('#channelSettingsResetButton'),
   channelSettingsSections: document.querySelector('#channelSettingsSections'),
+  onboardingBackdrop: document.querySelector('#onboardingBackdrop'),
+  onboardingTitle: document.querySelector('#onboardingTitle'),
+  onboardingProgress: document.querySelector('#onboardingProgress'),
+  onboardingBody: document.querySelector('#onboardingBody'),
+  onboardingSkipButton: document.querySelector('#onboardingSkipButton'),
+  onboardingBackButton: document.querySelector('#onboardingBackButton'),
+  onboardingNextButton: document.querySelector('#onboardingNextButton'),
+  resetBackdrop: document.querySelector('#resetBackdrop'),
+  resetDeleteHistory: document.querySelector('#resetDeleteHistory'),
+  resetDeleteLogs: document.querySelector('#resetDeleteLogs'),
+  resetDeleteBackups: document.querySelector('#resetDeleteBackups'),
+  resetConfirmInput: document.querySelector('#resetConfirmInput'),
+  resetConfirmButton: document.querySelector('#resetConfirmButton'),
+  resetCancelButton: document.querySelector('#resetCancelButton'),
+  resetStatus: document.querySelector('#resetStatus'),
 };
 
 const CHANNEL_SETTING_SECTIONS = [
@@ -287,6 +321,9 @@ async function init() {
   window.macIRC.onIrcEvent(handleIrcEvent);
   await loadChatHistory();
   loadAppVersion();
+  if (!state.settings.onboarding.completed && !state.settings.onboarding.skipped) {
+    setTimeout(() => openOnboarding(), 450);
+  }
   setTimeout(() => checkForUpdates({ silent: true }), 1800);
 }
 
@@ -407,6 +444,10 @@ function ensureSettingsShape() {
   state.settings.popups ||= [];
   state.settings.timedMessages ||= [];
   state.settings.channels ||= {};
+  state.settings.onboarding ||= {};
+  state.settings.onboarding.completed ??= false;
+  state.settings.onboarding.skipped ??= false;
+  state.settings.onboarding.completedAt ??= null;
   state.settings.preferences ||= {};
   state.settings.preferences.chatHistoryEnabled ??= true;
   state.settings.preferences.channelLogging ??= false;
@@ -417,6 +458,18 @@ function ensureSettingsShape() {
   state.settings.preferences.dashboardSort ||= 'live';
   state.settings.preferences.dashboardFilter ||= 'all';
   state.settings.preferences.dashboardStreamStatus ??= true;
+  state.settings.preferences.chatDisplay ||= {};
+  state.settings.preferences.chatDisplay.showTimestamps ??= true;
+  state.settings.preferences.chatDisplay.showBadges ??= true;
+  state.settings.preferences.chatDisplay.showEmotes ??= true;
+  state.settings.preferences.chatDisplay.showSystemMessages ??= true;
+  state.settings.preferences.chatDisplay.highlightMentions ??= true;
+  state.settings.preferences.chatDisplay.groupMessages ??= false;
+  state.settings.preferences.chatDisplay.density ||= 'comfortable';
+  state.settings.preferences.chatDisplay.fontSize ??= 13;
+  state.settings.preferences.chatDisplay.hoverActions ??= true;
+  state.settings.preferences.chatDisplay.hoverModTools ??= true;
+  state.settings.preferences.chatDisplay.reducedMotion ??= false;
   state.settings.preferences.recentCommandPaletteActions ||= [];
   state.settings.preferences.hiddenChats ||= {};
   state.settings.preferences.roleMemory ||= {};
@@ -514,6 +567,7 @@ function hydrateSettings() {
   el.liveNotifyToggle.checked = state.settings.preferences.notifyOnLive;
   el.liveTabSortToggle.checked = state.settings.preferences.moveLiveTabsToFront;
   el.dashboardSort.value = state.settings.preferences.dashboardSort;
+  hydrateChatDisplaySettings();
   setDashboardFilter(state.settings.preferences.dashboardFilter || 'all', { save: false });
   updateChannelLogFolderLabel();
   applyTheme(state.settings.appearance.theme);
@@ -524,6 +578,353 @@ function updateChannelLogFolderLabel() {
   el.channelLogFolder.textContent = state.settings.preferences.channelLogFolder
     ? `Logging to ${state.settings.preferences.channelLogFolder}`
     : 'No folder selected.';
+}
+
+function hydrateChatDisplaySettings() {
+  const display = state.settings.preferences.chatDisplay;
+  el.showTimestampsToggle.checked = display.showTimestamps;
+  el.showBadgesToggle.checked = display.showBadges;
+  el.showEmotesToggle.checked = display.showEmotes;
+  el.showSystemMessagesToggle.checked = display.showSystemMessages;
+  el.highlightMentionsToggle.checked = display.highlightMentions;
+  el.groupMessagesToggle.checked = display.groupMessages;
+  el.hoverActionsToggle.checked = display.hoverActions;
+  el.hoverModToolsToggle.checked = display.hoverModTools;
+  el.reducedMotionToggle.checked = display.reducedMotion;
+  el.chatDensitySelect.value = display.density;
+  el.chatFontSizeInput.value = String(display.fontSize);
+  document.body.classList.toggle('reduced-motion', display.reducedMotion);
+}
+
+function bindChatDisplaySetting(control, key, mode) {
+  control.addEventListener('change', async () => {
+    const value = mode === 'checked'
+      ? control.checked
+      : (mode === 'number' ? Number(control.value || 13) : control.value);
+    state.settings.preferences.chatDisplay[key] = value;
+    document.body.classList.toggle('reduced-motion', state.settings.preferences.chatDisplay.reducedMotion);
+    await saveSettings();
+    renderMessages({ forceScroll: chatIsAtBottom() });
+  });
+}
+
+function rememberSentInput(input) {
+  const trimmed = input.trim();
+  if (!trimmed) return;
+  state.sentMessages = [trimmed, ...state.sentMessages.filter((entry) => entry !== trimmed)].slice(0, 50);
+  state.sentMessageIndex = -1;
+}
+
+function recallSentInput(event, direction) {
+  if (state.sentMessages.length === 0) return;
+  event.preventDefault();
+  state.sentMessageIndex = Math.min(state.sentMessages.length - 1, Math.max(-1, state.sentMessageIndex + (direction < 0 ? 1 : -1)));
+  el.messageInput.value = state.sentMessageIndex >= 0 ? state.sentMessages[state.sentMessageIndex] : '';
+  el.messageInput.setSelectionRange(el.messageInput.value.length, el.messageInput.value.length);
+}
+
+function openOnboarding({ rerun = false } = {}) {
+  state.onboarding = {
+    open: true,
+    step: 0,
+    draft: onboardingDraftFromSettings(),
+    rerun,
+  };
+  el.onboardingBackdrop.hidden = false;
+  renderOnboarding();
+}
+
+function onboardingDraftFromSettings() {
+  return {
+    nick: state.settings.profile.nick || '',
+    password: state.settings.profile.password || '',
+    channels: uniqueChannels([state.settings.quickConnect.channel, ...state.settings.connection.autoJoinChannels]).filter(Boolean),
+    autoJoin: true,
+    moveLive: state.settings.preferences.moveLiveTabsToFront,
+    streamPreview: state.settings.appearance.twitchPlayer,
+    userList: !el.rosterPanel.hidden,
+    compact: state.settings.preferences.chatDisplay.density === 'compact',
+    timestamps: state.settings.preferences.chatDisplay.showTimestamps,
+    badges: state.settings.preferences.chatDisplay.showBadges,
+    sevenTv: state.settings.appearance.sevenTvEmotes,
+    starterDiscord: false,
+    starterLurk: false,
+    starterTimer: false,
+    starterWave: false,
+    notifications: state.settings.preferences.notifyOnMention,
+    logs: state.settings.preferences.channelLogging,
+    connectionStatus: '',
+  };
+}
+
+function renderOnboarding() {
+  const steps = [
+    renderOnboardingWelcome,
+    renderOnboardingConnection,
+    renderOnboardingChannels,
+    renderOnboardingLayout,
+    renderOnboardingStarterTools,
+    renderOnboardingFinish,
+  ];
+  el.onboardingProgress.textContent = `Step ${state.onboarding.step + 1} of ${steps.length}`;
+  el.onboardingBackButton.disabled = state.onboarding.step === 0;
+  el.onboardingSkipButton.hidden = state.onboarding.step === steps.length - 1;
+  el.onboardingNextButton.textContent = state.onboarding.step === steps.length - 1 ? 'Open ClovaChat' : (state.onboarding.step === 0 ? 'Get Started' : 'Next');
+  el.onboardingBody.innerHTML = '';
+  steps[state.onboarding.step]();
+}
+
+function onboardingField(id, label, value, type = 'text') {
+  const wrapper = document.createElement('label');
+  wrapper.textContent = label;
+  const input = document.createElement('input');
+  input.id = id;
+  input.type = type;
+  input.value = value || '';
+  input.addEventListener('input', () => {
+    state.onboarding.draft[id.replace(/^onboarding/, '').replace(/^[A-Z]/, (match) => match.toLowerCase())] = input.value;
+  });
+  wrapper.append(input);
+  return wrapper;
+}
+
+function onboardingCheck(key, label) {
+  const wrapper = document.createElement('label');
+  wrapper.className = 'check-row';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = Boolean(state.onboarding.draft[key]);
+  input.addEventListener('change', () => {
+    state.onboarding.draft[key] = input.checked;
+  });
+  wrapper.append(input, document.createTextNode(label));
+  return wrapper;
+}
+
+function renderOnboardingWelcome() {
+  el.onboardingTitle.textContent = 'Welcome to ClovaChat';
+  el.onboardingBody.innerHTML = '<p>A modern Twitch chat client with stream preview, bot tools, commands, timers, popups, logs, and multi-channel support.</p>';
+}
+
+function renderOnboardingConnection() {
+  el.onboardingTitle.textContent = 'Connect to Twitch Chat';
+  el.onboardingBody.append(
+    onboardingField('onboardingNick', 'Twitch username / nickname', state.onboarding.draft.nick),
+    onboardingField('onboardingPassword', 'OAuth token', state.onboarding.draft.password, 'password')
+  );
+  const row = document.createElement('div');
+  row.className = 'button-row';
+  const test = document.createElement('button');
+  test.type = 'button';
+  test.textContent = 'Test Connection';
+  test.addEventListener('click', () => {
+    state.onboarding.draft.connectionStatus = state.onboarding.draft.nick ? `Ready to connect as ${state.onboarding.draft.nick}` : 'Enter a Twitch username first.';
+    renderOnboarding();
+  });
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.textContent = 'Save Connection';
+  save.addEventListener('click', () => saveOnboardingConnection());
+  row.append(test, save);
+  const status = document.createElement('p');
+  status.className = 'settings-hint';
+  status.textContent = state.onboarding.draft.connectionStatus || 'Server defaults to irc.chat.twitch.tv on port 6697 with TLS.';
+  el.onboardingBody.append(row, status);
+}
+
+function renderOnboardingChannels() {
+  el.onboardingTitle.textContent = 'Add Channels to Join';
+  const form = document.createElement('div');
+  form.className = 'onboarding-channel-add';
+  const input = document.createElement('input');
+  input.placeholder = '#channel';
+  const add = document.createElement('button');
+  add.type = 'button';
+  add.textContent = 'Add';
+  add.addEventListener('click', () => {
+    const channel = normalizeChannel(input.value);
+    if (channel) state.onboarding.draft.channels = uniqueChannels([...state.onboarding.draft.channels, channel]);
+    input.value = '';
+    renderOnboarding();
+  });
+  form.append(input, add);
+  const list = document.createElement('div');
+  list.className = 'onboarding-channel-list';
+  state.onboarding.draft.channels.forEach((channel) => {
+    const pill = document.createElement('button');
+    pill.type = 'button';
+    pill.textContent = `${channel} ×`;
+    pill.addEventListener('click', () => {
+      state.onboarding.draft.channels = state.onboarding.draft.channels.filter((entry) => entry !== channel);
+      renderOnboarding();
+    });
+    list.append(pill);
+  });
+  el.onboardingBody.append(form, list, onboardingCheck('autoJoin', 'Auto join these channels on startup'), onboardingCheck('moveLive', 'Move live channels to the front'));
+}
+
+function renderOnboardingLayout() {
+  el.onboardingTitle.textContent = 'Choose Your Chat Layout';
+  const preview = document.createElement('div');
+  preview.className = 'onboarding-preview-card';
+  preview.textContent = '[11:42 PM] mod_username: Welcome to ClovaChat Kappa';
+  el.onboardingBody.append(
+    onboardingCheck('streamPreview', 'Stream preview on'),
+    onboardingCheck('userList', 'User list on'),
+    onboardingCheck('compact', 'Compact chat mode'),
+    onboardingCheck('timestamps', 'Show timestamps'),
+    onboardingCheck('badges', 'Show badges'),
+    onboardingCheck('sevenTv', 'Enable 7TV emotes'),
+    preview
+  );
+}
+
+function renderOnboardingStarterTools() {
+  el.onboardingTitle.textContent = 'Set Up Starter Tools';
+  el.onboardingBody.append(
+    onboardingCheck('starterDiscord', 'Add !discord command'),
+    onboardingCheck('starterLurk', 'Add !lurk command'),
+    onboardingCheck('starterTimer', 'Add follow reminder timer'),
+    onboardingCheck('starterWave', 'Add wave popup button'),
+    onboardingCheck('notifications', 'Enable desktop notifications'),
+    onboardingCheck('logs', 'Enable channel logs')
+  );
+}
+
+function renderOnboardingFinish() {
+  el.onboardingTitle.textContent = 'You’re Ready';
+  const draft = state.onboarding.draft;
+  el.onboardingBody.innerHTML = `<div class="onboarding-summary">
+    <strong>Connected account</strong><span>${escapeHtml(draft.nick || 'Not set')}</span>
+    <strong>Channels added</strong><span>${escapeHtml((draft.channels || []).join(', ') || 'None yet')}</span>
+    <strong>Auto join</strong><span>${draft.autoJoin ? 'On' : 'Off'}</span>
+    <strong>Stream preview</strong><span>${draft.streamPreview ? 'On' : 'Off'}</span>
+    <strong>Logs</strong><span>${draft.logs ? 'On' : 'Off'}</span>
+    <strong>Starter tools</strong><span>${[draft.starterDiscord && '!discord', draft.starterLurk && '!lurk', draft.starterTimer && 'follow timer', draft.starterWave && 'wave popup'].filter(Boolean).join(', ') || 'None'}</span>
+  </div>`;
+}
+
+async function moveOnboarding(direction) {
+  if (direction > 0 && state.onboarding.step === 5) {
+    await finishOnboarding();
+    return;
+  }
+  if (state.onboarding.step === 1 && direction > 0) saveOnboardingConnection();
+  if (state.onboarding.step === 3 && direction > 0) applyOnboardingLayout();
+  state.onboarding.step = Math.min(5, Math.max(0, state.onboarding.step + direction));
+  renderOnboarding();
+}
+
+function saveOnboardingConnection() {
+  const draft = state.onboarding.draft;
+  state.settings.profile.nick = draft.nick || state.settings.profile.nick;
+  state.settings.profile.username = state.settings.profile.nick;
+  state.settings.profile.realName = `${state.settings.profile.nick} via ClovaChat`;
+  state.settings.profile.password = draft.password || state.settings.profile.password;
+  state.settings.quickConnect.host = 'irc.chat.twitch.tv';
+  state.settings.quickConnect.port = 6697;
+  state.settings.quickConnect.tls = true;
+  state.settings.quickConnect.channel = draft.channels?.[0] || state.settings.quickConnect.channel;
+  draft.connectionStatus = `Saved connection for ${state.settings.profile.nick}.`;
+  saveSettings();
+}
+
+function applyOnboardingLayout() {
+  const draft = state.onboarding.draft;
+  state.settings.appearance.twitchPlayer = Boolean(draft.streamPreview);
+  state.settings.appearance.sevenTvEmotes = Boolean(draft.sevenTv);
+  state.settings.preferences.moveLiveTabsToFront = Boolean(draft.moveLive);
+  state.settings.preferences.chatDisplay.density = draft.compact ? 'compact' : 'comfortable';
+  state.settings.preferences.chatDisplay.showTimestamps = Boolean(draft.timestamps);
+  state.settings.preferences.chatDisplay.showBadges = Boolean(draft.badges);
+  hydrateChatDisplaySettings();
+}
+
+async function finishOnboarding() {
+  saveOnboardingConnection();
+  applyOnboardingLayout();
+  const draft = state.onboarding.draft;
+  const channels = uniqueChannels(draft.channels || []);
+  if (channels.length > 0) {
+    state.settings.quickConnect.channel = channels[0];
+    if (draft.autoJoin) state.settings.connection.autoJoinChannels = uniqueChannels([...state.settings.connection.autoJoinChannels, ...channels]);
+  }
+  addStarterTools(draft, channels[0] || state.settings.quickConnect.channel);
+  state.settings.preferences.notifyOnMention = Boolean(draft.notifications);
+  state.settings.preferences.channelLogging = Boolean(draft.logs && state.settings.preferences.channelLogFolder);
+  state.settings.onboarding = { completed: true, skipped: false, completedAt: new Date().toISOString() };
+  await saveSettings();
+  hydrateSettings();
+  renderAll();
+  closeOnboarding();
+}
+
+function addStarterTools(draft, channel) {
+  if (draft.starterDiscord && !findAlias('discord')) state.settings.aliases.push({ name: 'discord', type: 'mirc', output: 'Join the Discord: ' });
+  if (draft.starterLurk && !findAlias('lurk')) state.settings.aliases.push({ name: 'lurk', type: 'mirc', output: 'I am lurking for a bit.' });
+  if (draft.starterTimer && !state.settings.timedMessages.some((timer) => timer.message === 'Enjoying the stream? Don’t forget to follow!')) {
+    state.settings.timedMessages.push({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      channel: normalizeChannel(channel),
+      minutes: 10,
+      seconds: 0,
+      message: 'Enjoying the stream? Don’t forget to follow!',
+      enabled: true,
+      expiresAt: null,
+      showOnChannel: true,
+    });
+  }
+  if (draft.starterWave && !state.settings.popups.some((popup) => popup.label.toLowerCase() === 'wave')) {
+    state.settings.popups.push({ label: 'Wave', command: '👋' });
+  }
+}
+
+async function skipOnboarding() {
+  state.settings.onboarding = { completed: false, skipped: true, completedAt: null };
+  await saveSettings();
+  closeOnboarding();
+}
+
+function closeOnboarding() {
+  state.onboarding.open = false;
+  el.onboardingBackdrop.hidden = true;
+}
+
+function openResetModal() {
+  el.resetBackdrop.hidden = false;
+  el.resetConfirmInput.value = '';
+  el.resetConfirmButton.disabled = true;
+  el.resetStatus.textContent = '';
+}
+
+function closeResetModal() {
+  el.resetBackdrop.hidden = true;
+}
+
+async function resetClovaChat() {
+  if (el.resetConfirmInput.value !== 'RESET') return;
+  el.resetConfirmButton.disabled = true;
+  el.resetStatus.textContent = 'Creating backup and resetting...';
+  const result = await window.macIRC.resetSettings({
+    deleteHistory: el.resetDeleteHistory.checked,
+    deleteLogs: el.resetDeleteLogs.checked,
+    deleteBackups: el.resetDeleteBackups.checked,
+  });
+  if (!result.ok) {
+    el.resetStatus.textContent = `Reset failed: ${result.error}`;
+    el.resetConfirmButton.disabled = false;
+    return;
+  }
+  state.settings = result.settings;
+  state.channels = [];
+  state.messagesByTarget.clear();
+  state.rosters.clear();
+  ensureSettingsShape();
+  hydrateSettings();
+  renderAll();
+  closeResetModal();
+  appendStatus(`Reset complete. Backup saved to ${result.backupPath}`, 'success');
+  openOnboarding();
 }
 
 function bindEvents() {
@@ -550,6 +951,16 @@ function bindEvents() {
     }
   });
   window.addEventListener('blur', hideContextMenu);
+  el.newMessagesButton.addEventListener('click', () => {
+    state.pendingNewMessages = 0;
+    renderNewMessagesButton();
+    el.messages.scrollTop = el.messages.scrollHeight;
+  });
+  el.messages.addEventListener('scroll', () => {
+    if (!chatIsAtBottom()) return;
+    state.pendingNewMessages = 0;
+    renderNewMessagesButton();
+  });
 
   el.commandPaletteBackdrop.addEventListener('pointerdown', (event) => {
     if (event.target === el.commandPaletteBackdrop) closeCommandPalette();
@@ -566,6 +977,28 @@ function bindEvents() {
   el.channelSettingsResetButton.addEventListener('click', resetActiveChannelSettings);
   el.channelSettingsCopyButton.addEventListener('click', copyChannelSettingsFromSelection);
   el.channelSettingsApplyAllButton.addEventListener('click', applyActiveChannelSettingsToAll);
+  el.onboardingSkipButton.addEventListener('click', skipOnboarding);
+  el.onboardingBackButton.addEventListener('click', () => moveOnboarding(-1));
+  el.onboardingNextButton.addEventListener('click', () => moveOnboarding(1));
+  el.runOnboardingButton.addEventListener('click', () => openOnboarding({ rerun: true }));
+  el.resetAppButton.addEventListener('click', openResetModal);
+  el.resetCancelButton.addEventListener('click', closeResetModal);
+  el.resetConfirmInput.addEventListener('input', () => {
+    el.resetConfirmButton.disabled = el.resetConfirmInput.value !== 'RESET';
+  });
+  el.resetConfirmButton.addEventListener('click', resetClovaChat);
+
+  bindChatDisplaySetting(el.showTimestampsToggle, 'showTimestamps', 'checked');
+  bindChatDisplaySetting(el.showBadgesToggle, 'showBadges', 'checked');
+  bindChatDisplaySetting(el.showEmotesToggle, 'showEmotes', 'checked');
+  bindChatDisplaySetting(el.showSystemMessagesToggle, 'showSystemMessages', 'checked');
+  bindChatDisplaySetting(el.highlightMentionsToggle, 'highlightMentions', 'checked');
+  bindChatDisplaySetting(el.groupMessagesToggle, 'groupMessages', 'checked');
+  bindChatDisplaySetting(el.hoverActionsToggle, 'hoverActions', 'checked');
+  bindChatDisplaySetting(el.hoverModToolsToggle, 'hoverModTools', 'checked');
+  bindChatDisplaySetting(el.reducedMotionToggle, 'reducedMotion', 'checked');
+  bindChatDisplaySetting(el.chatDensitySelect, 'density', 'value');
+  bindChatDisplaySetting(el.chatFontSizeInput, 'fontSize', 'number');
 
   el.userDrawerClose.addEventListener('click', closeUserDrawer);
 
@@ -794,6 +1227,7 @@ function bindEvents() {
     const input = el.messageInput.value;
     el.messageInput.value = '';
     hideNickSuggestion();
+    rememberSentInput(input);
     runInput(input);
   });
 
@@ -805,6 +1239,14 @@ function bindEvents() {
     }
 
     if (event.key === 'Escape') hideNickSuggestion();
+
+    if (event.key === 'ArrowUp' && !el.messageInput.value) {
+      recallSentInput(event, -1);
+    }
+
+    if (event.key === 'ArrowDown' && state.sentMessageIndex >= 0) {
+      recallSentInput(event, 1);
+    }
   });
 
   el.aliasForm.addEventListener('submit', async (event) => {
@@ -3024,6 +3466,20 @@ function renderAutoJoinChannels() {
 }
 
 function updateNickSuggestion() {
+  const commandMatch = commandCompletionMatch();
+  if (commandMatch) {
+    const prefix = commandMatch.query.toLowerCase();
+    const suggestion = commandCompletionCandidates()
+      .find((command) => command.toLowerCase().startsWith(prefix) && command.toLowerCase() !== prefix);
+    if (suggestion) {
+      state.nickSuggestion = '';
+      state.commandSuggestion = suggestion;
+      el.nickSuggest.hidden = false;
+      el.nickSuggest.textContent = `Tab: /${suggestion}`;
+      return;
+    }
+  }
+
   const match = nickCompletionMatch();
   if (!match) {
     hideNickSuggestion();
@@ -3040,11 +3496,23 @@ function updateNickSuggestion() {
   }
 
   state.nickSuggestion = suggestion;
+  state.commandSuggestion = '';
   el.nickSuggest.hidden = false;
   el.nickSuggest.textContent = `Tab: @${suggestion}`;
 }
 
 function applyNickSuggestion() {
+  if (state.commandSuggestion) {
+    const match = commandCompletionMatch();
+    if (!match) return;
+    const value = el.messageInput.value;
+    el.messageInput.value = `${value.slice(0, match.start)}/${state.commandSuggestion}${value.slice(match.end)}`;
+    const caret = match.start + state.commandSuggestion.length + 1;
+    el.messageInput.setSelectionRange(caret, caret);
+    hideNickSuggestion();
+    return;
+  }
+
   const match = nickCompletionMatch();
   if (!match || !state.nickSuggestion) return;
 
@@ -3057,8 +3525,34 @@ function applyNickSuggestion() {
 
 function hideNickSuggestion() {
   state.nickSuggestion = '';
+  state.commandSuggestion = '';
   el.nickSuggest.hidden = true;
   el.nickSuggest.textContent = '';
+}
+
+function commandCompletionMatch() {
+  const value = el.messageInput.value;
+  const caret = el.messageInput.selectionStart ?? value.length;
+  const beforeCaret = value.slice(0, caret);
+  const match = beforeCaret.match(/^\/([A-Za-z0-9_-]{0,25})$/);
+  if (!match) return null;
+  return {
+    start: 0,
+    end: caret,
+    query: match[1],
+  };
+}
+
+function commandCompletionCandidates() {
+  return Array.from(new Set([
+    'join',
+    'part',
+    'me',
+    'timeout',
+    'ban',
+    'unban',
+    ...state.settings.aliases.map((alias) => alias.name),
+  ].map((command) => normalizeCommandName(command)).filter(Boolean)));
 }
 
 function nickCompletionMatch() {
@@ -3901,6 +4395,8 @@ function renderPopupEditor() {
 function appendMessage(event) {
   if (event.direction === 'out') addRosterUser(event.target, event.nick, event.role, { roleKnown: Boolean(event.role) });
   const target = normalizeChannel(event.target);
+  const isActiveTarget = target === state.activeChannel;
+  const shouldScroll = isActiveTarget ? chatIsAtBottom() : false;
   const role = event.roleKnown ? (event.role || '') : (event.role || rememberedUserRole(target, event.nick));
   const entry = {
     kind: 'message',
@@ -3917,8 +4413,9 @@ function appendMessage(event) {
   logChannelMessage(event.target, entry);
   renderDashboard();
   notifyChannelSpecificUser(entry);
-  if (normalizeChannel(event.target) !== state.activeChannel) return;
-  renderMessages();
+  if (!isActiveTarget) return;
+  if (!shouldScroll) state.pendingNewMessages += 1;
+  renderMessages({ forceScroll: shouldScroll });
 }
 
 function logMonitoredMessage(entry) {
@@ -3956,13 +4453,18 @@ function notifyChannelSpecificUser(entry) {
   new Notification(`${entry.nick} chatted in ${entry.target}`, { body: entry.text });
 }
 
-function renderMessages() {
+function renderMessages({ forceScroll = false } = {}) {
+  const shouldScroll = forceScroll || chatIsAtBottom();
   el.messages.innerHTML = '';
-  el.messages.classList.toggle('compact-messages', channelSettingValue(state.activeChannel, 'chat.compactMode', false));
-  el.messages.style.fontSize = `${channelSettingValue(state.activeChannel, 'chat.fontSize', 13)}px`;
+  const density = chatDisplayValue('density', 'comfortable');
+  const compact = density === 'compact' || channelSettingValue(state.activeChannel, 'chat.compactMode', false);
+  el.messages.dataset.density = density;
+  el.messages.classList.toggle('compact-messages', compact);
+  el.messages.style.fontSize = `${channelSettingValue(state.activeChannel, 'chat.fontSize', chatDisplayValue('fontSize', 13))}px`;
   const messages = state.messagesByTarget.get(state.activeChannel) || [];
   let visibleMessageCount = 0;
   const repeated = new Set();
+  let previousMessage = null;
   messages.forEach((entry) => {
     if (entry.kind === 'message' && isHidden(entry.nick || '')) return;
     if (entry.kind === 'message' && channelSettingValue(state.activeChannel, 'chat.hideBotMessages', false) && looksLikeBot(entry.nick)) return;
@@ -3972,15 +4474,37 @@ function renderMessages() {
       repeated.add(repeatKey);
     }
     if (entry.kind === 'status') {
+      if (!chatDisplayValue('showSystemMessages', true)) return;
       renderStatusRow(entry);
     } else {
-      renderMessageRow(entry);
+      renderMessageRow(entry, previousMessage);
+      previousMessage = entry;
       visibleMessageCount += 1;
     }
   });
   renderChatEmptyState(visibleMessageCount);
   renderChannelStatusStrip();
-  el.messages.scrollTop = el.messages.scrollHeight;
+  if (shouldScroll) {
+    state.pendingNewMessages = 0;
+    el.messages.scrollTop = el.messages.scrollHeight;
+  }
+  renderNewMessagesButton();
+}
+
+function chatDisplayValue(key, fallback) {
+  return state.settings?.preferences?.chatDisplay?.[key] ?? fallback;
+}
+
+function chatIsAtBottom() {
+  if (!el.messages) return true;
+  return el.messages.scrollHeight - el.messages.scrollTop - el.messages.clientHeight < 56;
+}
+
+function renderNewMessagesButton() {
+  if (!el.newMessagesButton) return;
+  const count = state.pendingNewMessages;
+  el.newMessagesButton.hidden = count <= 0;
+  el.newMessagesButton.textContent = count === 1 ? '1 new message' : `${count} new messages`;
 }
 
 function renderChatEmptyState(visibleMessageCount) {
@@ -3997,30 +4521,122 @@ function renderChatEmptyState(visibleMessageCount) {
   el.messages.append(empty);
 }
 
-function renderMessageRow(event) {
+function renderMessageRow(event, previousMessage = null) {
   const row = document.createElement('div');
-  const isMention = event.direction === 'in' && channelSettingValue(event.target || state.activeChannel, 'chat.highlightMentions', true) && messageMentionsNick(event.text);
-  const highlightedUsers = parseLabelList(channelSettingValue(event.target || state.activeChannel, 'chat.highlightUsers', '')).map((nick) => nick.toLowerCase());
+  const channel = event.target || state.activeChannel;
+  const showTimestamps = channelSettingValue(channel, 'chat.showTimestamps', chatDisplayValue('showTimestamps', true));
+  const showBadges = channelSettingValue(channel, 'chat.showBadges', chatDisplayValue('showBadges', true));
+  const highlightMentions = channelSettingValue(channel, 'chat.highlightMentions', chatDisplayValue('highlightMentions', true));
+  const groupMessages = chatDisplayValue('groupMessages', false);
+  const grouped = Boolean(groupMessages
+    && previousMessage
+    && previousMessage.kind === 'message'
+    && previousMessage.nick === event.nick
+    && previousMessage.direction === event.direction
+    && Math.abs((event.timestamp || 0) - (previousMessage.timestamp || 0)) < 120000);
+  const isMention = event.direction === 'in' && highlightMentions && messageMentionsNick(event.text);
+  const highlightedUsers = parseLabelList(channelSettingValue(channel, 'chat.highlightUsers', '')).map((nick) => nick.toLowerCase());
   const isHighlightedUser = highlightedUsers.includes(String(event.nick || '').toLowerCase());
-  const isFirstTime = channelSettingValue(event.target || state.activeChannel, 'chat.highlightFirstTimeChatters', false)
-    && getUserStats(event.target || state.activeChannel, event.nick).messageCount <= 1;
-  row.className = `message ${event.direction || ''}${isMention ? ' mention' : ''}${isMonitored(event.nick || '') ? ' monitored' : ''}${isHighlightedUser ? ' highlighted-user' : ''}${isFirstTime ? ' first-time' : ''}${showTimestamps ? '' : ' no-time'}`;
+  const isFirstTime = channelSettingValue(channel, 'chat.highlightFirstTimeChatters', false)
+    && getUserStats(channel, event.nick).messageCount <= 1;
+  row.className = `message ${event.direction || ''}${isMention ? ' mention' : ''}${isMonitored(event.nick || '') ? ' monitored' : ''}${isHighlightedUser ? ' highlighted-user' : ''}${isFirstTime ? ' first-time' : ''}${showTimestamps ? '' : ' no-time'}${grouped ? ' grouped' : ''}`;
   const time = document.createElement('span');
   time.className = 'time';
-  time.textContent = formatTime(event.timestamp);
+  time.textContent = grouped ? '' : formatTime(event.timestamp);
   const nick = document.createElement('span');
   nick.className = `nick${event.role ? ` ${event.role}` : ''}`;
-  if (channelSettingValue(event.target || state.activeChannel, 'chat.showBadges', true)) appendRoleIcon(nick, event.role);
-  nick.append(document.createTextNode(event.nick));
+  if (!grouped && showBadges) appendRoleIcon(nick, event.role);
+  nick.append(document.createTextNode(grouped ? '' : event.nick));
   nick.addEventListener('click', () => {
-    openUserDrawer(event.target || state.activeChannel, event.nick);
+    openUserDrawer(channel, event.nick);
+  });
+  nick.addEventListener('contextmenu', (contextEvent) => {
+    contextEvent.preventDefault();
+    showMessageUserContextMenu(contextEvent, event);
   });
   const text = document.createElement('span');
   text.className = 'text';
-  renderMessageText(text, event.text, event.target || state.activeChannel, event.twitchEmotes);
+  renderMessageText(text, event.text, channel, event.twitchEmotes);
   if (showTimestamps) row.append(time);
   row.append(nick, text);
+  if (chatDisplayValue('hoverActions', true)) row.append(createMessageActions(event));
   el.messages.append(row);
+}
+
+function createMessageActions(event) {
+  const actions = document.createElement('span');
+  actions.className = 'message-actions';
+  actions.append(
+    messageActionButton('Mention', () => mentionUserFromChat(event.nick)),
+    messageActionButton('Copy', () => copyText(event.text || '')),
+    messageActionButton('Profile', () => openUserDrawer(event.target || state.activeChannel, event.nick))
+  );
+  if (chatDisplayValue('hoverModTools', true) && canModerateChannel(event.target || state.activeChannel) && event.direction === 'in') {
+    actions.append(
+      messageActionButton('Timeout', () => runInputForTarget(`/timeout ${event.nick} 600`, event.target || state.activeChannel)),
+      messageActionButton('Ban', () => runInputForTarget(`/ban ${event.nick}`, event.target || state.activeChannel))
+    );
+  }
+  return actions;
+}
+
+function messageActionButton(label, action) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    action();
+  });
+  return button;
+}
+
+function mentionUserFromChat(nick) {
+  const current = el.messageInput.value;
+  el.messageInput.value = `${current}${current && !current.endsWith(' ') ? ' ' : ''}@${nick} `;
+  el.messageInput.focus();
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    appendStatus('Could not copy to clipboard.', 'error');
+  }
+}
+
+function showMessageUserContextMenu(event, chatEvent) {
+  hideContextMenu();
+  const channel = chatEvent.target || state.activeChannel;
+  const nick = chatEvent.nick;
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.append(
+    contextMenuButton(`Mention ${nick}`, () => mentionUserFromChat(nick)),
+    contextMenuButton('Copy username', () => copyText(nick)),
+    contextMenuButton('Copy message', () => copyText(chatEvent.text || '')),
+    contextMenuButton('Open profile', () => openUserDrawer(channel, nick))
+  );
+  if (chatDisplayValue('hoverModTools', true) && canModerateChannel(channel) && chatEvent.direction === 'in') {
+    menu.append(
+      contextMenuButton('Timeout 10 minutes', () => runInputForTarget(`/timeout ${nick} 600`, channel)),
+      contextMenuButton('Ban user', () => runInputForTarget(`/ban ${nick}`, channel))
+    );
+  }
+  document.body.append(menu);
+  positionContextMenu(menu, event.clientX, event.clientY);
+  state.activeContextMenu = menu;
+}
+
+function contextMenuButton(label, action) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.addEventListener('click', () => {
+    hideContextMenu();
+    action();
+  });
+  return button;
 }
 
 function messageMentionsNick(text) {
@@ -4051,7 +4667,7 @@ function appendStatus(text, level = 'info') {
 
 function renderStatusRow(entry) {
   const row = document.createElement('div');
-  row.className = `message status ${entry.level === 'error' ? 'error' : ''}`;
+  row.className = `message status ${entry.level || 'info'}`;
   row.innerHTML = `<span class="time">${formatTime(entry.timestamp)}</span><span class="nick">server</span><span class="text">${escapeHtml(entry.text || '')}</span>`;
   el.messages.append(row);
 }
@@ -4261,7 +4877,7 @@ function parseBadgeList(badgesRaw, nick) {
 
 function canModerateChannel(channel) {
   const self = getRosterUser(normalizeChannel(channel), state.settings.profile.nick || '');
-  return self.role === 'mod';
+  return self?.role === 'mod';
 }
 
 function openUserDrawer(channel, nick) {
@@ -4439,6 +5055,11 @@ function sevenTvEmoteUrl(emote) {
 }
 
 function renderMessageText(container, text, channel, twitchEmotes = []) {
+  if (!chatDisplayValue('showEmotes', true) || !channelSettingValue(channel, 'chat.showEmotes', true)) {
+    appendLinkedText(container, String(text || ''));
+    return;
+  }
+
   const sevenTvEmotes = state.settings.appearance.sevenTvEmotes
     ? state.sevenTv.emotesByChannel.get(normalizeChannel(channel))
     : null;

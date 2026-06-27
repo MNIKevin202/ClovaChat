@@ -50,8 +50,7 @@ function startLocalServer() {
   });
 }
 
-const store = new Store({
-  defaults: {
+const DEFAULT_SETTINGS = {
     profile: {
       nick: 'ClovaChatUser',
       username: 'clovachat',
@@ -92,7 +91,10 @@ const store = new Store({
       notifyOnMention: false,
       roleMemory: {},
     }
-  }
+};
+
+const store = new Store({
+  defaults: DEFAULT_SETTINGS
 });
 
 const historyStore = new Store({ name: 'chat-history', defaults: { history: {} } });
@@ -185,6 +187,42 @@ ipcMain.handle('settings:get', () => store.store);
 ipcMain.handle('settings:set', (_event, nextSettings) => {
   store.set(nextSettings);
   return store.store;
+});
+
+ipcMain.handle('settings:reset', async (_event, options = {}) => {
+  try {
+    const backupDir = path.join(app.getPath('userData'), 'Backups');
+    fs.mkdirSync(backupDir, { recursive: true });
+    const backupPath = path.join(backupDir, `clovachat-reset-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
+    fs.writeFileSync(backupPath, JSON.stringify(store.store, null, 2));
+
+    const previous = store.store;
+    if (options.deleteHistory) historyStore.set('history', {});
+    if (options.deleteLogs && previous.preferences?.channelLogFolder) {
+      fs.rmSync(previous.preferences.channelLogFolder, { recursive: true, force: true });
+    }
+    if (options.deleteBackups) {
+      for (const entry of fs.readdirSync(backupDir)) {
+        const candidate = path.join(backupDir, entry);
+        if (candidate !== backupPath) fs.rmSync(candidate, { recursive: true, force: true });
+      }
+    }
+
+    store.clear();
+    store.set({
+      ...structuredClone(DEFAULT_SETTINGS),
+      onboarding: {
+        completed: false,
+        skipped: false,
+        completedAt: null,
+      },
+      channels: {},
+    });
+    irc.disconnect();
+    return { ok: true, settings: store.store, backupPath };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
 });
 
 ipcMain.handle('external:open', (_event, url) => {

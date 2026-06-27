@@ -156,6 +156,7 @@
           </div>
           <div id="popupBar" class="popup-bar"></div>
           <div id="timerPills" class="timer-pills"></div>
+          <button id="newMessagesButton" class="new-messages-button" type="button" hidden>New messages</button>
           <div class="chat-action-bar">
             <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
           </div>
@@ -277,6 +278,7 @@
           <aside class="docs-nav" aria-label="Docs categories">
             <h2>Docs</h2>
             <a href="#docs-start">Getting Started</a>
+            <a href="#docs-onboarding">Onboarding</a>
             <a href="#docs-dashboard">Dashboard</a>
             <a href="#docs-channel-settings">Channel Settings</a>
             <a href="#docs-palette">Command Palette</a>
@@ -291,6 +293,7 @@
             <a href="#docs-commands">Commands</a>
             <a href="#docs-bot">Bot Builder</a>
             <a href="#docs-logs">Logs &amp; Backups</a>
+            <a href="#docs-reset">Reset</a>
             <a href="#docs-updates">Updates</a>
             <a href="#docs-troubleshooting">Troubleshooting</a>
           </aside>
@@ -309,6 +312,18 @@
                 <li>Enter your nick and password. For Twitch, the password should be an OAuth token that starts with oauth:.</li>
                 <li>Enter a starting channel such as #mnikevin202.</li>
                 <li>Click Connect. Server events appear in the Server tab, and joined channels appear across the top of Chat.</li>
+              </ol>
+            </section>
+
+            <section id="docs-onboarding" class="docs-section">
+              <h3>Onboarding Wizard</h3>
+              <ol>
+                <li>The wizard opens automatically the first time ClovaChat starts, or after a first-install reset.</li>
+                <li>Use Connect Twitch Chat to save your Twitch username and OAuth token.</li>
+                <li>Use Add Channels to pick channels and decide whether they should be added to Auto Join.</li>
+                <li>Use Choose Layout to turn stream preview, the user list, timestamps, badges, compact chat, and 7TV emotes on or off.</li>
+                <li>Use Starter Tools to create optional beginner commands, a timer, and a popup without creating duplicates.</li>
+                <li>Open Settings and choose Run Onboarding Again any time you want to walk through setup again.</li>
               </ol>
             </section>
 
@@ -358,6 +373,12 @@
                 <li>Type a message in the box at the bottom and press Send.</li>
                 <li>Use slash commands in the same box, such as /me waves, /join #channel, /part #channel, or custom commands you create.</li>
                 <li>Type @ and part of a name to use nickname suggestions from the current roster and recent chatters.</li>
+                <li>Type / and part of a command to use command autocomplete, then press Tab to fill it in.</li>
+                <li>Use Up and Down in an empty message box to recall messages or commands you sent recently.</li>
+                <li>Hover over a chat message to mention the user, copy the message, open their profile, or use moderator actions when your account can moderate the channel.</li>
+                <li>Right-click a username in chat to open the same user actions from a menu.</li>
+                <li>If you scroll up, ClovaChat keeps your place and shows a New Messages button when fresh chat arrives.</li>
+                <li>Open Settings, then Chat Display, to change density, font size, timestamps, badges, emotes, mention highlighting, grouped messages, hover actions, and reduced motion.</li>
                 <li>Messages that mention your nick can trigger desktop notifications when that setting is enabled.</li>
               </ol>
             </section>
@@ -480,6 +501,18 @@
               </ol>
             </section>
 
+            <section id="docs-reset" class="docs-section">
+              <h3>Reset to First Install</h3>
+              <ol>
+                <li>Open Settings and find Danger Zone.</li>
+                <li>Click Reset ClovaChat to First Install.</li>
+                <li>ClovaChat creates a backup of your current settings before it resets anything.</li>
+                <li>Choose whether to also delete local chat history, channel log files, or old backups.</li>
+                <li>Type RESET to unlock the final reset button.</li>
+                <li>After reset, ClovaChat clears saved settings, disconnects, and opens the Onboarding Wizard again.</li>
+              </ol>
+            </section>
+
             <section id="docs-updates" class="docs-section">
               <h3>Updates</h3>
               <ol>
@@ -550,6 +583,56 @@
             </section>
 
             <section class="settings-group">
+              <h3>Chat Display</h3>
+              <label class="switch-row">
+                <span>Show timestamps</span>
+                <input id="showTimestampsToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Show badges</span>
+                <input id="showBadgesToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Show emotes</span>
+                <input id="showEmotesToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Show system messages</span>
+                <input id="showSystemMessagesToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Highlight mentions</span>
+                <input id="highlightMentionsToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Group consecutive messages</span>
+                <input id="groupMessagesToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Enable hover actions</span>
+                <input id="hoverActionsToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Show mod tools on hover</span>
+                <input id="hoverModToolsToggle" type="checkbox" />
+              </label>
+              <label class="switch-row">
+                <span>Reduced motion</span>
+                <input id="reducedMotionToggle" type="checkbox" />
+              </label>
+              <label class="settings-field">Density
+                <select id="chatDensitySelect">
+                  <option value="compact">Compact</option>
+                  <option value="comfortable">Comfortable</option>
+                  <option value="cozy">Cozy</option>
+                </select>
+              </label>
+              <label class="settings-field">Font size
+                <input id="chatFontSizeInput" type="number" min="11" max="22" />
+              </label>
+            </section>
+
+            <section class="settings-group">
               <h3>Channel Logs</h3>
               <label class="switch-row">
                 <span>Keep a log file for each channel</span>
@@ -584,6 +667,15 @@
               <div class="button-row">
                 <button id="exportSettingsButton" type="button">Backup Settings</button>
                 <button id="importSettingsButton" type="button">Import Settings</button>
+                <button id="runOnboardingButton" type="button">Run Onboarding Again</button>
+              </div>
+            </section>
+
+            <section class="settings-group danger-zone">
+              <h3>Danger Zone</h3>
+              <p class="settings-hint">Reset ClovaChat back to a first-install state. Logs and backups are only deleted if you explicitly choose that in the confirmation step.</p>
+              <div class="button-row">
+                <button id="resetAppButton" class="danger" type="button">Reset ClovaChat to First Install</button>
               </div>
             </section>
 
@@ -676,6 +768,43 @@
           <button id="channelSettingsResetButton" class="danger" type="button">Reset Channel Settings</button>
         </div>
         <div id="channelSettingsSections" class="channel-settings-sections"></div>
+      </section>
+    </div>
+
+    <div id="onboardingBackdrop" class="onboarding-backdrop" hidden>
+      <section class="onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+        <header class="onboarding-header">
+          <img src="../../images/logo.png" alt="ClovaChat" />
+          <div>
+            <h2 id="onboardingTitle">Welcome to ClovaChat</h2>
+            <p id="onboardingProgress">Step 1 of 6</p>
+          </div>
+        </header>
+        <div id="onboardingBody" class="onboarding-body"></div>
+        <footer class="onboarding-footer">
+          <button id="onboardingSkipButton" type="button">Skip Setup</button>
+          <span></span>
+          <button id="onboardingBackButton" type="button">Back</button>
+          <button id="onboardingNextButton" class="primary" type="button">Next</button>
+        </footer>
+      </section>
+    </div>
+
+    <div id="resetBackdrop" class="reset-backdrop" hidden>
+      <section class="reset-modal" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+        <header>
+          <h2 id="resetTitle">Reset ClovaChat to First Install?</h2>
+          <p>This will remove your saved connection, channels, commands, timers, popups, settings, notes, and local app preferences.</p>
+        </header>
+        <label class="check-row"><input id="resetDeleteHistory" type="checkbox" /> Delete local chat history</label>
+        <label class="check-row"><input id="resetDeleteLogs" type="checkbox" /> Delete channel logs</label>
+        <label class="check-row"><input id="resetDeleteBackups" type="checkbox" /> Delete old backups</label>
+        <label>To confirm, type RESET below.<input id="resetConfirmInput" autocomplete="off" /></label>
+        <p id="resetStatus" class="settings-hint"></p>
+        <footer>
+          <button id="resetCancelButton" type="button">Cancel</button>
+          <button id="resetConfirmButton" class="danger" type="button" disabled>Reset Everything</button>
+        </footer>
       </section>
     </div>
 

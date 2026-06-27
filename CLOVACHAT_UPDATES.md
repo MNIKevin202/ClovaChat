@@ -66,6 +66,74 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 
 ## Current Upgrade
 
+- Added a first-launch Onboarding Wizard with welcome, Twitch connection, channel setup, layout choices, starter tools, and finish summary steps.
+- Onboarding completion is saved locally, can be skipped, and can be run again from Settings.
+- Starter tools can add beginner commands, a follow reminder timer, and a wave popup without duplicating existing tools.
+- Improved the chat message UI with global Chat Display settings for timestamps, badges, emotes, system messages, mention highlighting, grouped messages, density, font size, hover actions, moderator hover tools, and reduced motion.
+- Chat now supports slash-command autocomplete, sent-message history with Up and Down, hover actions, username right-click actions, status message levels, and a New Messages button when the user is scrolled up.
+- Added Reset ClovaChat to First Install in Settings with typed RESET confirmation, optional local history/log/old-backup deletion, automatic backup creation, disconnect, and onboarding restart.
+- Updated the in-app Docs for onboarding, chat display, hover actions, command autocomplete, message history, and reset behavior.
+
+## Requested Upgrade 10: Reset to First Install
+
+Add a Settings Danger Zone reset flow that can return ClovaChat to a first-install state.
+
+The reset flow should include:
+
+- A clear reset button in Settings
+- A confirmation modal
+- Typed RESET confirmation
+- Automatic backup before reset
+- Optional deletion of local chat history
+- Optional deletion of channel logs
+- Optional deletion of old backups
+- Clearing saved channels, commands, timers, popups, bot rules, notes, and preferences
+- Showing the Onboarding Wizard again after reset
+
+Purpose:
+This gives users a safe way to start over without manually hunting through local app data.
+
+## Requested Upgrade 9: Improved Chat Message UI
+
+Improve the chat message experience so ClovaChat feels more like a serious Twitch chat client.
+
+The chat UI should include:
+
+- Better message spacing and density options
+- Timestamp, badge, emote, and system message display controls
+- Mention highlighting
+- Optional grouped consecutive messages
+- Hover actions for mention, copy, and profile
+- Moderator hover tools when the connected account can moderate
+- Username right-click actions
+- New Messages button while scrolled up
+- Sent message and command history
+- Slash-command autocomplete
+- Reduced motion setting
+
+Purpose:
+This makes active chat easier to read, moderate, and move through quickly.
+
+## Requested Upgrade 8: Onboarding Wizard
+
+Add a first-launch setup wizard that guides users through the most important setup steps.
+
+The wizard should include:
+
+- Welcome
+- Connect Twitch Chat
+- Add Channels
+- Choose Layout
+- Starter Tools
+- Finish
+
+It should save completion locally, avoid duplicate starter tools, and be available again from Settings.
+
+Purpose:
+This helps new users get connected and productive without needing to understand every setting first.
+
+## Previous Upgrade
+
 - Added Per-Channel Settings.
 - Channel settings are stored by normalized channel name and fall back to global defaults when no override exists.
 - Added Channel Settings access from the active channel status strip, channel tab right-click menu, Multi-Channel Dashboard actions, Settings, and the Command Palette.

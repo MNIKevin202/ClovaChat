@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('macIRC', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings) => ipcRenderer.invoke('settings:set', settings),
+  resetSettings: (options) => ipcRenderer.invoke('settings:reset', options),
   openExternal: (url) => ipcRenderer.invoke('external:open', url),
   connect: (config) => ipcRenderer.invoke('irc:connect', config),
   disconnect: () => ipcRenderer.invoke('irc:disconnect'),
