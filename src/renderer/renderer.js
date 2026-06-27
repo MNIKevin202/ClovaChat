@@ -37,6 +37,10 @@ const state = {
 const el = {
   connectionStatus: document.querySelector('#connectionStatus'),
   connectionState: document.querySelector('#connectionState'),
+  connectionServer: document.querySelector('#connectionServer'),
+  connectionNick: document.querySelector('#connectionNick'),
+  connectionChannelCount: document.querySelector('#connectionChannelCount'),
+  openLogFolderButton: document.querySelector('#openLogFolderButton'),
   host: document.querySelector('#host'),
   port: document.querySelector('#port'),
   tls: document.querySelector('#tls'),
@@ -440,6 +444,11 @@ function bindEvents() {
     state.settings.preferences.channelLogFolder = result.path;
     await saveSettings();
     updateChannelLogFolderLabel();
+    renderConnectionCard();
+  });
+  el.openLogFolderButton.addEventListener('click', () => {
+    const folder = state.settings.preferences.channelLogFolder;
+    if (folder) window.macIRC.openLogFolder(folder);
   });
   el.mentionNotifyToggle.addEventListener('change', async () => {
     state.settings.preferences.notifyOnMention = el.mentionNotifyToggle.checked;
@@ -714,6 +723,16 @@ async function saveSettings() {
   state.settings = await window.macIRC.setSettings(state.settings);
 }
 
+function renderConnectionCard() {
+  el.connectionServer.textContent = state.connected ? state.settings.quickConnect.host : '—';
+  el.connectionNick.textContent = state.settings.profile.nick || '—';
+  const count = state.channels.length;
+  el.connectionChannelCount.textContent = `${count} joined`;
+
+  const folder = state.settings.preferences.channelLogFolder;
+  el.openLogFolderButton.hidden = !folder;
+}
+
 function applyTheme(theme) {
   document.body.dataset.theme = theme === 'dark' ? 'dark' : 'light';
 }
@@ -723,6 +742,8 @@ function handleIrcEvent(event) {
     state.connected = true;
     el.connectionState.textContent = `Connected to ${event.server}`;
     el.connectionStatus.classList.add('connected');
+    el.connectionStatus.classList.remove('disconnected');
+    renderConnectionCard();
     appendStatus('Connected.', 'success');
     scheduleAllTimers();
     setupLiveNotifications(event.server);
@@ -740,6 +761,7 @@ function handleIrcEvent(event) {
     clearStreamPlayer();
     el.connectionState.textContent = 'Offline';
     el.connectionStatus.classList.remove('connected');
+    el.connectionStatus.classList.add('disconnected');
     appendStatus(event.text || 'Disconnected.');
     renderChannels();
     renderMessages();
@@ -1006,6 +1028,7 @@ function renderAll() {
 function renderChannels() {
   syncChannelOrder();
   applySavedChannelOrder();
+  renderConnectionCard();
   el.channels.innerHTML = '';
 
   const tabs = ['server', ...displayChannels()];
@@ -1569,7 +1592,9 @@ function renderAutoJoinChannels() {
     name.textContent = channel;
     const remove = document.createElement('button');
     remove.type = 'button';
-    remove.textContent = 'Remove';
+    remove.className = 'icon-button';
+    remove.textContent = '✕';
+    remove.title = `Remove ${channel}`;
     remove.addEventListener('click', async () => {
       state.settings.connection.autoJoinChannels = state.settings.connection.autoJoinChannels
         .filter((entry) => entry !== channel);

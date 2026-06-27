@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('macIRC', {
   getTwitchChatters: (payload) => ipcRenderer.invoke('twitch:getChatters', payload),
   chooseLogFile: (suggestedName) => ipcRenderer.invoke('log:chooseFile', suggestedName),
   chooseLogFolder: () => ipcRenderer.invoke('log:chooseFolder'),
+  openLogFolder: (folderPath) => ipcRenderer.invoke('log:openFolder', folderPath),
   appendLog: (path, content) => ipcRenderer.invoke('log:append', { path, content }),
   getHistory: () => ipcRenderer.invoke('history:get'),
   setHistory: (history) => ipcRenderer.invoke('history:set', history),

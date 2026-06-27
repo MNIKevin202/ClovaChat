@@ -276,6 +276,12 @@ ipcMain.handle('log:chooseFolder', async () => {
   return { ok: true, path: result.filePaths[0] };
 });
 
+ipcMain.handle('log:openFolder', async (_event, folderPath) => {
+  if (!folderPath) return { ok: false };
+  const error = await shell.openPath(folderPath);
+  return error ? { ok: false, error } : { ok: true };
+});
+
 ipcMain.handle('history:get', () => historyStore.get('history'));
 
 ipcMain.handle('history:set', (_event, history) => {

@@ -10,76 +10,103 @@
   <body>
     <div class="app-shell">
       <aside class="sidebar">
-        <div class="brand">
-          <img class="brand-mark" src="../../images/logo.png" alt="ClovaChat" />
+        <div class="sidebar-scroll">
+          <div class="brand">
+            <img class="brand-mark" src="../../images/logo.png" alt="ClovaChat" />
+          </div>
+
+          <section class="card connection-card" id="connectionStatus">
+            <div class="connection-card-header">
+              <span class="status-dot"></span>
+              <span id="connectionState">Offline</span>
+            </div>
+            <div class="connection-card-grid">
+              <div class="connection-card-row">
+                <span class="connection-card-label">Server</span>
+                <span id="connectionServer">—</span>
+              </div>
+              <div class="connection-card-row">
+                <span class="connection-card-label">Nick</span>
+                <span id="connectionNick">—</span>
+              </div>
+              <div class="connection-card-row">
+                <span class="connection-card-label">Channels</span>
+                <span id="connectionChannelCount">0 joined</span>
+              </div>
+            </div>
+            <button id="openLogFolderButton" class="link-button" type="button" hidden>📁 Open Logs Folder</button>
+          </section>
+
+          <section class="sidebar-section">
+            <h2 class="section-label">Stream</h2>
+            <button id="streamSidebarButton" class="stream-sidebar-button" type="button">Watch Active Stream</button>
+
+            <section id="streamPanel" class="stream-panel" hidden>
+              <div class="stream-toolbar">
+                <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
+                <span id="streamTitle">Stream</span>
+                <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
+                <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
+                <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
+                <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
+              </div>
+              <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
+            </section>
+          </section>
+
+          <section class="sidebar-section">
+            <h2 class="section-label">Workspace</h2>
+            <nav class="tabs" aria-label="Workspace">
+              <button class="tab is-active" data-tab="chat" title="Chat"><span class="tab-icon">💬</span>Chat</button>
+              <button class="tab" data-tab="bot" title="Bot Builder"><span class="tab-icon">🤖</span>Bot</button>
+              <button class="tab" data-tab="commands" title="Command Scripts"><span class="tab-icon">/</span>Commands</button>
+              <button class="tab" data-tab="popups" title="Popup Actions"><span class="tab-icon">⚡</span>Popups</button>
+              <button class="tab" data-tab="timers" title="Timed Messages"><span class="tab-icon">⏱</span>Timers</button>
+              <button class="tab" data-tab="raw" title="Raw IRC"><span class="tab-icon">&lt;/&gt;</span>Raw</button>
+              <button class="tab" data-tab="docs" title="Documentation"><span class="tab-icon">?</span>Docs</button>
+              <button class="tab" data-tab="settings" title="Settings"><span class="tab-icon">⚙</span>Settings</button>
+            </nav>
+          </section>
+
+          <section class="connect-panel">
+            <details class="connection-details card">
+              <summary>Auto Join</summary>
+              <div class="auto-join-panel">
+                <div id="autoJoinList" class="auto-join-list"></div>
+                <form id="autoJoinForm" class="auto-join-form">
+                  <input id="autoJoinChannel" placeholder="#channel" autocomplete="off" />
+                  <button type="submit">Add</button>
+                </form>
+              </div>
+            </details>
+
+            <details class="connection-details card">
+              <summary>Server Connection</summary>
+              <div class="connection-fields">
+                <label>Server<input id="host" autocomplete="off" /></label>
+                <div class="two-col">
+                  <label>Port<input id="port" type="number" min="1" max="65535" /></label>
+                  <label class="check-row"><input id="tls" type="checkbox" /> TLS</label>
+                </div>
+                <label>Nick<input id="nick" autocomplete="username" /></label>
+                <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="oauth:... for Twitch" /></label>
+                <div class="button-row twitch-tools">
+                  <button id="twitchPresetButton" type="button">Twitch Preset</button>
+                  <button id="twitchTokenButton" type="button">Get Token</button>
+                </div>
+                <label>Channel<input id="channel" autocomplete="off" /></label>
+                <div class="button-row">
+                  <button id="connectButton" class="primary">Connect</button>
+                  <button id="disconnectButton" class="danger">Disconnect</button>
+                </div>
+              </div>
+            </details>
+          </section>
+        </div>
+
+        <div class="sidebar-footer">
           <span id="sidebarVersion" class="brand-version">ClovaChat</span>
         </div>
-
-        <div class="connection-status" id="connectionStatus">
-          <span class="status-dot"></span>
-          <span id="connectionState">Offline</span>
-        </div>
-
-        <button id="streamSidebarButton" class="stream-sidebar-button" type="button">Watch Active Stream</button>
-
-        <section id="streamPanel" class="stream-panel" hidden>
-          <div class="stream-toolbar">
-            <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
-            <span id="streamTitle">Stream</span>
-            <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
-            <button id="streamPlayButton" type="button">Pause</button>
-            <button id="streamMuteButton" type="button">Mute</button>
-            <button id="streamToggleButton" type="button">Hide</button>
-          </div>
-          <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
-        </section>
-
-        <nav class="tabs" aria-label="Workspace">
-          <button class="tab is-active" data-tab="chat">Chat</button>
-          <button class="tab" data-tab="bot">Bot</button>
-          <button class="tab" data-tab="commands">Commands</button>
-          <button class="tab" data-tab="popups">Popups</button>
-          <button class="tab" data-tab="timers">Timers</button>
-          <button class="tab" data-tab="raw">Raw</button>
-          <button class="tab" data-tab="docs">Docs</button>
-          <button class="tab" data-tab="settings">Settings</button>
-        </nav>
-
-        <section class="connect-panel">
-          <details class="connection-details">
-            <summary>Auto Join</summary>
-            <div class="auto-join-panel">
-              <div id="autoJoinList" class="auto-join-list"></div>
-              <form id="autoJoinForm" class="auto-join-form">
-                <input id="autoJoinChannel" placeholder="#channel" autocomplete="off" />
-                <button type="submit">Add</button>
-              </form>
-            </div>
-          </details>
-
-          <details class="connection-details">
-            <summary>Server Connection</summary>
-            <div class="connection-fields">
-              <label>Server<input id="host" autocomplete="off" /></label>
-              <div class="two-col">
-                <label>Port<input id="port" type="number" min="1" max="65535" /></label>
-                <label class="check-row"><input id="tls" type="checkbox" /> TLS</label>
-              </div>
-              <label>Nick<input id="nick" autocomplete="username" /></label>
-              <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="oauth:... for Twitch" /></label>
-              <div class="button-row twitch-tools">
-                <button id="twitchPresetButton" type="button">Twitch Preset</button>
-                <button id="twitchTokenButton" type="button">Get Token</button>
-              </div>
-              <label>Channel<input id="channel" autocomplete="off" /></label>
-              <div class="button-row">
-                <button id="connectButton" class="primary">Connect</button>
-                <button id="disconnectButton">Disconnect</button>
-              </div>
-            </div>
-          </details>
-        </section>
-
       </aside>
 
       <main class="main">
