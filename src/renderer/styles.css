@@ -1855,7 +1855,7 @@ textarea:focus {
 .message {
   position: relative;
   display: grid;
-  grid-template-columns: 72px 140px minmax(0, 1fr) auto;
+  grid-template-columns: 72px 140px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
   padding: 4px 6px 4px 0;
@@ -1868,7 +1868,7 @@ textarea:focus {
 }
 
 .message.no-time {
-  grid-template-columns: 140px minmax(0, 1fr) auto;
+  grid-template-columns: 140px minmax(0, 1fr);
 }
 
 .message.grouped {
@@ -1953,12 +1953,20 @@ textarea:focus {
 }
 
 .message-actions {
+  position: absolute;
+  top: 2px;
+  right: 6px;
   display: flex;
   gap: 4px;
-  justify-self: end;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--card-bg, rgba(20, 23, 27, 0.92));
+  border: 1px solid var(--card-border, var(--line));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
+  z-index: 2;
 }
 
 .message:hover .message-actions,
@@ -2234,6 +2242,53 @@ textarea:focus {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--muted);
+}
+
+.whatsnew-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}
+
+.whatsnew-entry-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.whatsnew-version {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.02em;
+}
+
+.whatsnew-date {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.whatsnew-title.whatsnew-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.whatsnew-bullets {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .settings-group .switch-row:last-child {

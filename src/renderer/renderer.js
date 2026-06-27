@@ -131,6 +131,7 @@ const el = {
   popupLabel: document.querySelector('#popupLabel'),
   popupCommand: document.querySelector('#popupCommand'),
   rawLog: document.querySelector('#rawLog'),
+  whatsnewList: document.querySelector('#whatsnewList'),
   chatHistoryToggle: document.querySelector('#chatHistoryToggle'),
   clearHistoryButton: document.querySelector('#clearHistoryButton'),
   channelLogToggle: document.querySelector('#channelLogToggle'),
@@ -1751,12 +1752,138 @@ function renderAll() {
   renderPopupEditor();
   renderTimers();
   renderStreamPlayer();
+  renderChangelog();
   scheduleAllTimers();
 
   if (state.settings.connection.connectOnOpen && !state.autoConnectStarted) {
     state.autoConnectStarted = true;
     connect();
   }
+}
+
+const CHANGELOG = [
+  {
+    version: 'v1.2.14',
+    date: '2026-06-27',
+    title: "What's New Page & Chat Layout Fix",
+    bullets: [
+      'New "What\'s New" navigation tab and command palette entry showing every release and what changed in it.',
+      'Fixed a chat layout bug where the hover action toolbar on messages (Mention/Copy/Profile/Timeout/Ban) reserved space even while hidden, squeezing message text into a one-word-per-line wrap on narrower windows.',
+    ],
+  },
+  {
+    version: 'v1.2.13',
+    date: '2026-06-27',
+    title: 'Onboarding Wizard, Chat UI Overhaul & Reset to First Install',
+    bullets: [
+      'First-launch onboarding wizard: connect Twitch, add channels, choose a layout, and add starter tools.',
+      'New Chat Display settings — timestamps, badges, emotes, density, font size, grouped messages, reduced motion.',
+      'Slash-command autocomplete, sent-message history (Up/Down), hover actions on messages, and a "New Messages" button when scrolled up.',
+      'Settings → Danger Zone: Reset to First Install with typed confirmation and an automatic backup first.',
+    ],
+  },
+  {
+    version: 'v1.2.12',
+    date: '2026-06-27',
+    title: 'Per-Channel Settings',
+    bullets: [
+      'Override chat display, bot, commands, timers, popups, logs, notifications, and stream preview on a per-channel basis.',
+      'Copy settings from another channel, apply settings to all channels, or reset any override back to the global default.',
+    ],
+  },
+  {
+    version: 'v1.2.11',
+    date: '2026-06-27',
+    title: 'Multi-Channel Dashboard',
+    bullets: [
+      'One view of every joined/auto-join channel: live status, viewers, category, chat activity, bot/timer/log status.',
+      'Sort by live-first, most active, alphabetical, recently active, or most viewers; filter by live, offline, auto-join, or bot-enabled.',
+    ],
+  },
+  {
+    version: 'v1.2.10',
+    date: '2026-06-27',
+    title: 'Command Palette',
+    bullets: [
+      'Cmd+K (macOS) / Ctrl+K (Windows/Linux) opens a searchable palette for channels, users, settings, timers, popups, bot rules, commands, stream controls, and navigation.',
+      'Keyboard-driven (arrows to move, Enter to run, Escape to close), shows recent actions first, and confirms before anything destructive.',
+    ],
+  },
+  {
+    version: 'v1.2.6 – v1.2.9',
+    date: '2026-06-26 – 2026-06-27',
+    title: 'Sidebar Redesign & Chat Power Tools',
+    bullets: [
+      'Sidebar reorganized into cards: connection summary, stream preview, workspace navigation, Auto Join, Server Connection.',
+      'Channel status strip above the message list showing user/message counts and bot/log status.',
+      'Subtle idle state ("Waiting for messages in #channel") for quiet channels.',
+      'User profile drawer when clicking a username — session stats, recent messages, a local note, and moderation quick actions.',
+    ],
+  },
+  {
+    version: 'v1.2.3 – v1.2.5',
+    date: '2026-06-26',
+    title: 'Timer Upgrades',
+    bullets: [
+      'Optional auto-expiration for timers (days/hours/minutes) with an inline editor to add, change, or clear it later.',
+      'On-channel timer pills with a live countdown, pause/resume, delete, and click-to-send-now.',
+      'Fixed timer scheduling so toggling one timer no longer reset every other timer’s countdown.',
+    ],
+  },
+  {
+    version: 'v1.2.0',
+    date: '2026-06-26',
+    title: 'Sidebar Visual Refresh',
+    bullets: [
+      'First pass at the card-based sidebar look, with icons on the workspace tabs and clearer primary/danger button styling.',
+    ],
+  },
+  {
+    version: 'v1.0.0 – v1.1.9, v1.2.1',
+    date: '2026-06-26',
+    title: 'Auto-Updates & Release Reliability',
+    bullets: [
+      'In-app updater that checks GitHub Releases and installs the right asset for Windows or macOS.',
+      'macOS builds are now signed and notarized by Apple, so updates install with no Gatekeeper warnings.',
+      'Fixed a download race condition that could corrupt the installer mid-update.',
+      'Windows installer now closes ClovaChat automatically once it launches.',
+      'Several smaller patch releases along the way while tracking down the above — not all individually listed here.',
+    ],
+  },
+];
+
+function renderChangelog() {
+  if (!el.whatsnewList) return;
+  el.whatsnewList.innerHTML = '';
+  CHANGELOG.forEach((entry) => {
+    const card = document.createElement('section');
+    card.className = 'settings-group whatsnew-entry';
+
+    const header = document.createElement('div');
+    header.className = 'whatsnew-entry-header';
+    const version = document.createElement('span');
+    version.className = 'whatsnew-version';
+    version.textContent = entry.version;
+    const date = document.createElement('span');
+    date.className = 'whatsnew-date';
+    date.textContent = entry.date;
+    header.append(version, date);
+
+    const title = document.createElement('h3');
+    title.className = 'whatsnew-title';
+    title.textContent = entry.title;
+
+    const list = document.createElement('ul');
+    list.className = 'whatsnew-bullets';
+    entry.bullets.forEach((bullet) => {
+      const item = document.createElement('li');
+      item.textContent = bullet;
+      list.append(item);
+    });
+
+    card.append(header, title, list);
+    el.whatsnewList.append(card);
+  });
 }
 
 function openChannelSettings(channel = state.activeChannel) {
@@ -2491,6 +2618,7 @@ function commandPaletteCommands(query = '') {
     }),
     paletteCommand('open-raw', 'Open Raw IRC', 'View protocol traffic and server notices.', 'Navigation', '⚡', 'raw irc protocol', () => activateTab('raw')),
     paletteCommand('open-docs', 'Open Docs', 'Read the in-app guide.', 'Navigation', '⚙', 'docs help guide wiki', () => activateTab('docs')),
+    paletteCommand('open-whatsnew', "Open What's New", 'See every release and what changed.', 'Navigation', '⚙', 'whatsnew changelog updates release notes version', () => activateTab('whatsnew')),
     paletteCommand('open-settings', 'Open Settings', 'Open preferences, backups, and updates.', 'Settings', '⚙', 'settings preferences updates backups', () => activateTab('settings')),
     paletteCommand('show-stream', 'Show stream preview', 'Open the stream player for the active channel.', 'Stream', '⚡', 'stream video show watch', () => setStreamPreviewVisible(true), {
       disabledReason: streamChannelFromActiveChannel() ? '' : 'Switch to a channel tab first.',
