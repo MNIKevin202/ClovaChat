@@ -53,6 +53,24 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Visual Polish Pass
+
+Performed a UI polish pass focused on:
+- Better spacing consistency
+- Improved typography hierarchy
+- Cleaner card styling
+- Refined sidebar layout
+- Improved channel status strip
+- More polished dashboard cards
+- Better button hierarchy
+- Cleaner filters and controls
+- Better chat readability
+- More cohesive stream panel styling
+- Improved user list styling
+
+Purpose:
+This pass improves the app's overall visual quality without changing its core layout or workflow.
+
 ## Recent UI Upgrade
 
 - Sidebar redesigned into cleaner sections

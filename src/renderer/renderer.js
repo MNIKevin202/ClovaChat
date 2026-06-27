@@ -1763,6 +1763,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.15',
+    date: '2026-06-27',
+    title: 'Visual Polish Pass',
+    bullets: [
+      'Refined spacing, typography, and card styling across the sidebar, chat view, dashboard, and stream panel for a cleaner, more consistent look.',
+      'Clearer button hierarchy (primary/secondary/tertiary/danger) with more consistent sizing and hover states throughout the app.',
+      'Polished channel tabs, the channel status strip, dashboard filters/cards/stats, the user list, and the chat composer.',
+    ],
+  },
+  {
     version: 'v1.2.14',
     date: '2026-06-27',
     title: "What's New Page & Chat Layout Fix",
@@ -2402,6 +2412,7 @@ function dashboardAction(label, action, options = {}) {
   button.type = 'button';
   button.textContent = label;
   button.disabled = Boolean(options.disabled);
+  if (label === 'Leave' || label === 'Remove Auto Join') button.classList.add('danger');
   button.addEventListener('click', async (event) => {
     event.stopPropagation();
     if (options.confirm && !window.confirm(options.confirm)) return;

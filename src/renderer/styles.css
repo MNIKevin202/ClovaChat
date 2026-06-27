@@ -15,6 +15,14 @@
   --card-bg: #fffdf9;
   --card-border: rgba(40, 34, 20, 0.1);
   --shadow: 0 18px 50px rgba(39, 34, 24, 0.13);
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
   color-scheme: light;
   font-family: "Avenir Next", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -87,28 +95,32 @@ textarea {
 
 button {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--button-bg, #ffffff);
   color: var(--ink);
   cursor: pointer;
   min-height: 34px;
-  padding: 0 12px;
-}
-
-button {
-  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  padding: 0 var(--space-3);
+  font-weight: 600;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
 }
 
 button:hover {
   border-color: var(--accent);
 }
 
+button:active {
+  transform: translateY(1px);
+}
+
 button:disabled {
   opacity: 0.45;
   cursor: default;
   border-color: var(--line);
+  transform: none;
 }
 
+/* Primary — main, high-emphasis actions (Connect, Send, Create...). */
 button.primary,
 .popup-bar button {
   background: var(--accent);
@@ -121,6 +133,28 @@ button.primary:hover {
   border-color: var(--accent-strong);
 }
 
+/* Secondary — the default look is already secondary-weight; .secondary just
+   names it explicitly for markup clarity alongside primary/tertiary/danger. */
+button.secondary {
+  background: var(--button-bg, var(--card-bg));
+  border-color: var(--card-border, var(--line));
+  color: var(--ink);
+}
+
+/* Tertiary — low-emphasis utility actions that shouldn't compete visually. */
+button.tertiary {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+
+button.tertiary:hover {
+  background: var(--button-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--card-border, var(--line));
+  color: var(--ink);
+}
+
+/* Danger — reserved for destructive actions (Leave, Remove, Reset, Ban...). */
 button.danger {
   background: transparent;
   border-color: var(--red);
@@ -150,10 +184,15 @@ button.danger:hover {
 }
 
 .link-button {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
   background: transparent;
-  border: none;
-  min-height: auto;
-  padding: 0;
+  border: 1px solid transparent;
+  min-height: 26px;
+  padding: 2px var(--space-2);
+  margin-left: calc(var(--space-2) * -1);
+  border-radius: var(--radius-sm);
   color: var(--accent);
   font-size: 12px;
   font-weight: 600;
@@ -161,8 +200,9 @@ button.danger:hover {
 }
 
 .link-button:hover {
+  background: var(--button-bg, rgba(23, 109, 115, 0.12));
+  border-color: var(--card-border, var(--line));
   color: var(--accent-strong);
-  text-decoration: underline;
 }
 
 .command-palette-backdrop {
@@ -682,13 +722,13 @@ button.danger:hover {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 16px 14px 10px;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-4) var(--space-2);
 }
 
 .sidebar-footer {
   flex: 0 0 auto;
-  padding: 8px 14px 14px;
+  padding: var(--space-2) var(--space-4) var(--space-4);
   border-top: 1px solid var(--soft-line, rgba(80, 70, 50, 0.18));
   text-align: center;
 }
@@ -696,13 +736,13 @@ button.danger:hover {
 .card {
   background: var(--card-bg, var(--button-bg, #fff));
   border: 1px solid var(--card-border, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .sidebar-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .section-label {
@@ -710,7 +750,7 @@ button.danger:hover {
   color: var(--muted);
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
@@ -718,11 +758,12 @@ button.danger:hover {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: var(--space-1) 0 var(--space-2);
 }
 
 .brand-mark {
-  width: 60%;
-  max-width: 170px;
+  width: 58%;
+  max-width: 168px;
   height: auto;
   object-fit: contain;
 }
@@ -735,16 +776,16 @@ button.danger:hover {
 }
 
 .connection-card {
-  padding: 12px 14px;
+  padding: var(--space-4);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .connection-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   font-size: 13px;
   font-weight: 700;
   color: var(--red);
@@ -776,14 +817,14 @@ button.danger:hover {
 
 .connection-card-grid {
   display: grid;
-  gap: 5px;
+  gap: var(--space-2);
 }
 
 .connection-card-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-3);
   font-size: 12px;
 }
 
@@ -807,15 +848,17 @@ button.danger:hover {
 .tabs {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
+  height: 38px;
   background: var(--card-bg, var(--button-bg));
   border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-sm);
   color: var(--muted);
   font-size: 13px;
   font-weight: 600;
@@ -824,6 +867,7 @@ button.danger:hover {
 
 .tab:hover {
   color: var(--ink);
+  background: var(--button-bg, var(--card-bg));
   border-color: var(--accent);
 }
 
@@ -837,6 +881,8 @@ button.danger:hover {
 
 .stream-sidebar-button {
   width: 100%;
+  height: 38px;
+  border-radius: var(--radius-sm);
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
@@ -851,6 +897,7 @@ button.danger:hover {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  box-shadow: 0 2px 10px rgba(23, 109, 115, 0.35);
 }
 
 .connect-panel {
@@ -1043,9 +1090,9 @@ textarea:focus {
 
 .dashboard-view {
   align-content: start;
-  gap: 18px;
+  gap: var(--space-5);
   min-height: 0;
-  padding: 24px;
+  padding: var(--space-5);
   overflow: auto;
   background: var(--panel);
 }
@@ -1053,59 +1100,72 @@ textarea:focus {
 .dashboard-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
+  gap: var(--space-4);
   align-items: start;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--card-border, var(--line));
 }
 
 .dashboard-header h2 {
   margin: 0 0 6px;
-  font-size: 22px;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .dashboard-header p {
   margin: 0;
   color: var(--muted);
+  font-size: 13px;
 }
 
 .dashboard-controls {
   display: grid;
   justify-items: end;
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .dashboard-controls label {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .dashboard-controls select {
   min-height: 34px;
   min-width: 190px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-sm);
   background: var(--input-bg, var(--button-bg));
   color: var(--ink);
-  padding: 0 10px;
+  padding: 0 var(--space-3);
 }
 
 .dashboard-filters {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--space-2);
   max-width: 620px;
 }
 
 .dashboard-filters button {
-  min-height: 30px;
-  padding: 0 10px;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border-color: var(--card-border, var(--line));
+  background: var(--card-bg, var(--button-bg));
   color: var(--muted);
-  background: var(--button-bg, #fff);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.dashboard-filters button:hover {
+  color: var(--ink);
 }
 
 .dashboard-filters button.is-active {
@@ -1117,23 +1177,26 @@ textarea:focus {
 .dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 12px;
+  gap: var(--space-4) var(--space-3);
 }
 
 .dashboard-card {
   display: grid;
-  gap: 10px;
+  gap: var(--space-3);
   min-width: 0;
-  padding: 14px;
+  padding: var(--space-4);
   border: 1px solid var(--card-border, var(--line));
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--card-bg);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
   cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
 }
 
 .dashboard-card:hover {
   border-color: rgba(44, 154, 163, 0.78);
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
 }
 
 .dashboard-card.is-live {
@@ -1170,6 +1233,8 @@ textarea:focus {
   white-space: nowrap;
   color: var(--accent-strong);
   font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
 }
 
 .dashboard-live-dot {
@@ -1193,9 +1258,13 @@ textarea:focus {
 
 .dashboard-badge,
 .dashboard-status {
-  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
   border: 1px solid var(--card-border, var(--line));
   border-radius: 999px;
+  background: var(--button-bg, transparent);
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
@@ -1237,22 +1306,26 @@ textarea:focus {
 .dashboard-metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .dashboard-metric {
   min-width: 0;
+  min-height: 52px;
   display: grid;
-  gap: 2px;
-  padding: 8px;
+  align-content: center;
+  gap: 3px;
+  padding: var(--space-2) var(--space-2);
   border: 1px solid var(--card-border, var(--line));
-  border-radius: 6px;
-  background: rgba(128, 138, 148, 0.08);
+  border-radius: var(--radius-sm);
+  background: var(--button-bg, rgba(128, 138, 148, 0.06));
 }
 
 .dashboard-metric strong {
   color: var(--muted);
   font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -1260,24 +1333,27 @@ textarea:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  color: var(--ink);
+  font-size: 14px;
   font-weight: 800;
 }
 
 .dashboard-sparkline {
-  height: 32px;
+  height: 28px;
   display: flex;
   align-items: end;
   gap: 3px;
-  padding: 4px 0;
+  margin: var(--space-1) 0;
+  padding: 0 1px;
+  border-bottom: 1px solid var(--card-border, var(--line));
 }
 
 .dashboard-sparkline span {
   width: 100%;
-  min-width: 6px;
-  border-radius: 3px 3px 0 0;
+  min-width: 5px;
+  border-radius: 2px 2px 0 0;
   background: linear-gradient(180deg, var(--secondary-accent), var(--accent));
-  opacity: 0.78;
+  opacity: 0.65;
 }
 
 .dashboard-user-link {
@@ -1309,13 +1385,16 @@ textarea:focus {
 
 .dashboard-actions {
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--card-border, var(--line));
 }
 
 .dashboard-actions button {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  font-size: 11.5px;
+  font-weight: 700;
 }
 
 .dashboard-actions button:first-child,
@@ -1343,9 +1422,9 @@ textarea:focus {
 
 .channel-tabs {
   display: flex;
-  gap: 6px;
-  min-height: 43px;
-  padding: 7px 10px 0;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 8px 12px 0;
   border-bottom: 1px solid var(--line);
   background: var(--sidebar-bg, #ebe5d7);
   overflow-x: auto;
@@ -1359,13 +1438,17 @@ textarea:focus {
   max-width: 220px;
   height: 36px;
   margin: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  background: var(--button-bg, #ffffff);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--card-bg, var(--button-bg, #fff));
+  border-color: var(--card-border, var(--line));
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.channel-tab:hover:not(.is-active) {
+  background: var(--button-bg, var(--card-bg));
 }
 
 .channel-tab.is-live::before {
@@ -1377,7 +1460,7 @@ textarea:focus {
   height: 7px;
   border-radius: 50%;
   background: var(--green);
-  box-shadow: 0 0 0 2px var(--button-bg, #fff);
+  box-shadow: 0 0 0 2px var(--card-bg, #fff);
 }
 
 .channel-tab.is-live.is-active::before {
@@ -1388,11 +1471,12 @@ textarea:focus {
   color: #fff;
   background: var(--accent);
   border-color: var(--accent);
+  box-shadow: 0 2px 10px rgba(23, 109, 115, 0.3);
 }
 
 .channel-tab.has-unread:not(.is-active) {
-  color: #fff;
-  background: var(--red);
+  color: var(--red);
+  background: var(--mention-bg, rgba(155, 53, 49, 0.14));
   border-color: var(--red);
 }
 
@@ -1467,9 +1551,9 @@ textarea:focus {
 .channel-status-strip {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
   min-height: 0;
-  padding: 6px 18px;
+  padding: var(--space-2) var(--space-5);
   border-bottom: 1px solid var(--line);
   background: var(--bar-bg, #faf7ef);
   overflow-x: auto;
@@ -1484,7 +1568,7 @@ textarea:focus {
 
 .channel-status-name {
   flex: 0 0 auto;
-  margin-right: 4px;
+  margin-right: var(--space-1);
   font-size: 13px;
   font-weight: 700;
   color: var(--ink);
@@ -1492,7 +1576,10 @@ textarea:focus {
 
 .status-pill {
   flex: 0 0 auto;
-  padding: 3px 10px;
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 var(--space-3);
   border-radius: 999px;
   background: var(--card-bg, var(--button-bg));
   border: 1px solid var(--card-border, var(--line));
@@ -1505,19 +1592,24 @@ textarea:focus {
 .status-pill.is-good {
   color: var(--green);
   border-color: var(--green);
+  background: rgba(45, 113, 69, 0.1);
 }
 
 .status-pill.is-bad {
   color: var(--red);
   border-color: var(--red);
+  background: rgba(155, 53, 49, 0.1);
 }
 
 .channel-settings-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
   min-height: 26px;
-  padding: 3px 10px;
+  padding: 0 var(--space-3);
   border-color: var(--secondary-accent);
   color: var(--secondary-accent);
-  background: transparent;
+  background: rgba(154, 79, 201, 0.08);
   font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
@@ -1631,10 +1723,10 @@ textarea:focus {
 .stream-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
+  gap: 6px;
+  padding: 0 var(--space-2);
   background: var(--bar-bg, #faf7ef);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--card-border, var(--line));
 }
 
 .stream-toolbar span {
@@ -1689,8 +1781,8 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 42px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 0 var(--space-4);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1707,28 +1799,41 @@ textarea:focus {
 
 .roster-panel h2 {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: var(--muted);
   text-transform: uppercase;
 }
 
 .roster-panel span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--card-bg, var(--button-bg));
+  border: 1px solid var(--card-border, var(--line));
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .roster-list {
   min-height: 0;
   overflow: auto;
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 .roster-user {
   display: block;
   width: 100%;
-  min-height: 28px;
-  margin-bottom: 4px;
-  padding: 0 8px;
+  min-height: 30px;
+  margin-bottom: 2px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
   border-color: transparent;
   background: transparent;
   text-align: left;
@@ -1738,7 +1843,8 @@ textarea:focus {
 }
 
 .roster-user:hover {
-  background: var(--input-bg, #fffdf8);
+  background: var(--card-bg, var(--input-bg, #fffdf8));
+  border-color: var(--card-border, var(--line));
 }
 
 .roster-user.mod,
@@ -1856,11 +1962,11 @@ textarea:focus {
   position: relative;
   display: grid;
   grid-template-columns: 72px 140px minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   align-items: start;
-  padding: 4px 6px 4px 0;
+  padding: 6px 8px 6px 10px;
   border-left: 3px solid transparent;
-  border-bottom: 1px solid var(--message-line, rgba(216, 208, 192, 0.45));
+  border-bottom: 1px solid var(--message-line, rgba(216, 208, 192, 0.4));
 }
 
 .message:hover {
@@ -1950,6 +2056,16 @@ textarea:focus {
 
 .message .text {
   overflow-wrap: anywhere;
+}
+
+.message .text a {
+  color: var(--accent-strong, var(--blue));
+  text-decoration: underline;
+  text-decoration-color: var(--card-border, rgba(255, 255, 255, 0.25));
+}
+
+.message .text a:hover {
+  text-decoration-color: currentColor;
 }
 
 .message-actions {
@@ -2092,16 +2208,36 @@ textarea:focus {
 .input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 96px;
-  gap: 10px;
-  padding: 14px 18px;
-  border-top: 1px solid var(--line);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--card-border, var(--line));
   background: var(--sidebar-bg, #ebe5d7);
   position: relative;
 }
 
 .input-row input {
   min-height: 42px;
+  border-radius: var(--radius-md);
   background: var(--input-bg-strong, #fff);
+}
+
+.input-row input:focus {
+  box-shadow: 0 0 0 3px rgba(23, 109, 115, 0.16);
+}
+
+.input-row button[type="submit"] {
+  height: 42px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.input-row button[type="submit"]:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
 }
 
 .nick-suggest {
