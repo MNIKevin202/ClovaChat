@@ -71,6 +71,8 @@ const el = {
   streamToggleButton: document.querySelector('#streamToggleButton'),
   streamToolbar: document.querySelector('#streamToolbar'),
   streamResizeGrip: document.querySelector('#streamResizeGrip'),
+  streamDockSlot: document.querySelector('#streamDockSlot'),
+  appShell: document.querySelector('.app-shell'),
   autoJoinList: document.querySelector('#autoJoinList'),
   autoJoinForm: document.querySelector('#autoJoinForm'),
   autoJoinChannel: document.querySelector('#autoJoinChannel'),
@@ -432,6 +434,7 @@ function ensureSettingsShape() {
   state.settings.appearance.theme ||= 'light';
   state.settings.appearance.sevenTvEmotes ??= true;
   state.settings.appearance.twitchPlayer ??= false;
+  state.settings.appearance.twitchPlayerDocked ??= true;
   state.settings.appearance.twitchPlayerBounds ||= null;
   state.settings.appearance.twitchPlayerChannel ||= '';
   state.settings.appearance.twitchPlayerStates ||= {};
@@ -1765,6 +1768,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.17',
+    date: '2026-06-27',
+    title: 'Dockable Stream Player & Stale Connection Fix',
+    bullets: [
+      'The stream player now lives in the sidebar by default again, but can be dragged out by its toolbar into a floating panel anywhere in the window, and dropped back near the sidebar to re-dock.',
+      'Fixed chat appearing to freeze (connection still shows Connected, but no new messages from others arrive) by detecting a stale/dead connection and automatically reconnecting and rejoining channels.',
+    ],
+  },
   {
     version: 'v1.2.16',
     date: '2026-06-27',
@@ -3232,7 +3244,7 @@ function renderStreamPlayer() {
     clearStreamPlayer();
     return;
   }
-  applyStreamPanelBounds();
+  applyStreamPanelPlacement();
 
   const channel = configuredChannel;
   el.streamTitle.textContent = `${channel} live`;
@@ -3435,6 +3447,12 @@ function streamPlayerState(channel) {
 
 const STREAM_PANEL_MIN_WIDTH = 240;
 const STREAM_PANEL_MIN_HEIGHT = 170;
+const STREAM_PANEL_DRAG_THRESHOLD = 6;
+const STREAM_REDOCK_ZONE_PX = 200;
+
+function isStreamPanelDocked() {
+  return state.settings.appearance.twitchPlayerDocked !== false;
+}
 
 function streamPanelBounds() {
   const saved = state.settings.appearance.twitchPlayerBounds || {};
@@ -3446,7 +3464,22 @@ function streamPanelBounds() {
   };
 }
 
-function applyStreamPanelBounds() {
+function applyStreamPanelPlacement() {
+  if (isStreamPanelDocked()) {
+    el.streamPanel.classList.remove('is-floating');
+    el.streamPanel.classList.add('is-docked');
+    el.streamPanel.style.left = '';
+    el.streamPanel.style.top = '';
+    el.streamPanel.style.width = '';
+    el.streamPanel.style.height = '';
+    if (!el.streamDockSlot.contains(el.streamPanel)) el.streamDockSlot.append(el.streamPanel);
+    return;
+  }
+  el.streamPanel.classList.remove('is-docked');
+  el.streamPanel.classList.add('is-floating');
+  if (!el.appShell.contains(el.streamPanel) || el.streamDockSlot.contains(el.streamPanel)) {
+    el.appShell.append(el.streamPanel);
+  }
   const bounds = clampStreamPanelBounds(streamPanelBounds());
   el.streamPanel.style.left = `${bounds.x}px`;
   el.streamPanel.style.top = `${bounds.y}px`;
@@ -3465,12 +3498,13 @@ function clampStreamPanelBounds(bounds) {
 }
 
 function clampStreamPanelToWindow() {
-  if (el.streamPanel.hidden) return;
-  applyStreamPanelBounds();
+  if (el.streamPanel.hidden || isStreamPanelDocked()) return;
+  applyStreamPanelPlacement();
 }
 
-async function saveStreamPanelBounds(bounds) {
+async function saveStreamPanelBounds(bounds, docked) {
   state.settings.appearance.twitchPlayerBounds = clampStreamPanelBounds(bounds);
+  state.settings.appearance.twitchPlayerDocked = docked;
   await saveSettings();
 }
 
@@ -3480,9 +3514,27 @@ function startStreamDrag(event) {
   event.preventDefault();
   const startX = event.clientX;
   const startY = event.clientY;
-  const start = streamPanelBounds();
+  let docked = isStreamPanelDocked();
+  let start = docked
+    ? { ...el.streamPanel.getBoundingClientRect() }
+    : streamPanelBounds();
 
-  const onMove = (moveEvent) => {
+  const undock = (moveEvent) => {
+    docked = false;
+    const rect = el.streamPanel.getBoundingClientRect();
+    start = { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+    state.settings.appearance.twitchPlayerDocked = false;
+    el.streamPanel.classList.remove('is-docked');
+    el.streamPanel.classList.add('is-floating');
+    el.appShell.append(el.streamPanel);
+    el.streamPanel.style.left = `${start.x}px`;
+    el.streamPanel.style.top = `${start.y}px`;
+    el.streamPanel.style.width = `${start.width}px`;
+    el.streamPanel.style.height = `${start.height}px`;
+    moveTo(moveEvent);
+  };
+
+  const moveTo = (moveEvent) => {
     const next = clampStreamPanelBounds({
       ...start,
       x: start.x + (moveEvent.clientX - startX),
@@ -3492,15 +3544,31 @@ function startStreamDrag(event) {
     el.streamPanel.style.top = `${next.y}px`;
   };
 
+  const onMove = (moveEvent) => {
+    if (docked) {
+      const moved = Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY);
+      if (moved < STREAM_PANEL_DRAG_THRESHOLD) return;
+      undock(moveEvent);
+      return;
+    }
+    moveTo(moveEvent);
+  };
+
   const onUp = async (upEvent) => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
+    if (docked) return;
     const next = clampStreamPanelBounds({
       ...start,
       x: start.x + (upEvent.clientX - startX),
       y: start.y + (upEvent.clientY - startY),
     });
-    await saveStreamPanelBounds(next);
+    if (next.x < STREAM_REDOCK_ZONE_PX) {
+      await saveStreamPanelBounds(next, true);
+      renderStreamPlayer();
+      return;
+    }
+    await saveStreamPanelBounds(next, false);
   };
 
   window.addEventListener('pointermove', onMove);
@@ -3508,7 +3576,7 @@ function startStreamDrag(event) {
 }
 
 function startStreamPanelResize(event) {
-  if (!state.settings.appearance.twitchPlayer) return;
+  if (!state.settings.appearance.twitchPlayer || isStreamPanelDocked()) return;
   event.preventDefault();
   event.stopPropagation();
   const startX = event.clientX;
@@ -3533,7 +3601,7 @@ function startStreamPanelResize(event) {
       width: start.width + (upEvent.clientX - startX),
       height: start.height + (upEvent.clientY - startY),
     });
-    await saveStreamPanelBounds(next);
+    await saveStreamPanelBounds(next, false);
   };
 
   window.addEventListener('pointermove', onMove);

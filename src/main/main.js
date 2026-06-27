@@ -67,6 +67,7 @@ const DEFAULT_SETTINGS = {
       theme: 'light',
       sevenTvEmotes: true,
       twitchPlayer: false,
+      twitchPlayerDocked: true,
       twitchPlayerBounds: null
     },
     connection: {

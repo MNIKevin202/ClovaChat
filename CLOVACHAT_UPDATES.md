@@ -53,6 +53,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Dockable Stream Player & Stale Connection Fix
+
+- The stream player is docked back in the sidebar by default. Dragging it by its toolbar detaches it into a floating, resizable panel that can go anywhere in the window, including on top of chat; dropping it back near the sidebar re-docks it.
+- Dock/floating state and the floating panel's position and size are remembered between sessions.
+- Fixed chat appearing to silently freeze: the connection card kept showing "Connected" and outgoing messages still sent, but incoming chat from other users stopped arriving because the underlying socket had gone stale (a "zombie" connection with no error or close event). ClovaChat now detects this with a keepalive watchdog and automatically reconnects and rejoins channels.
+
 ## Floating Stream Player & Ad-Freeze Fix
 
 - The Twitch stream preview is now a floating overlay panel instead of a fixed pane embedded in the sidebar. It can be dragged anywhere in the window (including on top of chat) and resized from its bottom-right corner.

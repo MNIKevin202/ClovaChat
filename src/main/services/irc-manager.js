@@ -1,6 +1,15 @@
 const net = require('net');
 const tls = require('tls');
 
+// Twitch sends a server PING roughly every 5 minutes to keep the connection
+// alive. If we haven't seen any data (not even a PING) in this long, the
+// socket is most likely a "zombie" connection — TCP never errored or closed,
+// but the read side silently died (common after sleep/wake or network
+// changes) — so chat looks "connected" forever while no new messages arrive.
+const STALE_DATA_THRESHOLD_MS = 4 * 60 * 1000;
+const STALE_PING_GRACE_MS = 20 * 1000;
+const WATCHDOG_INTERVAL_MS = 30 * 1000;
+
 class IrcManager {
   constructor({ onEvent }) {
     this.onEvent = onEvent;
@@ -9,6 +18,9 @@ class IrcManager {
     this.config = null;
     this.channels = new Set();
     this.connected = false;
+    this.lastDataAt = 0;
+    this.livenessPingSentAt = 0;
+    this.watchdogTimer = null;
   }
 
   connect(config) {
@@ -17,25 +29,67 @@ class IrcManager {
     this.emit({ type: 'status', level: 'info', text: `Connecting to ${this.config.host}:${this.config.port}...` });
 
     const socketFactory = this.config.tls ? tls.connect : net.connect;
-    this.socket = socketFactory({
+    const socket = socketFactory({
       host: this.config.host,
       port: this.config.port,
       rejectUnauthorized: false,
     });
+    this.socket = socket;
 
-    this.socket.setEncoding('utf8');
-    this.socket.on('connect', () => this.register());
-    this.socket.on('secureConnect', () => this.register());
-    this.socket.on('data', (chunk) => this.handleData(chunk));
-    this.socket.on('error', (error) => {
+    socket.setEncoding('utf8');
+    this.lastDataAt = Date.now();
+    this.livenessPingSentAt = 0;
+    socket.on('connect', () => this.register());
+    socket.on('secureConnect', () => this.register());
+    socket.on('data', (chunk) => this.handleData(chunk));
+    socket.on('error', (error) => {
+      if (this.socket !== socket) return;
       this.emit({ type: 'status', level: 'error', text: error.message });
     });
-    this.socket.on('close', () => {
+    socket.on('close', () => {
+      // A socket replaced by a watchdog-triggered reconnect closes
+      // asynchronously after the new one is already in place — ignore stale
+      // close events so they don't wipe the UI for a connection that's fine.
+      if (this.socket !== socket) return;
       this.connected = false;
+      this.stopWatchdog();
       this.emit({ type: 'disconnected', text: 'Disconnected.' });
     });
 
+    this.startWatchdog();
     return { ok: true };
+  }
+
+  startWatchdog() {
+    this.stopWatchdog();
+    this.watchdogTimer = setInterval(() => this.checkConnectionLiveness(), WATCHDOG_INTERVAL_MS);
+  }
+
+  stopWatchdog() {
+    if (this.watchdogTimer) clearInterval(this.watchdogTimer);
+    this.watchdogTimer = null;
+  }
+
+  checkConnectionLiveness() {
+    if (!this.socket || !this.connected) return;
+    const idleFor = Date.now() - this.lastDataAt;
+    if (this.livenessPingSentAt) {
+      if (Date.now() - this.livenessPingSentAt > STALE_PING_GRACE_MS) {
+        this.emit({ type: 'status', level: 'info', text: 'Connection looked stale, reconnecting...' });
+        this.reconnect();
+      }
+      return;
+    }
+    if (idleFor > STALE_DATA_THRESHOLD_MS) {
+      this.livenessPingSentAt = Date.now();
+      this.raw('PING :clovachat-keepalive');
+    }
+  }
+
+  reconnect() {
+    if (!this.config) return;
+    const channels = Array.from(this.channels);
+    this.connect({ ...this.config, channels });
   }
 
   register() {
@@ -60,6 +114,7 @@ class IrcManager {
   }
 
   disconnect() {
+    this.stopWatchdog();
     if (this.socket) {
       this.raw('QUIT :Leaving ClovaChat');
       this.socket.destroy();
@@ -179,6 +234,8 @@ class IrcManager {
   }
 
   handleData(chunk) {
+    this.lastDataAt = Date.now();
+    this.livenessPingSentAt = 0;
     this.buffer += chunk;
     const lines = this.buffer.split(/\r?\n/);
     this.buffer = lines.pop() || '';
