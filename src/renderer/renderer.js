@@ -30,6 +30,7 @@ const state = {
     unavailableChannels: new Set(),
   },
   liveChannels: new Set(),
+  streamDetails: new Map(),
   livePollHandle: null,
   draggedChannel: '',
   userStats: new Map(),
@@ -70,6 +71,10 @@ const el = {
   twitchTokenButton: document.querySelector('#twitchTokenButton'),
   connectButton: document.querySelector('#connectButton'),
   disconnectButton: document.querySelector('#disconnectButton'),
+  dashboardTab: document.querySelector('#dashboardTab'),
+  dashboardSort: document.querySelector('#dashboardSort'),
+  dashboardFilters: document.querySelector('#dashboardFilters'),
+  dashboardGrid: document.querySelector('#dashboardGrid'),
   chatTab: document.querySelector('#chatTab'),
   channels: document.querySelector('#channels'),
   topicBar: document.querySelector('#topicBar'),
@@ -293,6 +298,9 @@ function ensureSettingsShape() {
   state.settings.preferences.notifyOnMention ??= false;
   state.settings.preferences.notifyOnLive ??= false;
   state.settings.preferences.moveLiveTabsToFront ??= true;
+  state.settings.preferences.dashboardSort ||= 'live';
+  state.settings.preferences.dashboardFilter ||= 'all';
+  state.settings.preferences.dashboardStreamStatus ??= true;
   state.settings.preferences.recentCommandPaletteActions ||= [];
   state.settings.preferences.hiddenChats ||= {};
   state.settings.preferences.roleMemory ||= {};
@@ -389,6 +397,8 @@ function hydrateSettings() {
   el.mentionNotifyToggle.checked = state.settings.preferences.notifyOnMention;
   el.liveNotifyToggle.checked = state.settings.preferences.notifyOnLive;
   el.liveTabSortToggle.checked = state.settings.preferences.moveLiveTabsToFront;
+  el.dashboardSort.value = state.settings.preferences.dashboardSort;
+  setDashboardFilter(state.settings.preferences.dashboardFilter || 'all', { save: false });
   updateChannelLogFolderLabel();
   applyTheme(state.settings.appearance.theme);
   state.activeChannel = quick.channel;
@@ -485,6 +495,16 @@ function bindEvents() {
 
   document.querySelectorAll('.tab').forEach((button) => {
     button.addEventListener('click', () => activateTab(button.dataset.tab));
+  });
+  el.dashboardSort.addEventListener('change', async () => {
+    state.settings.preferences.dashboardSort = el.dashboardSort.value;
+    await saveSettings();
+    renderDashboard();
+  });
+  el.dashboardFilters.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-dashboard-filter]');
+    if (!button) return;
+    await setDashboardFilter(button.dataset.dashboardFilter);
   });
 
   el.connectButton.addEventListener('click', connect);
@@ -626,6 +646,7 @@ function bindEvents() {
     await saveSettings();
     renderAutoJoinChannels();
     renderChatActions();
+    renderDashboard();
     if (state.connected) window.macIRC.send({ target: channel, text: `/join ${channel}` });
   });
 
@@ -639,6 +660,7 @@ function bindEvents() {
     await saveSettings();
     renderAutoJoinChannels();
     renderChatActions();
+    renderDashboard();
   });
 
   el.inputForm.addEventListener('submit', (event) => {
@@ -861,6 +883,7 @@ function handleIrcEvent(event) {
     clearTimerHandles();
     stopLivePolling();
     clearStreamPlayer();
+    state.streamDetails.clear();
     el.connectionState.textContent = 'Offline';
     el.connectionStatus.classList.remove('connected');
     el.connectionStatus.classList.add('disconnected');
@@ -869,6 +892,7 @@ function handleIrcEvent(event) {
     renderMessages();
     renderRoster();
     renderStreamPlayer();
+    renderDashboard();
     hideNickSuggestion();
   }
 
@@ -1111,6 +1135,7 @@ function runScript(script, target, depth) {
 function renderAll() {
   syncChannelOrder();
   applySavedChannelOrder();
+  renderDashboard();
   renderChannels();
   renderPopups();
   renderAutoJoinChannels();
@@ -1127,6 +1152,278 @@ function renderAll() {
     state.autoConnectStarted = true;
     connect();
   }
+}
+
+async function setDashboardFilter(filter, { save = true } = {}) {
+  const nextFilter = ['all', 'live', 'offline', 'active', 'autoJoin', 'bot'].includes(filter) ? filter : 'all';
+  state.settings.preferences.dashboardFilter = nextFilter;
+  el.dashboardFilters.querySelectorAll('[data-dashboard-filter]').forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.dashboardFilter === nextFilter);
+  });
+  if (save) await saveSettings();
+  renderDashboard();
+}
+
+function renderDashboard() {
+  if (!el.dashboardGrid || !state.settings) return;
+  const cards = dashboardChannelCards();
+  el.dashboardGrid.innerHTML = '';
+
+  if (cards.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'dashboard-empty';
+    empty.innerHTML = '<strong>No joined channels yet.</strong><span>Join a Twitch channel to start monitoring chat, stream status, timers, and bot tools.</span>';
+    el.dashboardGrid.append(empty);
+    return;
+  }
+
+  cards.forEach((card) => {
+    el.dashboardGrid.append(renderDashboardCard(card));
+  });
+}
+
+function dashboardChannelCards() {
+  const channels = uniqueChannels([
+    ...state.channels,
+    ...state.settings.connection.autoJoinChannels,
+  ]).filter((channel) => !isServerTarget(channel));
+  const cards = channels.map(dashboardChannelCard);
+  const filtered = filterDashboardCards(cards, state.settings.preferences.dashboardFilter || 'all');
+  return sortDashboardCards(filtered, state.settings.preferences.dashboardSort || 'live');
+}
+
+function dashboardChannelCard(channel) {
+  const login = channel.replace(/^#/, '').toLowerCase();
+  const stream = state.streamDetails.get(login);
+  const messages = (state.messagesByTarget.get(channel) || []).filter((entry) => entry.kind === 'message');
+  const lastMessage = messages[messages.length - 1] || null;
+  const activeMessages = messages.filter((entry) => Date.now() - entry.timestamp <= 5 * 60 * 1000).length;
+  const recentMessages = messages.filter((entry) => Date.now() - entry.timestamp <= 60 * 1000).length;
+  const mentionCount = messages.filter((entry) => entry.direction === 'in' && messageMentionsNick(entry.text)).length;
+  const timers = timersForChannel(channel);
+  return {
+    channel,
+    login,
+    joined: state.channels.includes(channel),
+    autoJoin: channelIsAutoJoined(channel),
+    live: state.liveChannels.has(login),
+    stream,
+    viewerCount: Number(stream?.viewer_count),
+    game: stream?.game_name || 'Unknown',
+    title: stream?.title || 'Unknown',
+    userCount: (state.rosters.get(channel) || new Map()).size,
+    messageCount: messages.length,
+    activeMessages,
+    recentMessages,
+    activityLabel: dashboardActivityLabel(recentMessages),
+    lastMessage,
+    lastMessageAt: lastMessage?.timestamp || 0,
+    unread: state.unreadChannels.has(channel),
+    mentionCount,
+    botEnabled: (state.settings.botRules || []).some((rule) => rule.enabled && botRuleMatchesChannel(rule, channel)),
+    timersEnabled: timers.some((timer) => timer.enabled),
+    hasTimers: timers.length > 0,
+    logsEnabled: Boolean(state.settings.preferences.channelLogging && state.settings.preferences.channelLogFolder),
+    sparkline: dashboardSparkline(messages),
+  };
+}
+
+function filterDashboardCards(cards, filter) {
+  return cards.filter((card) => {
+    if (filter === 'live') return card.live;
+    if (filter === 'offline') return !card.live;
+    if (filter === 'active') return card.recentMessages > 0;
+    if (filter === 'autoJoin') return card.autoJoin;
+    if (filter === 'bot') return card.botEnabled;
+    return true;
+  });
+}
+
+function sortDashboardCards(cards, sort) {
+  return cards.slice().sort((a, b) => {
+    if (sort === 'activity') return b.recentMessages - a.recentMessages || b.messageCount - a.messageCount || a.channel.localeCompare(b.channel);
+    if (sort === 'alpha') return a.channel.localeCompare(b.channel);
+    if (sort === 'recent') return b.lastMessageAt - a.lastMessageAt || a.channel.localeCompare(b.channel);
+    if (sort === 'viewers') return (b.viewerCount || 0) - (a.viewerCount || 0) || a.channel.localeCompare(b.channel);
+    if (a.live !== b.live) return a.live ? -1 : 1;
+    return a.channel.localeCompare(b.channel);
+  });
+}
+
+function renderDashboardCard(card) {
+  const item = document.createElement('article');
+  item.className = `dashboard-card${card.live ? ' is-live' : ''}${card.joined ? '' : ' is-auto-only'}`;
+  item.addEventListener('click', () => {
+    if (card.joined) switchToChannel(card.channel);
+    else activateTab('chat');
+  });
+
+  const header = document.createElement('header');
+  header.className = 'dashboard-card-header';
+  const title = document.createElement('div');
+  title.className = 'dashboard-card-title';
+  const liveDot = document.createElement('span');
+  liveDot.className = `dashboard-live-dot${card.live ? ' is-live' : ''}`;
+  const name = document.createElement('strong');
+  name.textContent = card.channel;
+  title.append(liveDot, name);
+  const badges = document.createElement('div');
+  badges.className = 'dashboard-card-badges';
+  if (card.unread) badges.append(dashboardBadge('Unread', 'warn'));
+  if (card.autoJoin) badges.append(dashboardBadge('Auto Join'));
+  if (!card.joined) badges.append(dashboardBadge('Not Joined', 'muted'));
+  header.append(title, badges);
+
+  const streamLine = document.createElement('div');
+  streamLine.className = 'dashboard-stream-line';
+  streamLine.textContent = card.live
+    ? `Live · ${Number.isFinite(card.viewerCount) ? `${card.viewerCount.toLocaleString()} viewers` : 'Unknown viewers'} · ${card.game}`
+    : `Offline · Unknown viewers · ${card.game}`;
+
+  const streamTitle = document.createElement('div');
+  streamTitle.className = 'dashboard-stream-title';
+  streamTitle.textContent = card.title;
+
+  const metrics = document.createElement('div');
+  metrics.className = 'dashboard-metrics';
+  metrics.append(
+    dashboardMetric('Chat', `${card.userCount} users`),
+    dashboardMetric('Messages', String(card.messageCount)),
+    dashboardMetric('Activity', card.activityLabel),
+    dashboardMetric('Mentions', String(card.mentionCount))
+  );
+
+  const sparkline = document.createElement('div');
+  sparkline.className = 'dashboard-sparkline';
+  card.sparkline.forEach((value) => {
+    const bar = document.createElement('span');
+    bar.style.height = `${Math.max(3, Math.min(28, 3 + value * 5))}px`;
+    sparkline.append(bar);
+  });
+
+  const last = document.createElement('div');
+  last.className = 'dashboard-last-message';
+  if (card.lastMessage) {
+    last.append(document.createTextNode('Last: '));
+    const quote = document.createElement('span');
+    quote.textContent = `“${truncateText(card.lastMessage.text, 90)}” `;
+    const by = document.createElement('button');
+    by.type = 'button';
+    by.className = 'dashboard-user-link';
+    by.textContent = `by ${card.lastMessage.nick}`;
+    by.addEventListener('click', (event) => {
+      event.stopPropagation();
+      openUserDrawer(card.channel, card.lastMessage.nick);
+    });
+    const time = document.createElement('span');
+    time.className = 'dashboard-last-time';
+    time.textContent = ` · ${formatTime(card.lastMessage.timestamp)}`;
+    last.append(quote, by, time);
+  } else {
+    last.textContent = 'Last: No messages this session';
+  }
+
+  const status = document.createElement('div');
+  status.className = 'dashboard-status-line';
+  status.append(
+    dashboardStatus('Bot', card.botEnabled),
+    dashboardStatus('Timers', card.hasTimers ? card.timersEnabled : false, card.hasTimers ? '' : 'None'),
+    dashboardStatus('Logs', card.logsEnabled)
+  );
+
+  const actions = document.createElement('div');
+  actions.className = 'dashboard-actions';
+  actions.append(
+    dashboardAction('Open Chat', () => switchToChannel(card.channel), { disabled: !card.joined }),
+    dashboardAction('Open Stream', () => openStreamForChannel(card.channel)),
+    dashboardAction(card.joined ? 'Leave' : 'Join', () => (card.joined ? leaveChannel(card.channel) : joinChannelOnce(card.channel)), {
+      confirm: card.joined ? `Leave ${card.channel}?` : '',
+      disabled: !card.joined && !state.connected,
+    }),
+    dashboardAction(card.autoJoin ? 'Remove Auto Join' : 'Add Auto Join', () => (
+      card.autoJoin ? removeAutoJoinChannel(card.channel) : addChannelToAutoJoin(card.channel)
+    ), {
+      confirm: card.autoJoin ? `Remove ${card.channel} from Auto Join?` : '',
+    }),
+    dashboardAction('Run Popup', () => runDashboardPopup(card.channel), {
+      disabled: state.settings.popups.length === 0 || !card.joined,
+    }),
+    dashboardAction('Open Logs', openConfiguredLogFolder, {
+      disabled: !state.settings.preferences.channelLogFolder,
+    }),
+    dashboardAction('Settings', () => {
+      activateTab('settings');
+    })
+  );
+
+  item.append(header, streamLine, streamTitle, metrics, sparkline, last, status, actions);
+  return item;
+}
+
+function dashboardBadge(text, tone = '') {
+  const badge = document.createElement('span');
+  badge.className = `dashboard-badge${tone ? ` ${tone}` : ''}`;
+  badge.textContent = text;
+  return badge;
+}
+
+function dashboardMetric(label, value) {
+  const metric = document.createElement('span');
+  metric.className = 'dashboard-metric';
+  metric.innerHTML = `<strong>${escapeHtml(label)}</strong><span>${escapeHtml(value)}</span>`;
+  return metric;
+}
+
+function dashboardStatus(label, enabled, fallback = '') {
+  const status = document.createElement('span');
+  status.className = `dashboard-status${enabled ? ' is-on' : ''}`;
+  status.textContent = `${label}: ${fallback || (enabled ? 'On' : 'Off')}`;
+  return status;
+}
+
+function dashboardAction(label, action, options = {}) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.disabled = Boolean(options.disabled);
+  button.addEventListener('click', async (event) => {
+    event.stopPropagation();
+    if (options.confirm && !window.confirm(options.confirm)) return;
+    await action();
+    renderDashboard();
+  });
+  return button;
+}
+
+function dashboardActivityLabel(recentMessages) {
+  if (recentMessages >= 8) return 'Very active';
+  if (recentMessages >= 3) return 'Active';
+  if (recentMessages >= 1) return 'Warming up';
+  return 'Quiet';
+}
+
+function dashboardSparkline(messages) {
+  const now = Date.now();
+  const bins = Array(12).fill(0);
+  messages.forEach((entry) => {
+    const age = now - entry.timestamp;
+    if (age < 0 || age > 10 * 60 * 1000) return;
+    const index = 11 - Math.floor(age / (50 * 1000));
+    bins[Math.max(0, Math.min(11, index))] += 1;
+  });
+  return bins;
+}
+
+function runDashboardPopup(channel) {
+  const popup = state.settings.popups[0];
+  if (!popup) return;
+  const command = popup.command.replaceAll('$channel', channel || '');
+  runInputForTarget(command, channel);
+}
+
+function truncateText(value, maxLength) {
+  const text = String(value || '');
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
 function switchToChannel(channel) {
@@ -1280,6 +1577,7 @@ function commandPaletteCommands(query = '') {
     paletteCommand('open-logs-folder', 'Open Logs Folder', 'Open the configured channel log folder.', 'Settings', '⚙', 'logs folder open channel log', openConfiguredLogFolder, {
       disabledReason: state.settings.preferences.channelLogFolder ? '' : 'Choose a channel log folder in Settings first.',
     }),
+    paletteCommand('open-dashboard', 'Open Dashboard', 'View every joined and auto-join channel at once.', 'Navigation', '▦', 'dashboard command center overview multi channel', () => activateTab('dashboard')),
     paletteCommand('open-chat', 'Open Chat', 'Go to the chat workspace.', 'Navigation', '⚡', 'chat page tab', () => activateTab('chat')),
     paletteCommand('open-bot', 'Open Bot Builder', 'Build self-hosted bot rules.', 'Bot', '/', 'bot builder rules', () => activateTab('bot')),
     paletteCommand('open-commands', 'Open Commands', 'Manage mIRC and Python command scripts.', 'Command', '/', 'commands aliases scripts python mirc', () => activateTab('commands')),
@@ -1457,6 +1755,7 @@ function recentCommandPaletteCommands(commands) {
   if (recent.length > 0) return recent.slice(0, 10);
   return commands.filter((command) => [
     'focus-chat',
+    'open-dashboard',
     'open-bot',
     'open-commands',
     'new-timer',
@@ -1583,6 +1882,16 @@ async function setStreamPreviewVisible(visible) {
   renderStreamPlayer();
 }
 
+async function openStreamForChannel(channel) {
+  const normalized = normalizeChannel(channel);
+  if (!normalized || isServerTarget(normalized)) return;
+  saveCurrentStreamPlayerState();
+  state.settings.appearance.twitchPlayer = true;
+  state.settings.appearance.twitchPlayerChannel = normalized.replace(/^#/, '').toLowerCase();
+  await saveSettings();
+  renderStreamPlayer();
+}
+
 function setStreamPaused(paused) {
   if (!state.streamPlayer) return;
   try {
@@ -1670,6 +1979,7 @@ function renderChannels() {
   renderTimerChannelOptions();
   renderChannelChrome();
   renderChatActions();
+  renderDashboard();
 }
 
 function applySavedChannelOrder() {
@@ -2049,6 +2359,7 @@ function renderRoster() {
   renderChannelStatusStrip();
   if (isServerTarget(state.activeChannel)) {
     el.rosterCount.textContent = '0';
+    renderDashboard();
     return;
   }
   const users = Array.from((state.rosters.get(state.activeChannel) || new Map()).values())
@@ -2061,6 +2372,7 @@ function renderRoster() {
     empty.className = 'roster-empty';
     empty.textContent = 'No users yet';
     el.roster.append(empty);
+    renderDashboard();
     return;
   }
 
@@ -2079,6 +2391,7 @@ function renderRoster() {
     });
     el.roster.append(item);
   });
+  renderDashboard();
 }
 
 function isMonitored(nick) {
@@ -2220,6 +2533,7 @@ function renderAutoJoinChannels() {
       await saveSettings();
       renderAutoJoinChannels();
       renderChatActions();
+      renderDashboard();
     });
     item.append(name, remove);
     el.autoJoinList.append(item);
@@ -2880,6 +3194,7 @@ async function setupLiveNotifications(host) {
   state.twitchRoster.loadingChannels.clear();
   state.twitchRoster.unavailableChannels.clear();
   state.liveChannels.clear();
+  state.streamDetails.clear();
   if (!host.toLowerCase().includes('twitch.tv')) return;
 
   const token = stripOauthPrefix(state.settings.profile.password);
@@ -2910,7 +3225,9 @@ function scheduleLivePolling() {
   stopLivePolling();
   if (!shouldPollLiveChannels()) {
     state.liveChannels.clear();
+    state.streamDetails.clear();
     renderChannels();
+    renderDashboard();
     return;
   }
   if (!state.connected || !state.twitchClientId) return;
@@ -2920,7 +3237,11 @@ function scheduleLivePolling() {
 }
 
 function shouldPollLiveChannels() {
-  return Boolean(state.settings.preferences.notifyOnLive || state.settings.preferences.moveLiveTabsToFront);
+  return Boolean(
+    state.settings.preferences.dashboardStreamStatus
+    || state.settings.preferences.notifyOnLive
+    || state.settings.preferences.moveLiveTabsToFront
+  );
 }
 
 function stopLivePolling() {
@@ -2948,15 +3269,18 @@ async function pollLiveChannels() {
     });
     if (!response.ok) return;
     const data = await response.json();
-    const nowLive = new Set((data.data || []).map((stream) => stream.user_login.toLowerCase()));
+    const streams = data.data || [];
+    const nowLive = new Set(streams.map((stream) => stream.user_login.toLowerCase()));
+    state.streamDetails = new Map(streams.map((stream) => [stream.user_login.toLowerCase(), stream]));
 
     for (const login of nowLive) {
       if (state.settings.preferences.notifyOnLive && !state.liveChannels.has(login)) {
-        notifyChannelLive(login, data.data.find((s) => s.user_login.toLowerCase() === login));
+        notifyChannelLive(login, streams.find((s) => s.user_login.toLowerCase() === login));
       }
     }
     state.liveChannels = nowLive;
     renderChannels();
+    renderDashboard();
     renderStreamPlayer();
   } catch {
     // Network hiccup; try again on the next poll.
@@ -3065,6 +3389,7 @@ function appendMessage(event) {
   storeMessage(event.target, entry);
   logMonitoredMessage(entry);
   logChannelMessage(event.target, entry);
+  renderDashboard();
   if (normalizeChannel(event.target) !== state.activeChannel) return;
   renderMessages();
 }
@@ -3257,6 +3582,7 @@ function setRosterUsers(channel, nicks) {
     }
   });
   if (normalized === state.activeChannel) renderRoster();
+  renderDashboard();
 }
 
 function addRosterUser(channel, nick, role = '', options = {}) {
@@ -3266,6 +3592,7 @@ function addRosterUser(channel, nick, role = '', options = {}) {
   setRosterUser(normalized, rosterFor(normalized), nick, role, options);
   rememberChatter(nick);
   if (normalized === state.activeChannel) renderRoster();
+  renderDashboard();
 }
 
 function removeRosterUser(channel, nick) {
@@ -3275,6 +3602,7 @@ function removeRosterUser(channel, nick) {
   if (!roster) return;
   roster.delete(nick.toLowerCase());
   if (normalized === state.activeChannel) renderRoster();
+  renderDashboard();
 }
 
 function removeRosterUserFromAllChannels(nick) {
@@ -3283,6 +3611,7 @@ function removeRosterUserFromAllChannels(nick) {
     roster.delete(nick.toLowerCase());
     if (channel === state.activeChannel) renderRoster();
   }
+  renderDashboard();
 }
 
 function rosterFor(channel) {

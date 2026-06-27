@@ -50,6 +50,7 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - In-app update checks from GitHub Releases
 - macOS DMG update download/open flow
 - Windows EXE installer builds from GitHub Actions
+- Multi-Channel Dashboard
 
 ## Recent UI Upgrade
 
@@ -63,6 +64,37 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Server tab cleaned up so it does not show roster, popups, auto-join actions, quick chat buttons, or the message composer
 
 ## Current Upgrade
+
+- Added a Multi-Channel Dashboard workspace view.
+- The dashboard shows joined and auto-join channels in one place.
+- Channel cards show live status, viewer count, category, stream title, chat users, session messages, activity speed, last message, bot status, timer status, and log status.
+- Dashboard actions open chat, open stream preview, join or leave, add or remove Auto Join, run a popup, open logs, and jump to Settings.
+- Sorting supports live channels first, most active chat, alphabetical, recently active, and most viewers.
+- Filtering supports all channels, live, offline, active chat, auto join, and bot enabled.
+- Stream status data reuses the existing throttled Twitch live poll instead of adding extra request loops.
+
+## Requested Upgrade 5: Multi-Channel Dashboard
+
+Add a dashboard view that shows all joined channels in one place with live status, viewer count, chat activity, user count, last message, bot status, timer status, and log status.
+
+The dashboard should include:
+
+- Channel cards or a table layout
+- Live/offline indicators
+- Viewer count if available
+- Category/game if available
+- Stream title if available
+- Chat user count
+- Session message count
+- Chat activity speed
+- Last message preview
+- Quick actions for each channel
+- Sorting and filtering options
+
+Purpose:
+This turns ClovaChat into a true multi-channel Twitch command center instead of requiring the user to jump between tabs to understand what is happening.
+
+## Previous Upgrade
 
 - Added a Command Palette opened with Cmd+K on macOS and Ctrl+K on Windows/Linux.
 - The palette searches channels, users, settings, timers, popups, bot rules, command scripts, stream controls, and app navigation.

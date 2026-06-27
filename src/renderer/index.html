@@ -57,6 +57,7 @@
           <section class="sidebar-section">
             <h2 class="section-label">Workspace</h2>
             <nav class="tabs" aria-label="Workspace">
+              <button class="tab" data-tab="dashboard" title="Dashboard"><span class="tab-icon">▦</span>Dashboard</button>
               <button class="tab is-active" data-tab="chat" title="Chat"><span class="tab-icon">💬</span>Chat</button>
               <button class="tab" data-tab="bot" title="Bot Builder"><span class="tab-icon">🤖</span>Bot</button>
               <button class="tab" data-tab="commands" title="Command Scripts"><span class="tab-icon">/</span>Commands</button>
@@ -110,6 +111,35 @@
       </aside>
 
       <main class="main">
+        <section id="dashboardTab" class="view dashboard-view">
+          <header class="dashboard-header">
+            <div>
+              <h2>Multi-Channel Dashboard</h2>
+              <p>Monitor joined and auto-join channels from one command-center view.</p>
+            </div>
+            <div class="dashboard-controls">
+              <label>Sort
+                <select id="dashboardSort">
+                  <option value="live">Live channels first</option>
+                  <option value="activity">Most active chat first</option>
+                  <option value="alpha">Alphabetical</option>
+                  <option value="recent">Recently active</option>
+                  <option value="viewers">Most viewers</option>
+                </select>
+              </label>
+              <div id="dashboardFilters" class="dashboard-filters" aria-label="Dashboard filters">
+                <button class="is-active" type="button" data-dashboard-filter="all">All</button>
+                <button type="button" data-dashboard-filter="live">Live</button>
+                <button type="button" data-dashboard-filter="offline">Offline</button>
+                <button type="button" data-dashboard-filter="active">Active Chat</button>
+                <button type="button" data-dashboard-filter="autoJoin">Auto Join</button>
+                <button type="button" data-dashboard-filter="bot">Bot Enabled</button>
+              </div>
+            </div>
+          </header>
+          <div id="dashboardGrid" class="dashboard-grid"></div>
+        </section>
+
         <section id="chatTab" class="view is-active">
           <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
           <div id="topicBar" class="topic-bar">No active channel</div>
@@ -247,6 +277,7 @@
           <aside class="docs-nav" aria-label="Docs categories">
             <h2>Docs</h2>
             <a href="#docs-start">Getting Started</a>
+            <a href="#docs-dashboard">Dashboard</a>
             <a href="#docs-palette">Command Palette</a>
             <a href="#docs-chat">Chat</a>
             <a href="#docs-channels">Channels</a>
@@ -277,6 +308,20 @@
                 <li>Enter your nick and password. For Twitch, the password should be an OAuth token that starts with oauth:.</li>
                 <li>Enter a starting channel such as #mnikevin202.</li>
                 <li>Click Connect. Server events appear in the Server tab, and joined channels appear across the top of Chat.</li>
+              </ol>
+            </section>
+
+            <section id="docs-dashboard" class="docs-section">
+              <h3>Dashboard</h3>
+              <ol>
+                <li>Open Dashboard from the Workspace section to see joined and Auto Join channels in one view.</li>
+                <li>Use Sort to prioritize live channels, active chats, alphabetical order, recent activity, or viewer count.</li>
+                <li>Use filters for All, Live, Offline, Active Chat, Auto Join, and Bot Enabled.</li>
+                <li>Each card shows live status, viewers when available, category, stream title, users, session messages, activity speed, last message, bot, timers, and logs.</li>
+                <li>Click a card to open its channel in Chat.</li>
+                <li>Click the username in the last message preview to open the User Profile Drawer.</li>
+                <li>Use card actions to open chat, open stream preview, join or leave, add or remove Auto Join, run the first popup action, open logs, or jump to Settings.</li>
+                <li>Stream status uses the same throttled Twitch polling as live notifications and live tab sorting, so it does not add a separate request loop.</li>
               </ol>
             </section>
 
