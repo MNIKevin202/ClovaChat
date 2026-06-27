@@ -701,8 +701,9 @@ button.danger:hover {
 }
 
 .app-shell {
+  position: relative;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) 8px;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
   height: 100vh;
   min-height: 0;
   overflow: hidden;
@@ -1706,13 +1707,20 @@ textarea:focus {
 }
 
 .stream-panel {
+  position: absolute;
+  top: 90px;
+  left: calc(var(--sidebar-width) + 24px);
+  z-index: 60;
   display: grid;
   grid-template-rows: 36px minmax(0, 1fr);
-  aspect-ratio: 16 / 9;
-  margin-top: 8px;
+  width: 480px;
+  height: 295px;
+  min-width: 240px;
+  min-height: 170px;
   border: 1px solid var(--card-border, var(--line));
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: #000;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
   overflow: hidden;
 }
 
@@ -1727,6 +1735,8 @@ textarea:focus {
   padding: 0 var(--space-2);
   background: var(--bar-bg, #faf7ef);
   border-bottom: 1px solid var(--card-border, var(--line));
+  cursor: move;
+  user-select: none;
 }
 
 .stream-toolbar span {
@@ -1786,15 +1796,18 @@ textarea:focus {
   border-bottom: 1px solid var(--line);
 }
 
-.stream-resize-handle {
-  width: 8px;
-  min-height: 0;
-  cursor: ew-resize;
-  background: var(--line);
+.stream-resize-grip {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.35) 50%);
 }
 
-.stream-resize-handle:hover {
-  background: var(--accent);
+.stream-resize-grip:hover {
+  background: linear-gradient(135deg, transparent 50%, var(--accent) 50%);
 }
 
 .roster-panel h2 {

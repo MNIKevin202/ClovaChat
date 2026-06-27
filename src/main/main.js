@@ -67,7 +67,7 @@ const DEFAULT_SETTINGS = {
       theme: 'light',
       sevenTvEmotes: true,
       twitchPlayer: false,
-      twitchPlayerWidth: 420
+      twitchPlayerBounds: null
     },
     connection: {
       connectOnOpen: false,
@@ -120,6 +120,7 @@ async function createWindow() {
       preload: path.join(__dirname, '../preload/preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      backgroundThrottling: false,
     }
   });
 

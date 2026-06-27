@@ -69,7 +69,8 @@ const el = {
   streamPlayButton: document.querySelector('#streamPlayButton'),
   streamMuteButton: document.querySelector('#streamMuteButton'),
   streamToggleButton: document.querySelector('#streamToggleButton'),
-  streamResizeHandle: document.querySelector('#streamResizeHandle'),
+  streamToolbar: document.querySelector('#streamToolbar'),
+  streamResizeGrip: document.querySelector('#streamResizeGrip'),
   autoJoinList: document.querySelector('#autoJoinList'),
   autoJoinForm: document.querySelector('#autoJoinForm'),
   autoJoinChannel: document.querySelector('#autoJoinChannel'),
@@ -431,7 +432,7 @@ function ensureSettingsShape() {
   state.settings.appearance.theme ||= 'light';
   state.settings.appearance.sevenTvEmotes ??= true;
   state.settings.appearance.twitchPlayer ??= false;
-  state.settings.appearance.twitchPlayerWidth ??= 420;
+  state.settings.appearance.twitchPlayerBounds ||= null;
   state.settings.appearance.twitchPlayerChannel ||= '';
   state.settings.appearance.twitchPlayerStates ||= {};
   state.settings.connection ||= {};
@@ -1190,7 +1191,9 @@ function bindEvents() {
   el.streamNextButton.addEventListener('click', () => navigateStream(1));
   el.streamPlayButton.addEventListener('click', toggleStreamPlayback);
   el.streamMuteButton.addEventListener('click', toggleStreamMute);
-  el.streamResizeHandle?.addEventListener('pointerdown', startStreamResize);
+  el.streamToolbar?.addEventListener('pointerdown', startStreamDrag);
+  el.streamResizeGrip?.addEventListener('pointerdown', startStreamPanelResize);
+  window.addEventListener('resize', clampStreamPanelToWindow);
 
   el.autoJoinForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1762,6 +1765,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.16',
+    date: '2026-06-27',
+    title: 'Floating Stream Player & Ad-Freeze Fix',
+    bullets: [
+      'The stream preview is now a floating panel you can drag anywhere (including on top of chat) and resize from its corner, instead of being fixed in the sidebar. Its position and size are remembered.',
+      'Fixed a bug where the stream would get stuck after a Twitch ad break and only resume after restarting the app — the player now detects a stuck state and automatically resumes.',
+    ],
+  },
   {
     version: 'v1.2.15',
     date: '2026-06-27',
@@ -2931,6 +2943,7 @@ async function openStreamForChannel(channel) {
 
 function setStreamPaused(paused) {
   if (!state.streamPlayer) return;
+  state.streamUserPaused = paused;
   try {
     if (paused) state.streamPlayer.pause();
     else state.streamPlayer.play();
@@ -3213,16 +3226,13 @@ function openActiveChannelTimers() {
 function renderStreamPlayer() {
   const configuredChannel = state.settings.appearance.twitchPlayerChannel || streamChannelFromActiveChannel();
   const enabled = state.settings.appearance.twitchPlayer && Boolean(configuredChannel);
-  const width = enabled
-    ? Math.min(720, Math.max(336, Number(state.settings.appearance.twitchPlayerWidth || 420)))
-    : 336;
-  document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
   el.streamSidebarButton.textContent = enabled ? 'Hide Stream' : 'Watch Active Stream';
   el.streamPanel.hidden = !enabled;
   if (!enabled) {
     clearStreamPlayer();
     return;
   }
+  applyStreamPanelBounds();
 
   const channel = configuredChannel;
   el.streamTitle.textContent = `${channel} live`;
@@ -3300,15 +3310,38 @@ function createStreamPlayer(channel) {
     autoplay: !playerState.paused,
   });
   state.streamPlayerChannel = channel;
+  state.streamUserPaused = Boolean(playerState.paused);
   state.streamPlayer.addEventListener(window.Twitch.Player.READY, () => {
     if (typeof playerState.volume === 'number') state.streamPlayer.setVolume(playerState.volume);
     state.streamPlayer.setMuted(Boolean(playerState.muted));
     if (playerState.paused) state.streamPlayer.pause();
     updateStreamControlButtons();
   });
+  state.streamPlayer.addEventListener(window.Twitch.Player.ENDED, () => {
+    if (!state.streamUserPaused) state.streamPlayer?.play();
+  });
+  startStreamWatchdog();
+}
+
+function startStreamWatchdog() {
+  stopStreamWatchdog();
+  state.streamWatchdog = setInterval(() => {
+    if (!state.streamPlayer || state.streamUserPaused) return;
+    try {
+      if (state.streamPlayer.isPaused()) state.streamPlayer.play();
+    } catch {
+      // player not ready yet, ignore until the next tick
+    }
+  }, 4000);
+}
+
+function stopStreamWatchdog() {
+  if (state.streamWatchdog) clearInterval(state.streamWatchdog);
+  state.streamWatchdog = null;
 }
 
 function clearStreamPlayer() {
+  stopStreamWatchdog();
   state.streamPlayer = null;
   state.streamPlayerChannel = '';
   el.streamPlayer.innerHTML = '';
@@ -3343,8 +3376,13 @@ function saveCurrentStreamPlayerState() {
 function toggleStreamPlayback() {
   if (!state.streamPlayer) return;
   try {
-    if (state.streamPlayer.isPaused()) state.streamPlayer.play();
-    else state.streamPlayer.pause();
+    if (state.streamPlayer.isPaused()) {
+      state.streamUserPaused = false;
+      state.streamPlayer.play();
+    } else {
+      state.streamUserPaused = true;
+      state.streamPlayer.pause();
+    }
     setTimeout(() => {
       saveCurrentStreamPlayerState();
       updateStreamControlButtons();
@@ -3395,22 +3433,107 @@ function streamPlayerState(channel) {
   };
 }
 
-function startStreamResize(event) {
+const STREAM_PANEL_MIN_WIDTH = 240;
+const STREAM_PANEL_MIN_HEIGHT = 170;
+
+function streamPanelBounds() {
+  const saved = state.settings.appearance.twitchPlayerBounds || {};
+  return {
+    x: Number.isFinite(saved.x) ? saved.x : 360,
+    y: Number.isFinite(saved.y) ? saved.y : 90,
+    width: Number.isFinite(saved.width) ? saved.width : 480,
+    height: Number.isFinite(saved.height) ? saved.height : 295,
+  };
+}
+
+function applyStreamPanelBounds() {
+  const bounds = clampStreamPanelBounds(streamPanelBounds());
+  el.streamPanel.style.left = `${bounds.x}px`;
+  el.streamPanel.style.top = `${bounds.y}px`;
+  el.streamPanel.style.width = `${bounds.width}px`;
+  el.streamPanel.style.height = `${bounds.height}px`;
+}
+
+function clampStreamPanelBounds(bounds) {
+  const maxWidth = Math.max(STREAM_PANEL_MIN_WIDTH, window.innerWidth - 24);
+  const maxHeight = Math.max(STREAM_PANEL_MIN_HEIGHT, window.innerHeight - 24);
+  const width = Math.min(maxWidth, Math.max(STREAM_PANEL_MIN_WIDTH, bounds.width));
+  const height = Math.min(maxHeight, Math.max(STREAM_PANEL_MIN_HEIGHT, bounds.height));
+  const x = Math.min(Math.max(0, window.innerWidth - width), Math.max(0, bounds.x));
+  const y = Math.min(Math.max(0, window.innerHeight - height), Math.max(0, bounds.y));
+  return { x, y, width, height };
+}
+
+function clampStreamPanelToWindow() {
+  if (el.streamPanel.hidden) return;
+  applyStreamPanelBounds();
+}
+
+async function saveStreamPanelBounds(bounds) {
+  state.settings.appearance.twitchPlayerBounds = clampStreamPanelBounds(bounds);
+  await saveSettings();
+}
+
+function startStreamDrag(event) {
   if (!state.settings.appearance.twitchPlayer) return;
+  if (event.target.closest('button')) return;
   event.preventDefault();
   const startX = event.clientX;
-  const startWidth = Number(state.settings.appearance.twitchPlayerWidth || 420);
+  const startY = event.clientY;
+  const start = streamPanelBounds();
 
   const onMove = (moveEvent) => {
-    const nextWidth = Math.min(720, Math.max(336, startWidth + (moveEvent.clientX - startX)));
-    document.documentElement.style.setProperty('--sidebar-width', `${nextWidth}px`);
-    state.settings.appearance.twitchPlayerWidth = Math.round(nextWidth);
+    const next = clampStreamPanelBounds({
+      ...start,
+      x: start.x + (moveEvent.clientX - startX),
+      y: start.y + (moveEvent.clientY - startY),
+    });
+    el.streamPanel.style.left = `${next.x}px`;
+    el.streamPanel.style.top = `${next.y}px`;
   };
 
-  const onUp = async () => {
+  const onUp = async (upEvent) => {
     window.removeEventListener('pointermove', onMove);
     window.removeEventListener('pointerup', onUp);
-    await saveSettings();
+    const next = clampStreamPanelBounds({
+      ...start,
+      x: start.x + (upEvent.clientX - startX),
+      y: start.y + (upEvent.clientY - startY),
+    });
+    await saveStreamPanelBounds(next);
+  };
+
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+}
+
+function startStreamPanelResize(event) {
+  if (!state.settings.appearance.twitchPlayer) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const start = streamPanelBounds();
+
+  const onMove = (moveEvent) => {
+    const next = clampStreamPanelBounds({
+      ...start,
+      width: start.width + (moveEvent.clientX - startX),
+      height: start.height + (moveEvent.clientY - startY),
+    });
+    el.streamPanel.style.width = `${next.width}px`;
+    el.streamPanel.style.height = `${next.height}px`;
+  };
+
+  const onUp = async (upEvent) => {
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    const next = clampStreamPanelBounds({
+      ...start,
+      width: start.width + (upEvent.clientX - startX),
+      height: start.height + (upEvent.clientY - startY),
+    });
+    await saveStreamPanelBounds(next);
   };
 
   window.addEventListener('pointermove', onMove);

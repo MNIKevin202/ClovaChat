@@ -40,18 +40,6 @@
           <section class="sidebar-section">
             <h2 class="section-label">Stream</h2>
             <button id="streamSidebarButton" class="stream-sidebar-button" type="button">Watch Active Stream</button>
-
-            <section id="streamPanel" class="stream-panel" hidden>
-              <div class="stream-toolbar">
-                <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
-                <span id="streamTitle">Stream</span>
-                <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
-                <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
-                <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
-                <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
-              </div>
-              <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
-            </section>
           </section>
 
           <section class="sidebar-section">
@@ -699,7 +687,19 @@
           </div>
         </section>
       </main>
-      <div id="streamResizeHandle" class="stream-resize-handle" role="separator" aria-orientation="vertical"></div>
+
+      <section id="streamPanel" class="stream-panel" hidden>
+        <div id="streamToolbar" class="stream-toolbar">
+          <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
+          <span id="streamTitle">Stream</span>
+          <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
+          <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
+          <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
+          <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
+        </div>
+        <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
+        <div id="streamResizeGrip" class="stream-resize-grip" title="Drag to resize"></div>
+      </section>
     </div>
 
     <aside id="userDrawer" class="user-drawer" aria-label="User profile">

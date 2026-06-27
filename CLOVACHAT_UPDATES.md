@@ -53,6 +53,13 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Floating Stream Player & Ad-Freeze Fix
+
+- The Twitch stream preview is now a floating overlay panel instead of a fixed pane embedded in the sidebar. It can be dragged anywhere in the window (including on top of chat) and resized from its bottom-right corner.
+- The panel's position and size are remembered between sessions.
+- Removed the old sidebar-width drag handle that only existed to resize the embedded player.
+- Fixed a bug where the stream would get stuck after a Twitch ad break and only resume after fully restarting the app. The player now detects an unexpected stuck/paused state and automatically resumes playback, and the app window no longer throttles background activity while unfocused.
+
 ## Visual Polish Pass
 
 Performed a UI polish pass focused on:
