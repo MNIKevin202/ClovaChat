@@ -111,6 +111,20 @@ class IrcManager {
       text: 'Use the connect form to open a new server connection.'
     });
 
+    // Twitch implements moderation/utility commands (timeout, ban, unban,
+    // clear, color, marker, etc.) by intercepting plain PRIVMSG text that
+    // starts with "/" — there's no separate protocol command for them. Any
+    // slash command we don't handle locally gets forwarded as-is so Twitch
+    // can interpret it; Twitch replies with a NOTICE either way (success or
+    // "Unrecognized command"), which already surfaces in the UI.
+    if (this.config.isTwitch && target) {
+      // Send directly over the wire (not via privmsg()) so the command itself
+      // doesn't get echoed into the local chat log as if it were a message —
+      // Twitch doesn't show these to anyone either, just replies with a NOTICE.
+      this.raw(`PRIVMSG ${target} :${input}`);
+      return;
+    }
+
     this.emit({ type: 'unknown-command', command, args, target });
   }
 
@@ -235,6 +249,7 @@ class IrcManager {
         nick: message.tags['display-name'] || this.config.profile.nick,
         role: roleFromBadges(message.tags.badges || ''),
         roleKnown: hasBadgeMetadata,
+        badges: message.tags.badges || '',
         timestamp: Date.now()
       });
       return;
@@ -277,6 +292,7 @@ class IrcManager {
         nick,
         role,
         roleKnown: hasBadgeMetadata,
+        badges: message.tags.badges || '',
         text: displayText,
         twitchEmotes: parseTwitchEmotes(message.tags.emotes || '', displayText),
         timestamp: Date.now()

@@ -523,6 +523,52 @@
       <div id="streamResizeHandle" class="stream-resize-handle" role="separator" aria-orientation="vertical"></div>
     </div>
 
+    <aside id="userDrawer" class="user-drawer" aria-label="User profile">
+      <div class="user-drawer-header">
+        <h2>User Profile</h2>
+        <button id="userDrawerClose" class="icon-button" type="button" title="Close">✕</button>
+      </div>
+      <div class="user-drawer-body">
+        <div class="user-drawer-identity">
+          <div id="userDrawerName" class="user-drawer-name">—</div>
+          <div id="userDrawerDisplayName" class="user-drawer-display-name"></div>
+          <div id="userDrawerBadges" class="user-drawer-badges"></div>
+        </div>
+
+        <section class="user-drawer-section">
+          <h3 class="section-label">Session Stats</h3>
+          <div class="user-drawer-stats">
+            <div class="user-drawer-stat-row"><span>Messages</span><span id="userDrawerMessageCount">0</span></div>
+            <div class="user-drawer-stat-row"><span>First seen</span><span id="userDrawerFirstSeen">—</span></div>
+            <div class="user-drawer-stat-row"><span>Last message</span><span id="userDrawerLastMessage">—</span></div>
+          </div>
+        </section>
+
+        <section class="user-drawer-section">
+          <h3 class="section-label">Recent Messages</h3>
+          <div id="userDrawerRecentMessages" class="user-drawer-recent"></div>
+        </section>
+
+        <section class="user-drawer-section">
+          <h3 class="section-label">Note</h3>
+          <textarea id="userDrawerNote" placeholder="Private note about this user..."></textarea>
+        </section>
+
+        <section class="user-drawer-section">
+          <h3 class="section-label">Actions</h3>
+          <div class="user-drawer-actions">
+            <button id="userDrawerMention" type="button">Mention</button>
+            <button id="userDrawerCopy" type="button">Copy Username</button>
+            <button id="userDrawerWhisper" type="button">Whisper</button>
+            <button id="userDrawerTimeout" type="button" class="danger">Timeout</button>
+            <button id="userDrawerBan" type="button" class="danger">Ban</button>
+            <button id="userDrawerUnban" type="button">Unban</button>
+            <button id="userDrawerClear" type="button">Clear Messages</button>
+          </div>
+        </section>
+      </div>
+    </aside>
+
     <script src="./renderer.js"></script>
   </body>
 </html>

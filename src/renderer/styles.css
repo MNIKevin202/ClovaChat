@@ -1059,6 +1059,11 @@ textarea:focus {
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.message .nick:hover {
+  text-decoration: underline;
 }
 
 .message.out .nick {
@@ -1609,4 +1614,191 @@ textarea:focus {
   .docs-content {
     padding: 22px 20px 34px;
   }
+}
+
+.user-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 340px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg, var(--panel));
+  border-left: 1px solid var(--card-border, var(--line));
+  box-shadow: var(--shadow);
+  z-index: 500;
+  transform: translateX(100%);
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+.user-drawer.is-open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.user-drawer-header {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.user-drawer-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.user-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-drawer-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.user-drawer-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.user-drawer-display-name {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.user-drawer-display-name:empty {
+  display: none;
+}
+
+.user-drawer-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.user-drawer-badge {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--button-bg, var(--card-bg));
+  border: 1px solid var(--card-border, var(--line));
+  color: var(--muted);
+}
+
+.user-drawer-badge.broadcaster {
+  color: var(--secondary-accent);
+  border-color: var(--secondary-accent);
+}
+
+.user-drawer-badge.mod {
+  color: var(--mod-color, var(--blue));
+  border-color: var(--mod-color, var(--blue));
+}
+
+.user-drawer-badge.vip {
+  color: var(--vip-color, var(--secondary-accent));
+  border-color: var(--vip-color, var(--secondary-accent));
+}
+
+.user-drawer-badge.subscriber {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.user-drawer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.user-drawer-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.user-drawer-stat-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.user-drawer-stat-row > span:first-child {
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.user-drawer-stat-row > span:last-child {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.user-drawer-recent {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.user-drawer-message {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.user-drawer-message .time {
+  flex: 0 0 auto;
+  color: var(--time-color, var(--muted));
+}
+
+.user-drawer-message .text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+}
+
+.user-drawer-empty {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.user-drawer-section textarea#userDrawerNote {
+  min-height: 70px;
+  font-size: 13px;
+}
+
+.user-drawer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.user-drawer-actions button {
+  font-size: 12px;
+  padding: 0 8px;
 }

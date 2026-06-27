@@ -32,6 +32,8 @@ const state = {
   liveChannels: new Set(),
   livePollHandle: null,
   draggedChannel: '',
+  userStats: new Map(),
+  userDrawer: { open: false, channel: '', nick: '' },
 };
 
 const el = {
@@ -130,6 +132,23 @@ const el = {
   appVersion: document.querySelector('#appVersion'),
   updateStatus: document.querySelector('#updateStatus'),
   checkUpdatesButton: document.querySelector('#checkUpdatesButton'),
+  userDrawer: document.querySelector('#userDrawer'),
+  userDrawerClose: document.querySelector('#userDrawerClose'),
+  userDrawerName: document.querySelector('#userDrawerName'),
+  userDrawerDisplayName: document.querySelector('#userDrawerDisplayName'),
+  userDrawerBadges: document.querySelector('#userDrawerBadges'),
+  userDrawerMessageCount: document.querySelector('#userDrawerMessageCount'),
+  userDrawerFirstSeen: document.querySelector('#userDrawerFirstSeen'),
+  userDrawerLastMessage: document.querySelector('#userDrawerLastMessage'),
+  userDrawerRecentMessages: document.querySelector('#userDrawerRecentMessages'),
+  userDrawerNote: document.querySelector('#userDrawerNote'),
+  userDrawerMention: document.querySelector('#userDrawerMention'),
+  userDrawerCopy: document.querySelector('#userDrawerCopy'),
+  userDrawerWhisper: document.querySelector('#userDrawerWhisper'),
+  userDrawerTimeout: document.querySelector('#userDrawerTimeout'),
+  userDrawerBan: document.querySelector('#userDrawerBan'),
+  userDrawerUnban: document.querySelector('#userDrawerUnban'),
+  userDrawerClear: document.querySelector('#userDrawerClear'),
 };
 
 init();
@@ -271,6 +290,7 @@ function ensureSettingsShape() {
   state.settings.preferences.moveLiveTabsToFront ??= true;
   state.settings.preferences.hiddenChats ||= {};
   state.settings.preferences.roleMemory ||= {};
+  state.settings.preferences.userNotes ||= {};
   migrateDefaultScripts();
   loadHiddenChats();
   loadRoleMemory();
@@ -380,9 +400,62 @@ function bindEvents() {
     if (state.activeContextMenu && !state.activeContextMenu.contains(event.target)) hideContextMenu();
   });
   window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') hideContextMenu();
+    if (event.key === 'Escape') {
+      hideContextMenu();
+      if (state.userDrawer.open) closeUserDrawer();
+    }
   });
   window.addEventListener('blur', hideContextMenu);
+
+  el.userDrawerClose.addEventListener('click', closeUserDrawer);
+
+  el.userDrawerMention.addEventListener('click', () => {
+    const key = state.userDrawer.nick.toLowerCase();
+    const current = el.messageInput.value;
+    el.messageInput.value = `${current}${current && !current.endsWith(' ') ? ' ' : ''}@${key} `;
+    el.messageInput.focus();
+  });
+
+  el.userDrawerCopy.addEventListener('click', async () => {
+    const key = state.userDrawer.nick.toLowerCase();
+    await navigator.clipboard.writeText(key);
+    appendStatus(`Copied "${key}" to clipboard.`, 'info');
+  });
+
+  el.userDrawerTimeout.addEventListener('click', () => {
+    const { channel, nick } = state.userDrawer;
+    if (!canModerateChannel(channel)) return;
+    if (!window.confirm(`Timeout ${nick} for 10 minutes in ${channel}?`)) return;
+    runInputForTarget(`/timeout ${nick.toLowerCase()} 600`, channel);
+  });
+
+  el.userDrawerBan.addEventListener('click', () => {
+    const { channel, nick } = state.userDrawer;
+    if (!canModerateChannel(channel)) return;
+    if (!window.confirm(`Ban ${nick} from ${channel}? This cannot be undone from here.`)) return;
+    runInputForTarget(`/ban ${nick.toLowerCase()}`, channel);
+  });
+
+  el.userDrawerUnban.addEventListener('click', () => {
+    const { channel, nick } = state.userDrawer;
+    if (!canModerateChannel(channel)) return;
+    if (!window.confirm(`Unban ${nick} in ${channel}?`)) return;
+    runInputForTarget(`/unban ${nick.toLowerCase()}`, channel);
+  });
+
+  el.userDrawerClear.addEventListener('click', () => {
+    const { channel, nick } = state.userDrawer;
+    if (!window.confirm(`Remove ${nick}'s messages from your local view of ${channel}?`)) return;
+    clearUserMessagesLocally(channel, nick);
+  });
+
+  let userNoteSaveTimer = null;
+  el.userDrawerNote.addEventListener('input', () => {
+    const key = state.userDrawer.nick.toLowerCase();
+    state.settings.preferences.userNotes[key] = el.userDrawerNote.value;
+    clearTimeout(userNoteSaveTimer);
+    userNoteSaveTimer = setTimeout(() => saveSettings(), 500);
+  });
 
   document.querySelectorAll('.tab').forEach((button) => {
     button.addEventListener('click', () => activateTab(button.dataset.tab));
@@ -757,6 +830,8 @@ function handleIrcEvent(event) {
     state.rosters.clear();
     state.messagesByTarget.clear();
     state.recentChatters = [];
+    state.userStats.clear();
+    closeUserDrawer();
     clearTimerHandles();
     stopLivePolling();
     clearStreamPlayer();
@@ -807,7 +882,7 @@ function handleIrcEvent(event) {
 
   if (event.type === 'userstate') {
     addChannel(event.channel);
-    addRosterUser(event.channel, event.nick, event.role, { roleKnown: event.roleKnown });
+    addRosterUser(event.channel, event.nick, event.role, { roleKnown: event.roleKnown, badges: event.badges });
   }
 
   if (event.type === 'notice') {
@@ -816,19 +891,21 @@ function handleIrcEvent(event) {
 
   if (event.type === 'message') {
     addChannel(event.target);
-    addRosterUser(event.target, event.nick, event.role, { roleKnown: event.roleKnown });
+    addRosterUser(event.target, event.nick, event.role, { roleKnown: event.roleKnown, badges: event.badges });
     rememberChatter(event.nick);
     markChannelUnread(event.target);
     appendMessage(event);
+    recordUserMessage(event.target, event.nick, event.text, event.timestamp);
     runBotRules(event);
     notifyOnMention(event);
   }
 
   if (event.type === 'action') {
     addChannel(event.target);
-    addRosterUser(event.target, event.nick, event.role, { roleKnown: event.roleKnown });
+    addRosterUser(event.target, event.nick, event.role, { roleKnown: event.roleKnown, badges: event.badges });
     rememberChatter(event.nick);
     markChannelUnread(event.target);
+    recordUserMessage(event.target, event.nick, `* ${event.text}`, event.timestamp);
     const actionPrefix = `* ${event.nick} `;
     appendMessage({
       ...event,
@@ -1074,6 +1151,10 @@ function renderChannels() {
     button.addEventListener('click', () => {
       state.activeChannel = channel;
       state.unreadChannels.delete(channel);
+      if (state.userDrawer.open) {
+        state.userDrawer.channel = channel;
+        renderUserDrawer();
+      }
       renderChannels();
       renderTopic();
       renderRoster();
@@ -1496,8 +1577,7 @@ function renderRoster() {
     appendRoleIcon(item, user.role);
     item.append(document.createTextNode(user.nick));
     item.addEventListener('click', () => {
-      el.messageInput.value = `${el.messageInput.value}${user.nick}: `;
-      el.messageInput.focus();
+      openUserDrawer(state.activeChannel, user.nick);
     });
     item.addEventListener('contextmenu', (event) => {
       event.preventDefault();
@@ -2558,6 +2638,9 @@ function renderMessageRow(event) {
   nick.className = `nick${event.role ? ` ${event.role}` : ''}`;
   appendRoleIcon(nick, event.role);
   nick.append(document.createTextNode(event.nick));
+  nick.addEventListener('click', () => {
+    openUserDrawer(event.target || state.activeChannel, event.nick);
+  });
   const text = document.createElement('span');
   text.className = 'text';
   renderMessageText(text, event.text, event.target || state.activeChannel, event.twitchEmotes);
@@ -2721,6 +2804,7 @@ function setRosterUser(channel, roster, nick, role = '', options = {}) {
   roster.set(key, {
     nick: existing?.nick || nick,
     role: nextRole,
+    badges: options.badges ?? existing?.badges ?? '',
   });
 }
 
@@ -2749,7 +2833,143 @@ function isRememberedRole(role) {
 }
 
 function getRosterUser(channel, nick) {
-  return state.rosters.get(channel)?.get(nick.toLowerCase()) || { nick, role: '' };
+  return state.rosters.get(channel)?.get(nick.toLowerCase()) || { nick, role: '', badges: '' };
+}
+
+// --- User profile drawer ---
+
+function recordUserMessage(channel, nick, text, timestamp) {
+  const normalized = normalizeChannel(channel);
+  if (!normalized || !nick) return;
+  if (!state.userStats.has(normalized)) state.userStats.set(normalized, new Map());
+  const channelStats = state.userStats.get(normalized);
+  const key = nick.toLowerCase();
+  const stamp = timestamp || Date.now();
+  const existing = channelStats.get(key) || { messageCount: 0, firstSeenAt: stamp, lastMessageAt: stamp, recentMessages: [] };
+  existing.messageCount += 1;
+  existing.lastMessageAt = stamp;
+  existing.recentMessages = [...existing.recentMessages, { text, timestamp: stamp }].slice(-5);
+  channelStats.set(key, existing);
+
+  if (state.userDrawer.open && state.userDrawer.channel === normalized && state.userDrawer.nick.toLowerCase() === key) {
+    renderUserDrawer();
+  }
+}
+
+function getUserStats(channel, nick) {
+  const normalized = normalizeChannel(channel);
+  return state.userStats.get(normalized)?.get((nick || '').toLowerCase())
+    || { messageCount: 0, firstSeenAt: null, lastMessageAt: null, recentMessages: [] };
+}
+
+const KNOWN_BOT_NICKS = ['nightbot', 'streamelements', 'streamlabs', 'moobot', 'fossabot', 'wizebot', 'own3d', 'sery_bot', 'creatisbot'];
+
+function looksLikeBot(nick) {
+  const lower = (nick || '').toLowerCase();
+  return KNOWN_BOT_NICKS.includes(lower) || lower.endsWith('bot');
+}
+
+function parseBadgeList(badgesRaw, nick) {
+  const names = (badgesRaw || '').split(',').map((badge) => badge.split('/')[0]).filter(Boolean);
+  const labels = [];
+  if (names.includes('broadcaster')) labels.push('Broadcaster');
+  if (names.some((name) => ['moderator', 'global_mod', 'admin', 'staff'].includes(name))) labels.push('Mod');
+  if (names.includes('vip')) labels.push('VIP');
+  if (names.some((name) => name === 'subscriber' || name === 'founder')) labels.push('Subscriber');
+  if (looksLikeBot(nick)) labels.push('Bot');
+  return labels;
+}
+
+function canModerateChannel(channel) {
+  const self = getRosterUser(normalizeChannel(channel), state.settings.profile.nick || '');
+  return self.role === 'mod';
+}
+
+function openUserDrawer(channel, nick) {
+  if (!nick) return;
+  state.userDrawer = { open: true, channel: normalizeChannel(channel) || state.activeChannel, nick };
+  el.userDrawer.classList.add('is-open');
+  renderUserDrawer();
+}
+
+function closeUserDrawer() {
+  state.userDrawer.open = false;
+  el.userDrawer.classList.remove('is-open');
+}
+
+function renderUserDrawer() {
+  if (!state.userDrawer.open) return;
+  const { channel, nick } = state.userDrawer;
+  const key = nick.toLowerCase();
+  const rosterUser = getRosterUser(channel, nick);
+
+  el.userDrawerName.textContent = key;
+  el.userDrawerDisplayName.textContent = nick !== key ? nick : '';
+
+  el.userDrawerBadges.innerHTML = '';
+  const badges = parseBadgeList(rosterUser.badges, nick);
+  if (badges.length === 0) {
+    const span = document.createElement('span');
+    span.className = 'user-drawer-badge';
+    span.textContent = 'No roles';
+    el.userDrawerBadges.append(span);
+  } else {
+    badges.forEach((label) => {
+      const span = document.createElement('span');
+      span.className = `user-drawer-badge ${label.toLowerCase()}`;
+      span.textContent = label;
+      el.userDrawerBadges.append(span);
+    });
+  }
+
+  const stats = getUserStats(channel, nick);
+  el.userDrawerMessageCount.textContent = String(stats.messageCount);
+  el.userDrawerFirstSeen.textContent = stats.firstSeenAt ? formatTime(stats.firstSeenAt) : '—';
+  el.userDrawerLastMessage.textContent = stats.lastMessageAt ? formatTime(stats.lastMessageAt) : '—';
+
+  el.userDrawerRecentMessages.innerHTML = '';
+  if (stats.recentMessages.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'user-drawer-empty';
+    empty.textContent = 'No messages yet this session.';
+    el.userDrawerRecentMessages.append(empty);
+  } else {
+    stats.recentMessages.slice().reverse().forEach((entry) => {
+      const row = document.createElement('div');
+      row.className = 'user-drawer-message';
+      const time = document.createElement('span');
+      time.className = 'time';
+      time.textContent = formatTime(entry.timestamp);
+      const text = document.createElement('span');
+      text.className = 'text';
+      text.textContent = entry.text;
+      row.append(time, text);
+      el.userDrawerRecentMessages.append(row);
+    });
+  }
+
+  el.userDrawerNote.value = state.settings.preferences.userNotes[key] || '';
+
+  const moderationAllowed = canModerateChannel(channel);
+  [el.userDrawerTimeout, el.userDrawerBan, el.userDrawerUnban].forEach((button) => {
+    button.disabled = !moderationAllowed;
+    button.title = moderationAllowed ? '' : 'Requires moderator permissions.';
+  });
+  el.userDrawerWhisper.disabled = true;
+  el.userDrawerWhisper.title = 'Twitch removed whisper support over IRC.';
+}
+
+function clearUserMessagesLocally(channel, nick) {
+  const normalized = normalizeChannel(channel);
+  const messages = state.messagesByTarget.get(normalized);
+  if (!messages) return;
+  const key = nick.toLowerCase();
+  state.messagesByTarget.set(
+    normalized,
+    messages.filter((entry) => !(entry.kind === 'message' && (entry.nick || '').toLowerCase() === key))
+  );
+  if (normalized === state.activeChannel) renderMessages();
+  appendStatus(`Cleared ${nick}'s messages from ${normalized} (local view only).`, 'info');
 }
 
 function appendRoleIcon(container, role) {
