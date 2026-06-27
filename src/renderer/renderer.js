@@ -70,6 +70,7 @@ const el = {
   chatTab: document.querySelector('#chatTab'),
   channels: document.querySelector('#channels'),
   topicBar: document.querySelector('#topicBar'),
+  channelStatusStrip: document.querySelector('#channelStatusStrip'),
   messages: document.querySelector('#messages'),
   chatBody: document.querySelector('.chat-body'),
   rosterPanel: document.querySelector('.roster-panel'),
@@ -1177,6 +1178,7 @@ function renderTopic() {
     label.textContent = 'Server status — connection events, joins/parts, and notices live here.';
     el.topicBar.append(label);
     renderTimerPills();
+    renderChannelStatusStrip();
     return;
   }
 
@@ -1185,6 +1187,7 @@ function renderTopic() {
 
   const channelTimers = timersForChannel(state.activeChannel);
   renderTimerPills();
+  renderChannelStatusStrip();
   if (channelTimers.length === 0) return;
 
   const button = document.createElement('button');
@@ -1193,6 +1196,47 @@ function renderTopic() {
   button.textContent = channelTimers.some((timer) => timer.enabled) ? 'Timers Active' : 'Timers Inactive';
   button.addEventListener('click', openActiveChannelTimers);
   el.topicBar.append(button);
+}
+
+function renderChannelStatusStrip() {
+  if (!el.channelStatusStrip) return;
+  el.channelStatusStrip.innerHTML = '';
+  if (!state.activeChannel || state.activeChannel === 'server') return;
+
+  const channel = state.activeChannel;
+  const userCount = (state.rosters.get(channel) || new Map()).size;
+  const messageCount = (state.messagesByTarget.get(channel) || []).filter((entry) => entry.kind === 'message').length;
+  const botOn = (state.settings.botRules || []).some((rule) => rule.enabled && botRuleMatchesChannel(rule, channel));
+  const logsOn = Boolean(state.settings.preferences.channelLogging && state.settings.preferences.channelLogFolder);
+
+  let liveLabel = 'Unknown';
+  let liveClass = '';
+  if (state.connected && state.twitchClientId && shouldPollLiveChannels()) {
+    const login = channel.replace(/^#/, '').toLowerCase();
+    liveLabel = state.liveChannels.has(login) ? 'Yes' : 'No';
+    liveClass = state.liveChannels.has(login) ? 'is-good' : '';
+  }
+
+  const name = document.createElement('span');
+  name.className = 'channel-status-name';
+  name.textContent = channel;
+  el.channelStatusStrip.append(name);
+
+  el.channelStatusStrip.append(
+    statusPill('Live', liveLabel, liveClass),
+    statusPill('Users', String(userCount)),
+    statusPill('Messages', String(messageCount)),
+    statusPill('Connection', state.connected ? 'Online' : 'Offline', state.connected ? 'is-good' : 'is-bad'),
+    statusPill('Bot', botOn ? 'On' : 'Off', botOn ? 'is-good' : ''),
+    statusPill('Logs', logsOn ? 'On' : 'Off', logsOn ? 'is-good' : '')
+  );
+}
+
+function statusPill(label, value, extraClass = '') {
+  const pill = document.createElement('span');
+  pill.className = `status-pill${extraClass ? ` ${extraClass}` : ''}`;
+  pill.textContent = `${label}: ${value}`;
+  return pill;
 }
 
 function renderChannelChrome() {
@@ -1427,6 +1471,7 @@ function startStreamResize(event) {
 
 function renderRoster() {
   el.roster.innerHTML = '';
+  renderChannelStatusStrip();
   if (isServerTarget(state.activeChannel)) {
     el.rosterCount.textContent = '0';
     return;
@@ -2484,6 +2529,7 @@ function renderMessages() {
     }
   });
   renderChatEmptyState(visibleMessageCount);
+  renderChannelStatusStrip();
   el.messages.scrollTop = el.messages.scrollHeight;
 }
 
