@@ -278,6 +278,7 @@
             <h2>Docs</h2>
             <a href="#docs-start">Getting Started</a>
             <a href="#docs-dashboard">Dashboard</a>
+            <a href="#docs-channel-settings">Channel Settings</a>
             <a href="#docs-palette">Command Palette</a>
             <a href="#docs-chat">Chat</a>
             <a href="#docs-channels">Channels</a>
@@ -322,6 +323,19 @@
                 <li>Click the username in the last message preview to open the User Profile Drawer.</li>
                 <li>Use card actions to open chat, open stream preview, join or leave, add or remove Auto Join, run the first popup action, open logs, or jump to Settings.</li>
                 <li>Stream status uses the same throttled Twitch polling as live notifications and live tab sorting, so it does not add a separate request loop.</li>
+              </ol>
+            </section>
+
+            <section id="docs-channel-settings" class="docs-section">
+              <h3>Channel Settings</h3>
+              <ol>
+                <li>Open Channel Settings from the active channel status strip, a channel tab right-click menu, Dashboard card actions, Settings, or the Command Palette.</li>
+                <li>Each setting shows whether it is using the global default or a channel override.</li>
+                <li>Use Reset to Global Default on one setting, or Reset Channel Settings to clear every override for that channel.</li>
+                <li>Use Copy Settings to duplicate another channel's setup.</li>
+                <li>Use Apply To All Channels to copy the current channel's settings to every joined and Auto Join channel.</li>
+                <li>Per-channel settings can control chat display, bot responses, commands, timers, popups, moderation buttons, logs, notifications, stream preview, favorites, display name, and Auto Join.</li>
+                <li>If a setting is not saved for a channel, ClovaChat falls back to the global default.</li>
               </ol>
             </section>
 
@@ -519,6 +533,12 @@
             </section>
 
             <section class="settings-group">
+              <h3>Channels</h3>
+              <p class="settings-hint">Tune chat display, bot tools, timers, popups, logs, notifications, stream preview, and Auto Join per channel.</p>
+              <div id="channelSettingsList" class="channel-settings-list"></div>
+            </section>
+
+            <section class="settings-group">
               <h3>Chat History</h3>
               <label class="switch-row">
                 <span>Save chat history between sessions</span>
@@ -635,6 +655,27 @@
         </div>
         <div id="commandPaletteResults" class="command-palette-results" role="listbox"></div>
         <footer class="command-palette-footer">↑↓ Move&nbsp;&nbsp;&nbsp;Enter Run&nbsp;&nbsp;&nbsp;Esc Close</footer>
+      </section>
+    </div>
+
+    <div id="channelSettingsBackdrop" class="channel-settings-backdrop" hidden>
+      <section class="channel-settings-modal" role="dialog" aria-modal="true" aria-labelledby="channelSettingsTitle">
+        <header class="channel-settings-header">
+          <div>
+            <h2 id="channelSettingsTitle">Channel Settings</h2>
+            <p id="channelSettingsSummary">Using global defaults.</p>
+          </div>
+          <button id="channelSettingsClose" class="icon-button" type="button" title="Close">✕</button>
+        </header>
+        <div class="channel-settings-toolbar">
+          <label>Copy from
+            <select id="channelSettingsCopySource"></select>
+          </label>
+          <button id="channelSettingsCopyButton" type="button">Copy Settings</button>
+          <button id="channelSettingsApplyAllButton" type="button">Apply To All Channels</button>
+          <button id="channelSettingsResetButton" class="danger" type="button">Reset Channel Settings</button>
+        </div>
+        <div id="channelSettingsSections" class="channel-settings-sections"></div>
       </section>
     </div>
 

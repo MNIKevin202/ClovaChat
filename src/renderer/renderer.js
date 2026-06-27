@@ -36,6 +36,7 @@ const state = {
   userStats: new Map(),
   userDrawer: { open: false, channel: '', nick: '' },
   commandPalette: { open: false, query: '', selectedIndex: 0, results: [] },
+  channelSettings: { open: false, channel: '' },
 };
 
 const el = {
@@ -134,6 +135,7 @@ const el = {
   liveTabSortToggle: document.querySelector('#liveTabSortToggle'),
   exportSettingsButton: document.querySelector('#exportSettingsButton'),
   importSettingsButton: document.querySelector('#importSettingsButton'),
+  channelSettingsList: document.querySelector('#channelSettingsList'),
   sidebarVersion: document.querySelector('#sidebarVersion'),
   appVersion: document.querySelector('#appVersion'),
   updateStatus: document.querySelector('#updateStatus'),
@@ -159,7 +161,120 @@ const el = {
   commandPalette: document.querySelector('#commandPalette'),
   commandPaletteInput: document.querySelector('#commandPaletteInput'),
   commandPaletteResults: document.querySelector('#commandPaletteResults'),
+  channelSettingsBackdrop: document.querySelector('#channelSettingsBackdrop'),
+  channelSettingsClose: document.querySelector('#channelSettingsClose'),
+  channelSettingsTitle: document.querySelector('#channelSettingsTitle'),
+  channelSettingsSummary: document.querySelector('#channelSettingsSummary'),
+  channelSettingsCopySource: document.querySelector('#channelSettingsCopySource'),
+  channelSettingsCopyButton: document.querySelector('#channelSettingsCopyButton'),
+  channelSettingsApplyAllButton: document.querySelector('#channelSettingsApplyAllButton'),
+  channelSettingsResetButton: document.querySelector('#channelSettingsResetButton'),
+  channelSettingsSections: document.querySelector('#channelSettingsSections'),
 };
+
+const CHANNEL_SETTING_SECTIONS = [
+  {
+    title: 'General',
+    fields: [
+      { path: 'displayName', label: 'Custom display name', type: 'text', defaultValue: '' },
+      { path: 'favorite', label: 'Favorite channel', type: 'boolean', defaultValue: false },
+      { path: 'autoJoin', label: 'Auto join this channel on startup', type: 'boolean', defaultValue: false },
+      { path: 'moveTabToFrontWhenLive', label: 'Move this channel tab to front when live', type: 'boolean', defaultValue: true },
+    ],
+  },
+  {
+    title: 'Chat',
+    fields: [
+      { path: 'chat.showBadges', label: 'Show badges', type: 'boolean', defaultValue: true },
+      { path: 'chat.showTimestamps', label: 'Show timestamps', type: 'boolean', defaultValue: true },
+      { path: 'chat.compactMode', label: 'Compact mode', type: 'boolean', defaultValue: false },
+      { path: 'chat.fontSize', label: 'Font size', type: 'number', defaultValue: 13, min: 11, max: 22 },
+      { path: 'chat.highlightMentions', label: 'Highlight mentions', type: 'boolean', defaultValue: true },
+      { path: 'chat.highlightFirstTimeChatters', label: 'Highlight first-time chatters', type: 'boolean', defaultValue: false },
+      { path: 'chat.highlightUsers', label: 'Highlight specific users', type: 'text', defaultValue: '', placeholder: 'nick1, nick2' },
+      { path: 'chat.hideBotMessages', label: 'Hide bot messages', type: 'boolean', defaultValue: false },
+      { path: 'chat.hideRepeatedMessages', label: 'Hide repeated messages', type: 'boolean', defaultValue: false },
+    ],
+  },
+  {
+    title: 'Bot',
+    fields: [
+      { path: 'botEnabled', label: 'Bot enabled for this channel', type: 'boolean', defaultValue: true },
+      { path: 'commandsEnabled', label: 'Commands enabled for this channel', type: 'boolean', defaultValue: true },
+      { path: 'timersEnabled', label: 'Timers enabled for this channel', type: 'boolean', defaultValue: true },
+      { path: 'popupsEnabled', label: 'Popups enabled for this channel', type: 'boolean', defaultValue: true },
+      { path: 'autoRepliesEnabled', label: 'Auto-replies enabled for this channel', type: 'boolean', defaultValue: true },
+      { path: 'commandPrefix', label: 'Default command prefix', type: 'text', defaultValue: '!', placeholder: '!' },
+    ],
+  },
+  {
+    title: 'Commands',
+    fields: [
+      { path: 'commands.allowGlobal', label: 'Allow global commands', type: 'boolean', defaultValue: true },
+      { path: 'commands.channelOnly', label: 'Channel-only command notes', type: 'textarea', defaultValue: '', placeholder: '!discord = channel-specific reply' },
+      { path: 'commands.overrides', label: 'Global command overrides', type: 'textarea', defaultValue: '', placeholder: 'discord = Join this channel Discord...' },
+      { path: 'commands.trackUsage', label: 'Track command usage per channel', type: 'boolean', defaultValue: true },
+    ],
+  },
+  {
+    title: 'Timers',
+    fields: [
+      { path: 'timers.enabled', label: 'Enable timers per channel', type: 'boolean', defaultValue: true },
+      { path: 'timers.allowGlobal', label: 'Allow global timers to run here', type: 'boolean', defaultValue: true },
+      { path: 'timers.pauseAll', label: 'Pause all timers for this channel', type: 'boolean', defaultValue: false },
+      { path: 'timers.showNext', label: 'Show next scheduled timer message', type: 'boolean', defaultValue: true },
+    ],
+  },
+  {
+    title: 'Popups',
+    fields: [
+      { path: 'popups.enabled', label: 'Enable popup actions', type: 'boolean', defaultValue: true },
+      { path: 'popups.visibleLabels', label: 'Only show these popup labels', type: 'text', defaultValue: '', placeholder: 'Wave, Discord' },
+      { path: 'popups.channelButtons', label: 'Channel-specific popup buttons', type: 'textarea', defaultValue: '', placeholder: 'Label = message or /command' },
+      { path: 'popups.order', label: 'Popup order', type: 'text', defaultValue: '', placeholder: 'Wave, Say hello, Discord' },
+    ],
+  },
+  {
+    title: 'Moderation',
+    fields: [
+      { path: 'moderation.enabled', label: 'Enable moderation tools', type: 'boolean', defaultValue: true },
+      { path: 'moderation.showTimeoutBan', label: 'Show timeout and ban buttons', type: 'boolean', defaultValue: true },
+      { path: 'moderation.linkDetection', label: 'Link detection warning', type: 'boolean', defaultValue: false },
+      { path: 'moderation.capsWarning', label: 'Caps spam warning', type: 'boolean', defaultValue: false },
+      { path: 'moderation.repeatedWarning', label: 'Repeated message warning', type: 'boolean', defaultValue: false },
+      { path: 'moderation.confirmActions', label: 'Require confirmation before moderation actions', type: 'boolean', defaultValue: true },
+    ],
+  },
+  {
+    title: 'Logs',
+    fields: [
+      { path: 'logs.enabled', label: 'Enable logging for this channel', type: 'boolean', defaultValue: true },
+      { path: 'logs.notes', label: 'Local log notes', type: 'textarea', defaultValue: '', placeholder: 'Private notes about this channel log' },
+    ],
+  },
+  {
+    title: 'Notifications',
+    fields: [
+      { path: 'notifications.goLive', label: 'Notify when channel goes live', type: 'boolean', defaultValue: false },
+      { path: 'notifications.mentions', label: 'Notify when mentioned', type: 'boolean', defaultValue: false },
+      { path: 'notifications.specificUsers', label: 'Notify when specific users chat', type: 'text', defaultValue: '', placeholder: 'nick1, nick2' },
+      { path: 'notifications.raids', label: 'Notify on raids if detected', type: 'boolean', defaultValue: false },
+      { path: 'notifications.firstAfterInactivity', label: 'Notify on first message after inactivity', type: 'boolean', defaultValue: false },
+    ],
+  },
+  {
+    title: 'Stream Preview',
+    fields: [
+      { path: 'stream.showPreview', label: 'Show stream preview for this channel', type: 'boolean', defaultValue: true },
+      { path: 'stream.autoOpenWhenLive', label: 'Auto-open stream preview when live', type: 'boolean', defaultValue: false },
+      { path: 'stream.muteByDefault', label: 'Mute stream by default', type: 'boolean', defaultValue: false },
+      { path: 'stream.rememberVolume', label: 'Remember volume per channel', type: 'boolean', defaultValue: true },
+      { path: 'stream.volume', label: 'Default volume', type: 'number', defaultValue: 0.5, min: 0, max: 1, step: 0.05 },
+    ],
+  },
+];
+
+const CHANNEL_SETTING_FIELDS = CHANNEL_SETTING_SECTIONS.flatMap((section) => section.fields);
 
 init();
 
@@ -291,6 +406,7 @@ function ensureSettingsShape() {
   state.settings.botRules ||= [];
   state.settings.popups ||= [];
   state.settings.timedMessages ||= [];
+  state.settings.channels ||= {};
   state.settings.preferences ||= {};
   state.settings.preferences.chatHistoryEnabled ??= true;
   state.settings.preferences.channelLogging ??= false;
@@ -429,6 +545,7 @@ function bindEvents() {
 
     if (event.key === 'Escape') {
       hideContextMenu();
+      if (state.channelSettings.open) closeChannelSettings();
       if (state.userDrawer.open) closeUserDrawer();
     }
   });
@@ -442,6 +559,13 @@ function bindEvents() {
     state.commandPalette.selectedIndex = 0;
     renderCommandPalette();
   });
+  el.channelSettingsBackdrop.addEventListener('pointerdown', (event) => {
+    if (event.target === el.channelSettingsBackdrop) closeChannelSettings();
+  });
+  el.channelSettingsClose.addEventListener('click', closeChannelSettings);
+  el.channelSettingsResetButton.addEventListener('click', resetActiveChannelSettings);
+  el.channelSettingsCopyButton.addEventListener('click', copyChannelSettingsFromSelection);
+  el.channelSettingsApplyAllButton.addEventListener('click', applyActiveChannelSettingsToAll);
 
   el.userDrawerClose.addEventListener('click', closeUserDrawer);
 
@@ -638,6 +762,7 @@ function bindEvents() {
     event.preventDefault();
     const channel = normalizeChannel(el.autoJoinChannel.value);
     if (!channel || isServerTarget(channel)) return;
+    setChannelSetting(channel, 'autoJoin', true);
     state.settings.connection.autoJoinChannels = uniqueChannels([
       ...state.settings.connection.autoJoinChannels,
       channel,
@@ -653,6 +778,7 @@ function bindEvents() {
   el.addAutoJoinCurrentButton.addEventListener('click', async () => {
     const channel = normalizeChannel(state.activeChannel);
     if (!channel || isServerTarget(channel) || channelIsAutoJoined(channel)) return;
+    setChannelSetting(channel, 'autoJoin', true);
     state.settings.connection.autoJoinChannels = uniqueChannels([
       ...state.settings.connection.autoJoinChannels,
       channel,
@@ -997,7 +1123,20 @@ async function runInputForTarget(input, target = state.activeChannel, depth = 0)
   if (trimmed.startsWith('/')) {
     const [commandName, ...args] = trimmed.slice(1).split(' ');
     const alias = findAlias(commandName);
-    if (alias) {
+    const override = channelCommandOverride(target, commandName);
+    if (override || alias) {
+      if (!channelSettingValue(target, 'commandsEnabled', true)) {
+        appendStatus(`Commands are disabled for ${normalizeChannel(target)}.`, 'error');
+        return;
+      }
+      if (override) {
+        runScript(expandCommandTemplate(override, args.join(' '), target), target, depth + 1);
+        return;
+      }
+      if (!channelSettingValue(target, 'commands.allowGlobal', true)) {
+        appendStatus(`Global commands are disabled for ${normalizeChannel(target)}.`, 'error');
+        return;
+      }
       await runAlias(alias, args.join(' '), target, depth + 1);
       return;
     }
@@ -1014,13 +1153,35 @@ function findAlias(commandName) {
   return state.settings.aliases.find((item) => item.name === normalizeCommandName(commandName));
 }
 
-function expandAliasOutput(alias, argText, channel) {
+function channelCommandOverride(target, commandName) {
+  const name = normalizeCommandName(commandName);
+  const overrides = parseCommandMap(channelSettingValue(target, 'commands.overrides', ''));
+  const channelOnly = parseCommandMap(channelSettingValue(target, 'commands.channelOnly', ''));
+  return overrides.get(name) || channelOnly.get(name) || '';
+}
+
+function parseCommandMap(value) {
+  const map = new Map();
+  String(value || '').split(/\r?\n/).forEach((line) => {
+    const [name, ...outputParts] = line.split('=');
+    const key = normalizeCommandName(name);
+    const output = outputParts.join('=').trim();
+    if (key && output) map.set(key, output);
+  });
+  return map;
+}
+
+function expandCommandTemplate(output, argText, channel) {
   const args = argText ? argText.split(' ') : [];
-  return alias.output
+  return String(output || '')
     .replaceAll('$channel', channel || '')
     .replaceAll('$nick', state.settings.profile.nick || '')
     .replaceAll('$*', argText || '')
     .replace(/\$(\d+)/g, (_match, index) => args[Number(index) - 1] || '');
+}
+
+function expandAliasOutput(alias, argText, channel) {
+  return expandCommandTemplate(alias.output, argText, channel);
 }
 
 async function runAlias(alias, argText, target, depth) {
@@ -1049,6 +1210,7 @@ async function runPythonAlias(alias, argText, target, depth) {
 
 async function runBotRules(event) {
   if (event.direction !== 'in') return;
+  if (!channelSettingValue(event.target, 'botEnabled', true) || !channelSettingValue(event.target, 'autoRepliesEnabled', true)) return;
   const rules = state.settings.botRules || [];
   for (const rule of rules) {
     if (!rule.enabled) continue;
@@ -1136,6 +1298,7 @@ function renderAll() {
   syncChannelOrder();
   applySavedChannelOrder();
   renderDashboard();
+  renderChannelSettingsList();
   renderChannels();
   renderPopups();
   renderAutoJoinChannels();
@@ -1152,6 +1315,204 @@ function renderAll() {
     state.autoConnectStarted = true;
     connect();
   }
+}
+
+function openChannelSettings(channel = state.activeChannel) {
+  const normalized = normalizeChannel(channel);
+  if (!normalized || isServerTarget(normalized)) return;
+  state.channelSettings = { open: true, channel: normalized };
+  el.channelSettingsBackdrop.hidden = false;
+  renderChannelSettingsModal();
+}
+
+function closeChannelSettings() {
+  state.channelSettings.open = false;
+  el.channelSettingsBackdrop.hidden = true;
+}
+
+function renderChannelSettingsModal() {
+  const channel = normalizeChannel(state.channelSettings.channel);
+  if (!channel) return;
+  const key = channelKey(channel);
+  const overrides = countChannelSettingOverrides(state.settings.channels[key]);
+  el.channelSettingsTitle.textContent = `Channel Settings: ${channel}`;
+  el.channelSettingsSummary.textContent = overrides > 0
+    ? `${overrides} setting override${overrides === 1 ? '' : 's'} saved for this channel.`
+    : 'Every setting is using the global default.';
+  renderChannelSettingsCopyOptions(channel);
+  el.channelSettingsSections.innerHTML = '';
+  CHANNEL_SETTING_SECTIONS.forEach((section, index) => {
+    const details = document.createElement('details');
+    details.className = 'channel-settings-section';
+    details.open = index < 2;
+    const summary = document.createElement('summary');
+    summary.textContent = section.title;
+    details.append(summary);
+    section.fields.forEach((field) => details.append(renderChannelSettingField(channel, field)));
+    if (section.title === 'Logs') details.append(renderChannelLogActions(channel));
+    el.channelSettingsSections.append(details);
+  });
+}
+
+function renderChannelLogActions(channel) {
+  const row = document.createElement('div');
+  row.className = 'channel-setting-row channel-log-actions';
+  const label = document.createElement('div');
+  label.innerHTML = '<strong>Channel log actions</strong><span>Open the logs folder or clear this channel from the local chat view.</span>';
+  const actions = document.createElement('div');
+  actions.className = 'channel-setting-meta';
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.textContent = 'Open Logs Folder';
+  open.disabled = !state.settings.preferences.channelLogFolder;
+  open.addEventListener('click', openConfiguredLogFolder);
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'danger';
+  clear.textContent = 'Clear Local Channel Chat';
+  clear.addEventListener('click', () => {
+    if (!window.confirm(`Clear local chat history for ${channel}?`)) return;
+    state.messagesByTarget.set(channel, []);
+    scheduleHistorySave();
+    renderMessages();
+    renderDashboard();
+  });
+  actions.append(open, clear);
+  row.append(label, actions);
+  return row;
+}
+
+function renderChannelSettingField(channel, field) {
+  const row = document.createElement('div');
+  const showTimestamps = channelSettingValue(event.target || state.activeChannel, 'chat.showTimestamps', true);
+  row.className = 'channel-setting-row';
+  const label = document.createElement('label');
+  label.textContent = field.label;
+  const control = createChannelSettingControl(channel, field);
+  label.append(control);
+  const meta = document.createElement('div');
+  meta.className = 'channel-setting-meta';
+  const source = document.createElement('span');
+  source.textContent = channelSettingHasOverride(channel, field.path) ? 'Using: Channel Override' : 'Using: Global Default';
+  const reset = document.createElement('button');
+  reset.type = 'button';
+  reset.textContent = 'Reset to Global Default';
+  reset.disabled = !channelSettingHasOverride(channel, field.path);
+  reset.addEventListener('click', async () => {
+    deleteChannelSetting(channel, field.path);
+    await saveSettings();
+    applyChannelSettingsSideEffects(channel);
+    renderChannelSettingsModal();
+  });
+  meta.append(source, reset);
+  row.append(label, meta);
+  return row;
+}
+
+function createChannelSettingControl(channel, field) {
+  let control;
+  const value = channelSettingValue(channel, field.path, field.defaultValue);
+  if (field.type === 'textarea') {
+    control = document.createElement('textarea');
+    control.value = value || '';
+  } else if (field.type === 'boolean') {
+    control = document.createElement('input');
+    control.type = 'checkbox';
+    control.checked = Boolean(value);
+  } else {
+    control = document.createElement('input');
+    control.type = field.type === 'number' ? 'number' : 'text';
+    control.value = value ?? '';
+    if (field.min !== undefined) control.min = String(field.min);
+    if (field.max !== undefined) control.max = String(field.max);
+    if (field.step !== undefined) control.step = String(field.step);
+  }
+  if (field.placeholder) control.placeholder = field.placeholder;
+  control.addEventListener('change', () => updateChannelSettingFromControl(channel, field, control));
+  return control;
+}
+
+async function updateChannelSettingFromControl(channel, field, control) {
+  const value = field.type === 'boolean'
+    ? control.checked
+    : (field.type === 'number' ? Number(control.value || field.defaultValue || 0) : control.value);
+  setChannelSetting(channel, field.path, value);
+  if (field.path === 'autoJoin') syncAutoJoinFromChannelSetting(channel, value);
+  await saveSettings();
+  applyChannelSettingsSideEffects(channel);
+  renderChannelSettingsModal();
+}
+
+function renderChannelSettingsCopyOptions(channel) {
+  el.channelSettingsCopySource.innerHTML = '';
+  dashboardChannelNames().filter((entry) => entry !== channel).forEach((entry) => {
+    const option = document.createElement('option');
+    option.value = entry;
+    option.textContent = channelDisplayName(entry);
+    el.channelSettingsCopySource.append(option);
+  });
+  el.channelSettingsCopyButton.disabled = el.channelSettingsCopySource.options.length === 0;
+}
+
+async function resetActiveChannelSettings() {
+  const channel = state.channelSettings.channel;
+  if (!channel || !window.confirm(`Reset all channel settings for ${channel} to global defaults?`)) return;
+  delete state.settings.channels[channelKey(channel)];
+  await saveSettings();
+  applyChannelSettingsSideEffects(channel);
+  renderChannelSettingsModal();
+}
+
+async function copyChannelSettingsFromSelection() {
+  const source = el.channelSettingsCopySource.value;
+  const target = state.channelSettings.channel;
+  if (!source || !target) return;
+  state.settings.channels[channelKey(target)] = structuredClone(state.settings.channels[channelKey(source)] || {});
+  await saveSettings();
+  applyChannelSettingsSideEffects(target);
+  renderChannelSettingsModal();
+}
+
+async function applyActiveChannelSettingsToAll() {
+  const source = state.channelSettings.channel;
+  if (!source || !window.confirm(`Apply ${source}'s channel settings to every joined and Auto Join channel?`)) return;
+  const snapshot = structuredClone(state.settings.channels[channelKey(source)] || {});
+  dashboardChannelNames().forEach((channel) => {
+    state.settings.channels[channelKey(channel)] = structuredClone(snapshot);
+    syncAutoJoinFromChannelSetting(channel, channelSettingValue(channel, 'autoJoin', false));
+  });
+  await saveSettings();
+  renderAll();
+  renderChannelSettingsModal();
+}
+
+function renderChannelSettingsList() {
+  if (!el.channelSettingsList || !state.settings) return;
+  el.channelSettingsList.innerHTML = '';
+  const channels = dashboardChannelNames();
+  if (channels.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'settings-hint';
+    empty.textContent = 'Join or save a channel to edit channel-specific settings.';
+    el.channelSettingsList.append(empty);
+    return;
+  }
+  channels.forEach((channel) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = channelDisplayName(channel);
+    button.addEventListener('click', () => openChannelSettings(channel));
+    el.channelSettingsList.append(button);
+  });
+}
+
+function applyChannelSettingsSideEffects(channel) {
+  renderMessages();
+  renderPopups();
+  renderChannels();
+  renderDashboard();
+  renderChannelSettingsList();
+  scheduleAllTimers();
 }
 
 async function setDashboardFilter(filter, { save = true } = {}) {
@@ -1183,13 +1544,101 @@ function renderDashboard() {
 }
 
 function dashboardChannelCards() {
-  const channels = uniqueChannels([
-    ...state.channels,
-    ...state.settings.connection.autoJoinChannels,
-  ]).filter((channel) => !isServerTarget(channel));
+  const channels = dashboardChannelNames();
   const cards = channels.map(dashboardChannelCard);
   const filtered = filterDashboardCards(cards, state.settings.preferences.dashboardFilter || 'all');
   return sortDashboardCards(filtered, state.settings.preferences.dashboardSort || 'live');
+}
+
+function dashboardChannelNames() {
+  return uniqueChannels([
+    ...state.channels,
+    ...state.settings.connection.autoJoinChannels,
+    ...Object.keys(state.settings.channels || {}).map((key) => `#${key}`),
+  ]).filter((channel) => !isServerTarget(channel));
+}
+
+function channelKey(channel) {
+  return normalizeChannel(channel).replace(/^#/, '').toLowerCase();
+}
+
+function channelSettings(channel) {
+  return state.settings.channels?.[channelKey(channel)] || {};
+}
+
+function channelSettingValue(channel, path, defaultValue = '') {
+  const value = getNestedValue(channelSettings(channel), path);
+  return value === undefined ? defaultValue : value;
+}
+
+function channelSettingHasOverride(channel, path) {
+  return getNestedValue(channelSettings(channel), path) !== undefined;
+}
+
+function setChannelSetting(channel, path, value) {
+  const key = channelKey(channel);
+  state.settings.channels[key] ||= {};
+  setNestedValue(state.settings.channels[key], path, value);
+}
+
+function deleteChannelSetting(channel, path) {
+  const settings = state.settings.channels[channelKey(channel)];
+  if (!settings) return;
+  deleteNestedValue(settings, path);
+}
+
+function getNestedValue(object, path) {
+  return path.split('.').reduce((current, part) => current?.[part], object);
+}
+
+function setNestedValue(object, path, value) {
+  const parts = path.split('.');
+  const last = parts.pop();
+  const target = parts.reduce((current, part) => {
+    current[part] ||= {};
+    return current[part];
+  }, object);
+  target[last] = value;
+}
+
+function deleteNestedValue(object, path) {
+  const parts = path.split('.');
+  const last = parts.pop();
+  const stack = [];
+  let current = object;
+  for (const part of parts) {
+    if (!current?.[part]) return;
+    stack.push([current, part]);
+    current = current[part];
+  }
+  delete current[last];
+  while (stack.length > 0) {
+    const [parent, key] = stack.pop();
+    if (Object.keys(parent[key] || {}).length === 0) delete parent[key];
+  }
+}
+
+function countChannelSettingOverrides(value) {
+  if (!value || typeof value !== 'object') return 0;
+  return Object.values(value).reduce((count, entry) => (
+    count + (entry && typeof entry === 'object' && !Array.isArray(entry) ? countChannelSettingOverrides(entry) : 1)
+  ), 0);
+}
+
+function syncAutoJoinFromChannelSetting(channel, enabled) {
+  const normalized = normalizeChannel(channel);
+  if (!normalized) return;
+  if (enabled) {
+    state.settings.connection.autoJoinChannels = uniqueChannels([...state.settings.connection.autoJoinChannels, normalized]);
+  } else {
+    state.settings.connection.autoJoinChannels = state.settings.connection.autoJoinChannels
+      .filter((entry) => normalizeChannel(entry) !== normalized);
+  }
+}
+
+function channelDisplayName(channel) {
+  const alias = channelSettingValue(channel, 'displayName', '');
+  return alias ? `${alias} (${normalizeChannel(channel)})` : normalizeChannel(channel);
 }
 
 function dashboardChannelCard(channel) {
@@ -1220,10 +1669,10 @@ function dashboardChannelCard(channel) {
     lastMessageAt: lastMessage?.timestamp || 0,
     unread: state.unreadChannels.has(channel),
     mentionCount,
-    botEnabled: (state.settings.botRules || []).some((rule) => rule.enabled && botRuleMatchesChannel(rule, channel)),
-    timersEnabled: timers.some((timer) => timer.enabled),
+    botEnabled: channelSettingValue(channel, 'botEnabled', true) && (state.settings.botRules || []).some((rule) => rule.enabled && botRuleMatchesChannel(rule, channel)),
+    timersEnabled: channelTimersAllowed(channel) && timers.some((timer) => timer.enabled),
     hasTimers: timers.length > 0,
-    logsEnabled: Boolean(state.settings.preferences.channelLogging && state.settings.preferences.channelLogFolder),
+    logsEnabled: channelLogsEnabled(channel),
     sparkline: dashboardSparkline(messages),
   };
 }
@@ -1265,7 +1714,7 @@ function renderDashboardCard(card) {
   const liveDot = document.createElement('span');
   liveDot.className = `dashboard-live-dot${card.live ? ' is-live' : ''}`;
   const name = document.createElement('strong');
-  name.textContent = card.channel;
+  name.textContent = channelDisplayName(card.channel);
   title.append(liveDot, name);
   const badges = document.createElement('div');
   badges.className = 'dashboard-card-badges';
@@ -1346,14 +1795,12 @@ function renderDashboardCard(card) {
       confirm: card.autoJoin ? `Remove ${card.channel} from Auto Join?` : '',
     }),
     dashboardAction('Run Popup', () => runDashboardPopup(card.channel), {
-      disabled: state.settings.popups.length === 0 || !card.joined,
+      disabled: channelPopups(card.channel).length === 0 || !card.joined,
     }),
     dashboardAction('Open Logs', openConfiguredLogFolder, {
       disabled: !state.settings.preferences.channelLogFolder,
     }),
-    dashboardAction('Settings', () => {
-      activateTab('settings');
-    })
+    dashboardAction('Channel Settings', () => openChannelSettings(card.channel))
   );
 
   item.append(header, streamLine, streamTitle, metrics, sparkline, last, status, actions);
@@ -1415,7 +1862,7 @@ function dashboardSparkline(messages) {
 }
 
 function runDashboardPopup(channel) {
-  const popup = state.settings.popups[0];
+  const popup = channelPopups(channel)[0];
   if (!popup) return;
   const command = popup.command.replaceAll('$channel', channel || '');
   runInputForTarget(command, channel);
@@ -1573,6 +2020,9 @@ function commandPaletteCommands(query = '') {
       disabledReason: !currentChannel
         ? 'Switch to a channel tab first.'
         : (channelIsAutoJoined(currentChannel) ? `${currentChannel} is already in Auto Join.` : ''),
+    }),
+    paletteCommand('channel-settings', currentChannel ? `Channel Settings: ${currentChannel}` : 'Channel Settings', 'Open per-channel settings for the active channel.', 'Settings', '⚙', 'channel settings overrides', () => openChannelSettings(currentChannel), {
+      disabledReason: currentChannel ? '' : 'Switch to a channel tab first.',
     }),
     paletteCommand('open-logs-folder', 'Open Logs Folder', 'Open the configured channel log folder.', 'Settings', '⚙', 'logs folder open channel log', openConfiguredLogFolder, {
       disabledReason: state.settings.preferences.channelLogFolder ? '' : 'Choose a channel log folder in Settings first.',
@@ -1819,6 +2269,7 @@ async function joinChannelOnce(channel) {
 async function addChannelToAutoJoin(channel) {
   const normalized = normalizeChannel(channel);
   if (!normalized || isServerTarget(normalized) || channelIsAutoJoined(normalized)) return;
+  setChannelSetting(normalized, 'autoJoin', true);
   state.settings.connection.autoJoinChannels = uniqueChannels([
     ...state.settings.connection.autoJoinChannels,
     normalized,
@@ -1830,6 +2281,7 @@ async function addChannelToAutoJoin(channel) {
 
 async function removeAutoJoinChannel(channel) {
   const normalized = normalizeChannel(channel);
+  setChannelSetting(normalized, 'autoJoin', false);
   state.settings.connection.autoJoinChannels = state.settings.connection.autoJoinChannels
     .filter((entry) => normalizeChannel(entry) !== normalized);
   await saveSettings();
@@ -1885,6 +2337,10 @@ async function setStreamPreviewVisible(visible) {
 async function openStreamForChannel(channel) {
   const normalized = normalizeChannel(channel);
   if (!normalized || isServerTarget(normalized)) return;
+  if (!channelSettingValue(normalized, 'stream.showPreview', true)) {
+    appendStatus(`Stream preview is disabled for ${normalized}.`, 'error');
+    return;
+  }
   saveCurrentStreamPlayerState();
   state.settings.appearance.twitchPlayer = true;
   state.settings.appearance.twitchPlayerChannel = normalized.replace(/^#/, '').toLowerCase();
@@ -1936,7 +2392,7 @@ function renderChannels() {
       state.unreadChannels.has(channel) ? 'has-unread' : '',
       isLive ? 'is-live' : '',
     ].filter(Boolean).join(' ');
-    button.textContent = channel === 'server' ? 'Server' : channel;
+    button.textContent = channel === 'server' ? 'Server' : channelDisplayName(channel);
     button.draggable = channel !== 'server';
     button.addEventListener('dragstart', (event) => {
       if (channel === 'server') return;
@@ -2012,8 +2468,8 @@ function displayChannels() {
   const channels = state.channels.slice();
   if (!state.settings.preferences.moveLiveTabsToFront) return channels;
   return channels.sort((a, b) => {
-    const aLive = state.liveChannels.has(a.replace(/^#/, '').toLowerCase());
-    const bLive = state.liveChannels.has(b.replace(/^#/, '').toLowerCase());
+    const aLive = channelSettingValue(a, 'moveTabToFrontWhenLive', true) && state.liveChannels.has(a.replace(/^#/, '').toLowerCase());
+    const bLive = channelSettingValue(b, 'moveTabToFrontWhenLive', true) && state.liveChannels.has(b.replace(/^#/, '').toLowerCase());
     if (aLive !== bLive) return aLive ? -1 : 1;
     return 0;
   });
@@ -2048,7 +2504,15 @@ function showChannelContextMenu(event, channel) {
     leaveChannel(normalized);
   });
 
-  menu.append(leaveOption);
+  const settingsOption = document.createElement('button');
+  settingsOption.type = 'button';
+  settingsOption.textContent = 'Channel Settings';
+  settingsOption.addEventListener('click', () => {
+    hideContextMenu();
+    openChannelSettings(normalized);
+  });
+
+  menu.append(settingsOption, leaveOption);
   document.body.append(menu);
   positionContextMenu(menu, event.clientX, event.clientY);
   state.activeContextMenu = menu;
@@ -2091,8 +2555,8 @@ function renderChannelStatusStrip() {
   const channel = state.activeChannel;
   const userCount = (state.rosters.get(channel) || new Map()).size;
   const messageCount = (state.messagesByTarget.get(channel) || []).filter((entry) => entry.kind === 'message').length;
-  const botOn = (state.settings.botRules || []).some((rule) => rule.enabled && botRuleMatchesChannel(rule, channel));
-  const logsOn = Boolean(state.settings.preferences.channelLogging && state.settings.preferences.channelLogFolder);
+  const botOn = channelSettingValue(channel, 'botEnabled', true) && (state.settings.botRules || []).some((rule) => rule.enabled && botRuleMatchesChannel(rule, channel));
+  const logsOn = channelLogsEnabled(channel);
 
   let liveLabel = 'Unknown';
   let liveClass = '';
@@ -2115,6 +2579,13 @@ function renderChannelStatusStrip() {
     statusPill('Bot', botOn ? 'On' : 'Off', botOn ? 'is-good' : ''),
     statusPill('Logs', logsOn ? 'On' : 'Off', logsOn ? 'is-good' : '')
   );
+
+  const settingsButton = document.createElement('button');
+  settingsButton.type = 'button';
+  settingsButton.className = 'channel-settings-chip';
+  settingsButton.textContent = 'Channel Settings';
+  settingsButton.addEventListener('click', () => openChannelSettings(channel));
+  el.channelStatusStrip.append(settingsButton);
 }
 
 function statusPill(label, value, extraClass = '') {
@@ -2140,6 +2611,15 @@ function timersForChannel(channel) {
   const normalized = normalizeChannel(channel);
   if (!normalized || normalized === 'server') return [];
   return state.settings.timedMessages.filter((timer) => normalizeChannel(timer.channel) === normalized);
+}
+
+function channelTimersAllowed(channel) {
+  return Boolean(
+    channelSettingValue(channel, 'timersEnabled', true)
+    && channelSettingValue(channel, 'timers.enabled', true)
+    && channelSettingValue(channel, 'timers.allowGlobal', true)
+    && !channelSettingValue(channel, 'timers.pauseAll', false)
+  );
 }
 
 function openActiveChannelTimers() {
@@ -2325,10 +2805,12 @@ function updateStreamControlButtons() {
 }
 
 function streamPlayerState(channel) {
-  return state.settings.appearance.twitchPlayerStates?.[channel] || {
-    muted: false,
+  const saved = state.settings.appearance.twitchPlayerStates?.[channel];
+  if (saved && channelSettingValue(`#${channel}`, 'stream.rememberVolume', true)) return saved;
+  return {
+    muted: channelSettingValue(`#${channel}`, 'stream.muteByDefault', false),
     paused: false,
-    volume: 0.5,
+    volume: channelSettingValue(`#${channel}`, 'stream.volume', 0.5),
   };
 }
 
@@ -2528,6 +3010,7 @@ function renderAutoJoinChannels() {
     remove.textContent = '✕';
     remove.title = `Remove ${channel}`;
     remove.addEventListener('click', async () => {
+      setChannelSetting(channel, 'autoJoin', false);
       state.settings.connection.autoJoinChannels = state.settings.connection.autoJoinChannels
         .filter((entry) => entry !== channel);
       await saveSettings();
@@ -2606,8 +3089,13 @@ function renderPopups() {
     renderPopupEditor();
     return;
   }
+  if (!channelSettingValue(state.activeChannel, 'popupsEnabled', true) || !channelSettingValue(state.activeChannel, 'popups.enabled', true)) {
+    el.popupBar.hidden = true;
+    renderPopupEditor();
+    return;
+  }
   el.popupBar.hidden = false;
-  state.settings.popups.forEach((popup) => {
+  channelPopups(state.activeChannel).forEach((popup) => {
     const button = document.createElement('button');
     button.textContent = popup.label;
     button.addEventListener('click', () => {
@@ -2617,6 +3105,34 @@ function renderPopups() {
     el.popupBar.append(button);
   });
   renderPopupEditor();
+}
+
+function channelPopups(channel) {
+  const visibleLabels = parseLabelList(channelSettingValue(channel, 'popups.visibleLabels', ''));
+  const order = parseLabelList(channelSettingValue(channel, 'popups.order', ''));
+  const channelButtons = parseChannelPopupButtons(channelSettingValue(channel, 'popups.channelButtons', ''));
+  let popups = [...state.settings.popups, ...channelButtons];
+  if (visibleLabels.length > 0) {
+    const allowed = new Set(visibleLabels.map((label) => label.toLowerCase()));
+    popups = popups.filter((popup) => allowed.has(String(popup.label).toLowerCase()));
+  }
+  if (order.length > 0) {
+    const rank = new Map(order.map((label, index) => [label.toLowerCase(), index]));
+    popups.sort((a, b) => (rank.get(a.label.toLowerCase()) ?? 999) - (rank.get(b.label.toLowerCase()) ?? 999));
+  }
+  return popups;
+}
+
+function parseLabelList(value) {
+  return String(value || '').split(',').map((entry) => entry.trim()).filter(Boolean);
+}
+
+function parseChannelPopupButtons(value) {
+  return String(value || '').split(/\r?\n/).map((line) => {
+    const [label, ...commandParts] = line.split('=');
+    const command = commandParts.join('=').trim();
+    return label?.trim() && command ? { label: label.trim(), command } : null;
+  }).filter(Boolean);
 }
 
 function renderChatActions() {
@@ -2629,7 +3145,10 @@ function renderChatActions() {
 
 function channelIsAutoJoined(channel) {
   const normalized = normalizeChannel(channel);
-  return state.settings.connection.autoJoinChannels.some((entry) => normalizeChannel(entry) === normalized);
+  return Boolean(
+    channelSettingValue(normalized, 'autoJoin', false)
+    || state.settings.connection.autoJoinChannels.some((entry) => normalizeChannel(entry) === normalized)
+  );
 }
 
 function renderAliases() {
@@ -3053,7 +3572,7 @@ function scheduleAllTimers() {
 
 function scheduleTimer(timer) {
   unscheduleTimer(timer.id);
-  if (!timer.enabled || !state.connected) return;
+  if (!timer.enabled || !state.connected || !channelTimersAllowed(timer.channel)) return;
 
   timer.seconds ??= 0;
   const intervalSeconds = Math.max(1, (Number(timer.minutes || 0) * 60) + Number(timer.seconds || 0));
@@ -3066,6 +3585,7 @@ function scheduleTimer(timer) {
       unscheduleTimer(timer.id);
       return;
     }
+    if (!channelTimersAllowed(current.channel)) return;
     runInputForTarget(current.message, normalizeChannel(current.channel));
     state.timerNextFire.set(current.id, Date.now() + intervalMs);
   }, intervalMs);
@@ -3137,7 +3657,9 @@ function renderTimerPills() {
   if (!el.timerPills) return;
   el.timerPills.innerHTML = '';
 
-  const pills = timersForChannel(state.activeChannel).filter((timer) => timer.showOnChannel);
+  const pills = channelSettingValue(state.activeChannel, 'timers.showNext', true) && channelTimersAllowed(state.activeChannel)
+    ? timersForChannel(state.activeChannel).filter((timer) => timer.showOnChannel)
+    : [];
   pills.forEach((timer) => {
     const pill = document.createElement('div');
     pill.className = `timer-pill${timer.enabled ? '' : ' is-paused'}`;
@@ -3274,8 +3796,12 @@ async function pollLiveChannels() {
     state.streamDetails = new Map(streams.map((stream) => [stream.user_login.toLowerCase(), stream]));
 
     for (const login of nowLive) {
-      if (state.settings.preferences.notifyOnLive && !state.liveChannels.has(login)) {
+      const channel = `#${login}`;
+      if ((state.settings.preferences.notifyOnLive || channelSettingValue(channel, 'notifications.goLive', false)) && !state.liveChannels.has(login)) {
         notifyChannelLive(login, streams.find((s) => s.user_login.toLowerCase() === login));
+      }
+      if (channelSettingValue(channel, 'stream.autoOpenWhenLive', false) && !state.settings.appearance.twitchPlayer) {
+        openStreamForChannel(channel);
       }
     }
     state.liveChannels = nowLive;
@@ -3390,6 +3916,7 @@ function appendMessage(event) {
   logMonitoredMessage(entry);
   logChannelMessage(event.target, entry);
   renderDashboard();
+  notifyChannelSpecificUser(entry);
   if (normalizeChannel(event.target) !== state.activeChannel) return;
   renderMessages();
 }
@@ -3402,24 +3929,48 @@ function logMonitoredMessage(entry) {
 
 function logChannelMessage(target, entry) {
   const prefs = state.settings.preferences;
-  if (!prefs.channelLogging || !prefs.channelLogFolder) return;
+  if (!channelLogsEnabled(target)) return;
   const filename = (normalizeChannel(target) || 'server').replace(/^#/, '') || 'server';
   window.macIRC.appendLog(`${prefs.channelLogFolder}/${filename}.log`, formatLogLine(entry));
 }
 
+function channelLogsEnabled(channel) {
+  const prefs = state.settings.preferences;
+  return Boolean(prefs.channelLogging && prefs.channelLogFolder && channelSettingValue(channel, 'logs.enabled', true));
+}
+
 function notifyOnMention(event) {
-  if (event.direction !== 'in' || !state.settings.preferences.notifyOnMention) return;
+  if (event.direction !== 'in') return;
+  const channelMentions = channelSettingValue(event.target, 'notifications.mentions', false);
+  if (!state.settings.preferences.notifyOnMention && !channelMentions) return;
   if (!messageMentionsNick(event.text)) return;
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   new Notification(`${event.nick} mentioned you`, { body: event.text });
 }
 
+function notifyChannelSpecificUser(entry) {
+  if (entry.direction !== 'in') return;
+  const users = parseLabelList(channelSettingValue(entry.target, 'notifications.specificUsers', '')).map((nick) => nick.toLowerCase());
+  if (!users.includes(String(entry.nick || '').toLowerCase())) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  new Notification(`${entry.nick} chatted in ${entry.target}`, { body: entry.text });
+}
+
 function renderMessages() {
   el.messages.innerHTML = '';
+  el.messages.classList.toggle('compact-messages', channelSettingValue(state.activeChannel, 'chat.compactMode', false));
+  el.messages.style.fontSize = `${channelSettingValue(state.activeChannel, 'chat.fontSize', 13)}px`;
   const messages = state.messagesByTarget.get(state.activeChannel) || [];
   let visibleMessageCount = 0;
+  const repeated = new Set();
   messages.forEach((entry) => {
     if (entry.kind === 'message' && isHidden(entry.nick || '')) return;
+    if (entry.kind === 'message' && channelSettingValue(state.activeChannel, 'chat.hideBotMessages', false) && looksLikeBot(entry.nick)) return;
+    if (entry.kind === 'message' && channelSettingValue(state.activeChannel, 'chat.hideRepeatedMessages', false)) {
+      const repeatKey = `${entry.nick?.toLowerCase()}::${entry.text}`;
+      if (repeated.has(repeatKey)) return;
+      repeated.add(repeatKey);
+    }
     if (entry.kind === 'status') {
       renderStatusRow(entry);
     } else {
@@ -3448,14 +3999,18 @@ function renderChatEmptyState(visibleMessageCount) {
 
 function renderMessageRow(event) {
   const row = document.createElement('div');
-  const isMention = event.direction === 'in' && messageMentionsNick(event.text);
-  row.className = `message ${event.direction || ''}${isMention ? ' mention' : ''}${isMonitored(event.nick || '') ? ' monitored' : ''}`;
+  const isMention = event.direction === 'in' && channelSettingValue(event.target || state.activeChannel, 'chat.highlightMentions', true) && messageMentionsNick(event.text);
+  const highlightedUsers = parseLabelList(channelSettingValue(event.target || state.activeChannel, 'chat.highlightUsers', '')).map((nick) => nick.toLowerCase());
+  const isHighlightedUser = highlightedUsers.includes(String(event.nick || '').toLowerCase());
+  const isFirstTime = channelSettingValue(event.target || state.activeChannel, 'chat.highlightFirstTimeChatters', false)
+    && getUserStats(event.target || state.activeChannel, event.nick).messageCount <= 1;
+  row.className = `message ${event.direction || ''}${isMention ? ' mention' : ''}${isMonitored(event.nick || '') ? ' monitored' : ''}${isHighlightedUser ? ' highlighted-user' : ''}${isFirstTime ? ' first-time' : ''}${showTimestamps ? '' : ' no-time'}`;
   const time = document.createElement('span');
   time.className = 'time';
   time.textContent = formatTime(event.timestamp);
   const nick = document.createElement('span');
   nick.className = `nick${event.role ? ` ${event.role}` : ''}`;
-  appendRoleIcon(nick, event.role);
+  if (channelSettingValue(event.target || state.activeChannel, 'chat.showBadges', true)) appendRoleIcon(nick, event.role);
   nick.append(document.createTextNode(event.nick));
   nick.addEventListener('click', () => {
     openUserDrawer(event.target || state.activeChannel, event.nick);
@@ -3463,7 +4018,8 @@ function renderMessageRow(event) {
   const text = document.createElement('span');
   text.className = 'text';
   renderMessageText(text, event.text, event.target || state.activeChannel, event.twitchEmotes);
-  row.append(time, nick, text);
+  if (showTimestamps) row.append(time);
+  row.append(nick, text);
   el.messages.append(row);
 }
 
@@ -3773,8 +4329,10 @@ function renderUserDrawer() {
 
   el.userDrawerNote.value = state.settings.preferences.userNotes[key] || '';
 
-  const moderationAllowed = canModerateChannel(channel);
+  const moderationAllowed = canModerateChannel(channel) && channelSettingValue(channel, 'moderation.enabled', true);
+  const showTimeoutBan = channelSettingValue(channel, 'moderation.showTimeoutBan', true);
   [el.userDrawerTimeout, el.userDrawerBan, el.userDrawerUnban].forEach((button) => {
+    button.hidden = !showTimeoutBan;
     button.disabled = !moderationAllowed;
     button.title = moderationAllowed ? '' : 'Requires moderator permissions.';
   });

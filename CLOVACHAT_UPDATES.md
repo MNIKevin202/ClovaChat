@@ -51,6 +51,7 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - macOS DMG update download/open flow
 - Windows EXE installer builds from GitHub Actions
 - Multi-Channel Dashboard
+- Per-channel settings
 
 ## Recent UI Upgrade
 
@@ -64,6 +65,35 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Server tab cleaned up so it does not show roster, popups, auto-join actions, quick chat buttons, or the message composer
 
 ## Current Upgrade
+
+- Added Per-Channel Settings.
+- Channel settings are stored by normalized channel name and fall back to global defaults when no override exists.
+- Added Channel Settings access from the active channel status strip, channel tab right-click menu, Multi-Channel Dashboard actions, Settings, and the Command Palette.
+- Added a Channel Settings modal with sections for General, Chat, Bot, Commands, Timers, Popups, Moderation, Logs, Notifications, and Stream Preview.
+- Each setting shows whether it is using a Global Default or Channel Override.
+- Added Reset to Global Default per setting, Reset Channel Settings, Copy Settings From Another Channel, and Apply These Settings To All Channels.
+- Per-channel settings now affect chat display, badges, timestamps, compact mode, font size, mention highlighting, highlighted users, bot message hiding, repeated message hiding, bot auto-replies, commands, timers, popups, logs, notifications, stream preview defaults, favorites, display names, and Auto Join.
+
+## Requested Upgrade 6: Per-Channel Settings
+
+Add channel-specific settings so each Twitch channel can have its own chat display, bot behavior, commands, timers, popups, logs, notifications, stream preview, and moderation preferences.
+
+The system should support:
+
+- Global defaults
+- Channel-specific overrides
+- Reset to global default
+- Copy settings from another channel
+- Apply settings to all channels
+- Per-channel auto join
+- Per-channel favorite status
+- Per-channel logs
+- Per-channel stream preview behavior
+
+Purpose:
+This allows ClovaChat to scale from a simple single-channel chat client into a flexible multi-channel Twitch control center.
+
+## Previous Upgrade
 
 - Added a Multi-Channel Dashboard workspace view.
 - The dashboard shows joined and auto-join channels in one place.
