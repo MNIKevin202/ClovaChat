@@ -2473,12 +2473,32 @@ function notifyOnMention(event) {
 function renderMessages() {
   el.messages.innerHTML = '';
   const messages = state.messagesByTarget.get(state.activeChannel) || [];
+  let visibleMessageCount = 0;
   messages.forEach((entry) => {
     if (entry.kind === 'message' && isHidden(entry.nick || '')) return;
-    if (entry.kind === 'status') renderStatusRow(entry);
-    else renderMessageRow(entry);
+    if (entry.kind === 'status') {
+      renderStatusRow(entry);
+    } else {
+      renderMessageRow(entry);
+      visibleMessageCount += 1;
+    }
   });
+  renderChatEmptyState(visibleMessageCount);
   el.messages.scrollTop = el.messages.scrollHeight;
+}
+
+function renderChatEmptyState(visibleMessageCount) {
+  if (!state.activeChannel || state.activeChannel === 'server' || visibleMessageCount >= 3) return;
+  const empty = document.createElement('div');
+  empty.className = 'chat-empty-state';
+  const title = document.createElement('div');
+  title.className = 'chat-empty-state-title';
+  title.textContent = `Waiting for messages in ${state.activeChannel}`;
+  const hint = document.createElement('div');
+  hint.className = 'chat-empty-state-hint';
+  hint.textContent = 'Try sending a message, using a popup, or switching channels.';
+  empty.append(title, hint);
+  el.messages.append(empty);
 }
 
 function renderMessageRow(event) {
