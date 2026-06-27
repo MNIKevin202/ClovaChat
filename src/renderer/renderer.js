@@ -621,7 +621,7 @@ function bindEvents() {
     const expireMinutes = Math.max(0, Number(el.timerExpireMinutes.value || 0));
     const expireMs = ((expireDays * 24 * 60 * 60) + (expireHours * 60 * 60) + (expireMinutes * 60)) * 1000;
 
-    state.settings.timedMessages.push({
+    const newTimer = {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       channel,
       minutes,
@@ -630,7 +630,8 @@ function bindEvents() {
       enabled: true,
       expiresAt: expireMs > 0 ? Date.now() + expireMs : null,
       showOnChannel: el.timerShowOnChannel.checked,
-    });
+    };
+    state.settings.timedMessages.push(newTimer);
 
     el.timerMinutes.value = '10';
     el.timerSeconds.value = '0';
@@ -641,7 +642,8 @@ function bindEvents() {
     el.timerShowOnChannel.checked = false;
     await saveSettings();
     renderTimers();
-    scheduleTimers();
+    scheduleTimer(newTimer);
+    renderTimerPills();
   });
 
   el.popupForm.addEventListener('submit', async (event) => {
@@ -722,7 +724,7 @@ function handleIrcEvent(event) {
     el.connectionState.textContent = `Connected to ${event.server}`;
     el.connectionStatus.classList.add('connected');
     appendStatus('Connected.', 'success');
-    scheduleTimers();
+    scheduleAllTimers();
     setupLiveNotifications(event.server);
   }
 
@@ -993,7 +995,7 @@ function renderAll() {
   renderPopupEditor();
   renderTimers();
   renderStreamPlayer();
-  scheduleTimers();
+  scheduleAllTimers();
 
   if (state.settings.connection.connectOnOpen && !state.autoConnectStarted) {
     state.autoConnectStarted = true;
@@ -1938,9 +1940,10 @@ function renderTimers() {
     toggleLabel.textContent = timer.enabled ? 'Enabled' : 'Paused';
     enabled.addEventListener('change', async () => {
       timer.enabled = enabled.checked;
+      if (timer.enabled) clearExpiredDeadline(timer);
       toggleLabel.textContent = timer.enabled ? 'Enabled' : 'Paused';
       await saveSettings();
-      scheduleTimers();
+      scheduleTimer(timer);
       renderTopic();
     });
     toggle.append(enabled, toggleLabel);
@@ -1969,10 +1972,10 @@ function renderTimers() {
     remove.type = 'button';
     remove.textContent = 'Remove';
     remove.addEventListener('click', async () => {
+      unscheduleTimer(timer.id);
       state.settings.timedMessages = state.settings.timedMessages.filter((entry) => entry.id !== timer.id);
       await saveSettings();
       renderTimers();
-      scheduleTimers();
     });
 
     item.append(toggle, summary, showToggle, remove);
@@ -2017,54 +2020,77 @@ function renderTimerChannelOptions() {
   el.timerChannel.value = state.channels.includes(selected) ? selected : state.channels[0];
 }
 
-async function scheduleTimers() {
+// Schedules every timer from scratch. Only call this for events that should
+// legitimately reset every timer's countdown (connecting, full app init) —
+// individual create/toggle/delete actions must call scheduleTimer()/
+// unscheduleTimer() for just the one timer they touched, or every other
+// timer's countdown gets yanked back to its full interval too.
+function scheduleAllTimers() {
   clearTimerHandles();
-  if (await expireDueTimers()) {
-    await saveSettings();
+  let expiredChanged = false;
+  state.settings.timedMessages.forEach((timer) => {
+    if (timer.enabled && timer.expiresAt && Date.now() >= timer.expiresAt) {
+      timer.enabled = false;
+      expiredChanged = true;
+    }
+  });
+  if (expiredChanged) {
+    saveSettings();
     renderTimers();
   }
-  if (!state.connected) return;
 
-  state.settings.timedMessages
-    .filter((timer) => timer.enabled)
-    .forEach((timer) => {
-      timer.seconds ??= 0;
-      const intervalSeconds = Math.max(1, (Number(timer.minutes || 0) * 60) + Number(timer.seconds || 0));
-      const intervalMs = intervalSeconds * 1000;
-      state.timerNextFire.set(timer.id, Date.now() + intervalMs);
-      const handle = setInterval(() => {
-        const current = state.settings.timedMessages.find((entry) => entry.id === timer.id);
-        if (!current?.enabled) return;
-        runInputForTarget(current.message, normalizeChannel(current.channel));
-        state.timerNextFire.set(current.id, Date.now() + intervalMs);
-      }, intervalMs);
-      state.timerHandles.set(timer.id, handle);
-
-      if (timer.expiresAt) {
-        const expiryHandle = setTimeout(async () => {
-          if (await expireDueTimers()) {
-            await saveSettings();
-            renderTimers();
-            scheduleTimers();
-          }
-        }, Math.max(0, timer.expiresAt - Date.now()));
-        state.timerExpiryHandles.set(timer.id, expiryHandle);
-      }
-    });
-
+  state.settings.timedMessages.forEach((timer) => scheduleTimer(timer));
   ensureTimerPillTicking();
   renderTopic();
 }
 
-async function expireDueTimers() {
-  let changed = false;
-  state.settings.timedMessages.forEach((timer) => {
-    if (timer.enabled && timer.expiresAt && Date.now() >= timer.expiresAt) {
-      timer.enabled = false;
-      changed = true;
+function scheduleTimer(timer) {
+  unscheduleTimer(timer.id);
+  if (!timer.enabled || !state.connected) return;
+
+  timer.seconds ??= 0;
+  const intervalSeconds = Math.max(1, (Number(timer.minutes || 0) * 60) + Number(timer.seconds || 0));
+  const intervalMs = intervalSeconds * 1000;
+  state.timerNextFire.set(timer.id, Date.now() + intervalMs);
+
+  const handle = setInterval(() => {
+    const current = state.settings.timedMessages.find((entry) => entry.id === timer.id);
+    if (!current?.enabled) {
+      unscheduleTimer(timer.id);
+      return;
     }
-  });
-  return changed;
+    runInputForTarget(current.message, normalizeChannel(current.channel));
+    state.timerNextFire.set(current.id, Date.now() + intervalMs);
+  }, intervalMs);
+  state.timerHandles.set(timer.id, handle);
+
+  if (timer.expiresAt) {
+    const expiryHandle = setTimeout(() => {
+      const current = state.settings.timedMessages.find((entry) => entry.id === timer.id);
+      if (!current?.enabled || !current.expiresAt || Date.now() < current.expiresAt) return;
+      current.enabled = false;
+      saveSettings();
+      renderTimers();
+      unscheduleTimer(timer.id);
+      renderTopic();
+    }, Math.max(0, timer.expiresAt - Date.now()));
+    state.timerExpiryHandles.set(timer.id, expiryHandle);
+  }
+
+  ensureTimerPillTicking();
+}
+
+function unscheduleTimer(id) {
+  const handle = state.timerHandles.get(id);
+  if (handle) {
+    clearInterval(handle);
+    state.timerHandles.delete(id);
+  }
+  const expiryHandle = state.timerExpiryHandles.get(id);
+  if (expiryHandle) {
+    clearTimeout(expiryHandle);
+    state.timerExpiryHandles.delete(id);
+  }
 }
 
 function clearTimerHandles() {
@@ -2072,6 +2098,19 @@ function clearTimerHandles() {
   state.timerHandles.clear();
   for (const handle of state.timerExpiryHandles.values()) clearTimeout(handle);
   state.timerExpiryHandles.clear();
+}
+
+/** Manually flipping a timer back on after it auto-expired should let it run
+ * again, not get force-disabled the instant it's rescheduled. */
+function clearExpiredDeadline(timer) {
+  if (timer.enabled && timer.expiresAt && Date.now() >= timer.expiresAt) {
+    timer.expiresAt = null;
+  }
+}
+
+function sendTimerNow(timer) {
+  runInputForTarget(timer.message, normalizeChannel(timer.channel));
+  scheduleTimer(timer);
 }
 
 function ensureTimerPillTicking() {
@@ -2095,6 +2134,11 @@ function renderTimerPills() {
   pills.forEach((timer) => {
     const pill = document.createElement('div');
     pill.className = `timer-pill${timer.enabled ? '' : ' is-paused'}`;
+    pill.title = 'Click to send this message now and restart the timer';
+    pill.addEventListener('click', () => {
+      sendTimerNow(timer);
+      renderTimerPills();
+    });
 
     const message = document.createElement('span');
     message.className = 'timer-pill-message';
@@ -2109,22 +2153,27 @@ function renderTimerPills() {
     toggle.type = 'button';
     toggle.title = timer.enabled ? 'Pause timer' : 'Resume timer';
     toggle.textContent = timer.enabled ? '⏸' : '▶';
-    toggle.addEventListener('click', async () => {
+    toggle.addEventListener('click', async (event) => {
+      event.stopPropagation();
       timer.enabled = !timer.enabled;
+      if (timer.enabled) clearExpiredDeadline(timer);
       await saveSettings();
       renderTimers();
-      scheduleTimers();
+      scheduleTimer(timer);
+      renderTimerPills();
     });
 
     const remove = document.createElement('button');
     remove.type = 'button';
     remove.title = 'Delete timer';
     remove.textContent = '🗑';
-    remove.addEventListener('click', async () => {
+    remove.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      unscheduleTimer(timer.id);
       state.settings.timedMessages = state.settings.timedMessages.filter((entry) => entry.id !== timer.id);
       await saveSettings();
       renderTimers();
-      scheduleTimers();
+      renderTimerPills();
     });
 
     pill.append(message, countdown, toggle, remove);

@@ -894,6 +894,11 @@ textarea:focus {
   background: var(--button-bg, #fff);
   border: 1px solid var(--line);
   font-size: 12px;
+  cursor: pointer;
+}
+
+.timer-pill:hover {
+  border-color: var(--accent);
 }
 
 .timer-pill.is-paused {
