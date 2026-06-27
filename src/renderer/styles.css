@@ -873,6 +873,56 @@ textarea:focus {
   background: var(--bar-bg, #faf7ef);
 }
 
+.timer-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 18px 10px;
+  background: var(--bar-bg, #faf7ef);
+}
+
+.timer-pills:empty {
+  display: none;
+}
+
+.timer-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 6px 5px 12px;
+  border-radius: 999px;
+  background: var(--button-bg, #fff);
+  border: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.timer-pill.is-paused {
+  opacity: 0.6;
+}
+
+.timer-pill-message {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-pill-countdown {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timer-pill button {
+  min-height: auto;
+  height: 22px;
+  width: 22px;
+  padding: 0;
+  border-radius: 50%;
+  line-height: 1;
+  font-size: 12px;
+}
+
 .chat-action-bar .secondary-action {
   min-height: 34px;
 }
@@ -1188,15 +1238,41 @@ textarea:focus {
   margin-bottom: 0;
 }
 
+.timer-form .timer-expiration,
+.timer-form .check-row {
+  grid-column: 1 / -1;
+}
+
 .timer-item {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr) 80px;
+  grid-template-columns: 86px minmax(0, 1fr) 90px 80px;
   gap: 12px;
   align-items: center;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--input-bg, #fffdf8);
+}
+
+.timer-expiration {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px 4px;
+  margin: 0;
+}
+
+.timer-expiration legend {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 0 4px;
+}
+
+.timer-expiration label {
+  margin-bottom: 6px;
 }
 
 .timer-item input {

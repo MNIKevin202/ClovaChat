@@ -14,6 +14,9 @@ const state = {
   recentChatters: [],
   nickSuggestion: '',
   timerHandles: new Map(),
+  timerExpiryHandles: new Map(),
+  timerNextFire: new Map(),
+  timerPillTickHandle: null,
   streamPlayer: null,
   streamPlayerChannel: '',
   connected: false,
@@ -98,6 +101,11 @@ const el = {
   timerMinutes: document.querySelector('#timerMinutes'),
   timerSeconds: document.querySelector('#timerSeconds'),
   timerMessage: document.querySelector('#timerMessage'),
+  timerExpireDays: document.querySelector('#timerExpireDays'),
+  timerExpireHours: document.querySelector('#timerExpireHours'),
+  timerExpireMinutes: document.querySelector('#timerExpireMinutes'),
+  timerShowOnChannel: document.querySelector('#timerShowOnChannel'),
+  timerPills: document.querySelector('#timerPills'),
   popupList: document.querySelector('#popupList'),
   popupForm: document.querySelector('#popupForm'),
   popupLabel: document.querySelector('#popupLabel'),
@@ -608,6 +616,11 @@ function bindEvents() {
     const message = el.timerMessage.value.trim();
     if (!channel || !message || totalSeconds < 1) return;
 
+    const expireDays = Math.max(0, Number(el.timerExpireDays.value || 0));
+    const expireHours = Math.max(0, Number(el.timerExpireHours.value || 0));
+    const expireMinutes = Math.max(0, Number(el.timerExpireMinutes.value || 0));
+    const expireMs = ((expireDays * 24 * 60 * 60) + (expireHours * 60 * 60) + (expireMinutes * 60)) * 1000;
+
     state.settings.timedMessages.push({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       channel,
@@ -615,11 +628,17 @@ function bindEvents() {
       seconds,
       message,
       enabled: true,
+      expiresAt: expireMs > 0 ? Date.now() + expireMs : null,
+      showOnChannel: el.timerShowOnChannel.checked,
     });
 
     el.timerMinutes.value = '10';
     el.timerSeconds.value = '0';
     el.timerMessage.value = '';
+    el.timerExpireDays.value = '0';
+    el.timerExpireHours.value = '0';
+    el.timerExpireMinutes.value = '0';
+    el.timerShowOnChannel.checked = false;
     await saveSettings();
     renderTimers();
     scheduleTimers();
@@ -1132,6 +1151,7 @@ function renderTopic() {
   if (state.activeChannel === 'server') {
     label.textContent = 'Server status — connection events, joins/parts, and notices live here.';
     el.topicBar.append(label);
+    renderTimerPills();
     return;
   }
 
@@ -1139,6 +1159,7 @@ function renderTopic() {
   el.topicBar.append(label);
 
   const channelTimers = timersForChannel(state.activeChannel);
+  renderTimerPills();
   if (channelTimers.length === 0) return;
 
   const button = document.createElement('button');
@@ -1903,6 +1924,8 @@ function renderTimers() {
 
   state.settings.timedMessages.forEach((timer) => {
     timer.seconds ??= 0;
+    timer.expiresAt ??= null;
+    timer.showOnChannel ??= false;
     const item = document.createElement('div');
     item.className = 'timer-item';
 
@@ -1923,7 +1946,24 @@ function renderTimers() {
     toggle.append(enabled, toggleLabel);
 
     const summary = document.createElement('div');
-    summary.innerHTML = `<strong>${escapeHtml(timer.channel)}</strong><span>Every ${escapeHtml(formatTimerInterval(timer))}</span><code>${escapeHtml(timer.message)}</code>`;
+    const expiryText = timer.expiresAt
+      ? (timer.expiresAt > Date.now() ? `Expires in ${formatDuration(timer.expiresAt - Date.now())}` : 'Expired')
+      : '';
+    summary.innerHTML = `<strong>${escapeHtml(timer.channel)}</strong><span>Every ${escapeHtml(formatTimerInterval(timer))}</span>${expiryText ? `<span>${escapeHtml(expiryText)}</span>` : ''}<code>${escapeHtml(timer.message)}</code>`;
+
+    const showToggle = document.createElement('label');
+    showToggle.className = 'timer-toggle';
+    const showOnChannel = document.createElement('input');
+    showOnChannel.type = 'checkbox';
+    showOnChannel.checked = timer.showOnChannel;
+    const showToggleLabel = document.createElement('span');
+    showToggleLabel.textContent = 'On channel';
+    showOnChannel.addEventListener('change', async () => {
+      timer.showOnChannel = showOnChannel.checked;
+      await saveSettings();
+      renderTopic();
+    });
+    showToggle.append(showOnChannel, showToggleLabel);
 
     const remove = document.createElement('button');
     remove.type = 'button';
@@ -1935,10 +1975,22 @@ function renderTimers() {
       scheduleTimers();
     });
 
-    item.append(toggle, summary, remove);
+    item.append(toggle, summary, showToggle, remove);
     el.timerList.append(item);
   });
   renderTopic();
+}
+
+function formatDuration(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 function renderTimerChannelOptions() {
@@ -1965,8 +2017,12 @@ function renderTimerChannelOptions() {
   el.timerChannel.value = state.channels.includes(selected) ? selected : state.channels[0];
 }
 
-function scheduleTimers() {
+async function scheduleTimers() {
   clearTimerHandles();
+  if (await expireDueTimers()) {
+    await saveSettings();
+    renderTimers();
+  }
   if (!state.connected) return;
 
   state.settings.timedMessages
@@ -1975,18 +2031,105 @@ function scheduleTimers() {
       timer.seconds ??= 0;
       const intervalSeconds = Math.max(1, (Number(timer.minutes || 0) * 60) + Number(timer.seconds || 0));
       const intervalMs = intervalSeconds * 1000;
+      state.timerNextFire.set(timer.id, Date.now() + intervalMs);
       const handle = setInterval(() => {
         const current = state.settings.timedMessages.find((entry) => entry.id === timer.id);
         if (!current?.enabled) return;
         runInputForTarget(current.message, normalizeChannel(current.channel));
+        state.timerNextFire.set(current.id, Date.now() + intervalMs);
       }, intervalMs);
       state.timerHandles.set(timer.id, handle);
+
+      if (timer.expiresAt) {
+        const expiryHandle = setTimeout(async () => {
+          if (await expireDueTimers()) {
+            await saveSettings();
+            renderTimers();
+            scheduleTimers();
+          }
+        }, Math.max(0, timer.expiresAt - Date.now()));
+        state.timerExpiryHandles.set(timer.id, expiryHandle);
+      }
     });
+
+  ensureTimerPillTicking();
+  renderTopic();
+}
+
+async function expireDueTimers() {
+  let changed = false;
+  state.settings.timedMessages.forEach((timer) => {
+    if (timer.enabled && timer.expiresAt && Date.now() >= timer.expiresAt) {
+      timer.enabled = false;
+      changed = true;
+    }
+  });
+  return changed;
 }
 
 function clearTimerHandles() {
   for (const handle of state.timerHandles.values()) clearInterval(handle);
   state.timerHandles.clear();
+  for (const handle of state.timerExpiryHandles.values()) clearTimeout(handle);
+  state.timerExpiryHandles.clear();
+}
+
+function ensureTimerPillTicking() {
+  if (state.timerPillTickHandle) return;
+  state.timerPillTickHandle = setInterval(renderTimerPills, 1000);
+}
+
+function timerCountdownText(timer) {
+  if (!timer.enabled) return 'paused';
+  if (!state.connected) return 'disconnected';
+  const nextFire = state.timerNextFire.get(timer.id);
+  if (!nextFire) return '—';
+  return `next in ${formatDuration(Math.max(0, nextFire - Date.now()))}`;
+}
+
+function renderTimerPills() {
+  if (!el.timerPills) return;
+  el.timerPills.innerHTML = '';
+
+  const pills = timersForChannel(state.activeChannel).filter((timer) => timer.showOnChannel);
+  pills.forEach((timer) => {
+    const pill = document.createElement('div');
+    pill.className = `timer-pill${timer.enabled ? '' : ' is-paused'}`;
+
+    const message = document.createElement('span');
+    message.className = 'timer-pill-message';
+    message.textContent = timer.message;
+    message.title = timer.message;
+
+    const countdown = document.createElement('span');
+    countdown.className = 'timer-pill-countdown';
+    countdown.textContent = timerCountdownText(timer);
+
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.title = timer.enabled ? 'Pause timer' : 'Resume timer';
+    toggle.textContent = timer.enabled ? '⏸' : '▶';
+    toggle.addEventListener('click', async () => {
+      timer.enabled = !timer.enabled;
+      await saveSettings();
+      renderTimers();
+      scheduleTimers();
+    });
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.title = 'Delete timer';
+    remove.textContent = '🗑';
+    remove.addEventListener('click', async () => {
+      state.settings.timedMessages = state.settings.timedMessages.filter((entry) => entry.id !== timer.id);
+      await saveSettings();
+      renderTimers();
+      scheduleTimers();
+    });
+
+    pill.append(message, countdown, toggle, remove);
+    el.timerPills.append(pill);
+  });
 }
 
 async function setupLiveNotifications(host) {

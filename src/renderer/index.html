@@ -97,6 +97,7 @@
             </aside>
           </div>
           <div id="popupBar" class="popup-bar"></div>
+          <div id="timerPills" class="timer-pills"></div>
           <div class="chat-action-bar">
             <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
           </div>
@@ -195,6 +196,13 @@
             <label>Minutes<input id="timerMinutes" type="number" min="0" value="10" /></label>
             <label>Seconds<input id="timerSeconds" type="number" min="0" max="59" value="0" /></label>
             <label>Message<textarea id="timerMessage" placeholder="Remember to follow the channel."></textarea></label>
+            <fieldset class="timer-expiration">
+              <legend>Auto-disable after (optional)</legend>
+              <label>Days<input id="timerExpireDays" type="number" min="0" value="0" /></label>
+              <label>Hours<input id="timerExpireHours" type="number" min="0" max="23" value="0" /></label>
+              <label>Minutes<input id="timerExpireMinutes" type="number" min="0" max="59" value="0" /></label>
+            </fieldset>
+            <label class="check-row"><input id="timerShowOnChannel" type="checkbox" /> Show on channel</label>
             <button type="submit">Add Timer</button>
           </form>
         </section>
