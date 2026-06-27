@@ -247,6 +247,7 @@
           <aside class="docs-nav" aria-label="Docs categories">
             <h2>Docs</h2>
             <a href="#docs-start">Getting Started</a>
+            <a href="#docs-palette">Command Palette</a>
             <a href="#docs-chat">Chat</a>
             <a href="#docs-channels">Channels</a>
             <a href="#docs-streams">Streams</a>
@@ -276,6 +277,18 @@
                 <li>Enter your nick and password. For Twitch, the password should be an OAuth token that starts with oauth:.</li>
                 <li>Enter a starting channel such as #mnikevin202.</li>
                 <li>Click Connect. Server events appear in the Server tab, and joined channels appear across the top of Chat.</li>
+              </ol>
+            </section>
+
+            <section id="docs-palette" class="docs-section">
+              <h3>Command Palette</h3>
+              <ol>
+                <li>Press Cmd+K on macOS or Ctrl+K on Windows and Linux.</li>
+                <li>Search for channels, users, settings, commands, timers, popups, stream controls, or app pages.</li>
+                <li>Use Up and Down to move through results, Enter to run the selected action, and Escape to close.</li>
+                <li>Recent actions appear before you type so common workflows stay quick.</li>
+                <li>Actions that would leave a channel, clear a chat view, or remove an Auto Join entry ask for confirmation first.</li>
+                <li>Unavailable actions stay visible with a short reason, such as needing to connect before joining a channel.</li>
               </ol>
             </section>
 
@@ -568,6 +581,17 @@
         </section>
       </div>
     </aside>
+
+    <div id="commandPaletteBackdrop" class="command-palette-backdrop" hidden>
+      <section id="commandPalette" class="command-palette" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle">
+        <div class="command-palette-search">
+          <span id="commandPaletteTitle" class="command-palette-title">Command Palette</span>
+          <input id="commandPaletteInput" autocomplete="off" placeholder="Search commands, channels, users, settings..." />
+        </div>
+        <div id="commandPaletteResults" class="command-palette-results" role="listbox"></div>
+        <footer class="command-palette-footer">↑↓ Move&nbsp;&nbsp;&nbsp;Enter Run&nbsp;&nbsp;&nbsp;Esc Close</footer>
+      </section>
+    </div>
 
     <script src="./renderer.js"></script>
   </body>

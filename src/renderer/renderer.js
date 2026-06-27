@@ -34,6 +34,7 @@ const state = {
   draggedChannel: '',
   userStats: new Map(),
   userDrawer: { open: false, channel: '', nick: '' },
+  commandPalette: { open: false, query: '', selectedIndex: 0, results: [] },
 };
 
 const el = {
@@ -149,6 +150,10 @@ const el = {
   userDrawerBan: document.querySelector('#userDrawerBan'),
   userDrawerUnban: document.querySelector('#userDrawerUnban'),
   userDrawerClear: document.querySelector('#userDrawerClear'),
+  commandPaletteBackdrop: document.querySelector('#commandPaletteBackdrop'),
+  commandPalette: document.querySelector('#commandPalette'),
+  commandPaletteInput: document.querySelector('#commandPaletteInput'),
+  commandPaletteResults: document.querySelector('#commandPaletteResults'),
 };
 
 init();
@@ -288,6 +293,7 @@ function ensureSettingsShape() {
   state.settings.preferences.notifyOnMention ??= false;
   state.settings.preferences.notifyOnLive ??= false;
   state.settings.preferences.moveLiveTabsToFront ??= true;
+  state.settings.preferences.recentCommandPaletteActions ||= [];
   state.settings.preferences.hiddenChats ||= {};
   state.settings.preferences.roleMemory ||= {};
   state.settings.preferences.userNotes ||= {};
@@ -400,12 +406,32 @@ function bindEvents() {
     if (state.activeContextMenu && !state.activeContextMenu.contains(event.target)) hideContextMenu();
   });
   window.addEventListener('keydown', (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      openCommandPalette();
+      return;
+    }
+
+    if (state.commandPalette.open) {
+      handleCommandPaletteKeydown(event);
+      return;
+    }
+
     if (event.key === 'Escape') {
       hideContextMenu();
       if (state.userDrawer.open) closeUserDrawer();
     }
   });
   window.addEventListener('blur', hideContextMenu);
+
+  el.commandPaletteBackdrop.addEventListener('pointerdown', (event) => {
+    if (event.target === el.commandPaletteBackdrop) closeCommandPalette();
+  });
+  el.commandPaletteInput.addEventListener('input', () => {
+    state.commandPalette.query = el.commandPaletteInput.value;
+    state.commandPalette.selectedIndex = 0;
+    renderCommandPalette();
+  });
 
   el.userDrawerClose.addEventListener('click', closeUserDrawer);
 
@@ -1103,6 +1129,487 @@ function renderAll() {
   }
 }
 
+function switchToChannel(channel) {
+  const normalized = channel === 'server' ? 'server' : normalizeChannel(channel);
+  if (!normalized) return;
+  state.activeChannel = normalized;
+  state.unreadChannels.delete(normalized);
+  if (state.userDrawer.open) {
+    state.userDrawer.channel = normalized;
+    renderUserDrawer();
+  }
+  renderChannels();
+  renderTopic();
+  renderRoster();
+  renderMessages();
+  renderChatActions();
+  renderStreamPlayer();
+}
+
+function openCommandPalette() {
+  state.commandPalette.open = true;
+  state.commandPalette.query = '';
+  state.commandPalette.selectedIndex = 0;
+  el.commandPaletteBackdrop.hidden = false;
+  el.commandPaletteInput.value = '';
+  renderCommandPalette();
+  requestAnimationFrame(() => el.commandPaletteInput.focus());
+}
+
+function closeCommandPalette() {
+  state.commandPalette.open = false;
+  el.commandPaletteBackdrop.hidden = true;
+  state.commandPalette.results = [];
+}
+
+function handleCommandPaletteKeydown(event) {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    closeCommandPalette();
+    return;
+  }
+
+  if (event.key === 'ArrowDown') {
+    event.preventDefault();
+    moveCommandPaletteSelection(1);
+    return;
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault();
+    moveCommandPaletteSelection(-1);
+    return;
+  }
+
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    runSelectedCommandPaletteAction();
+  }
+}
+
+function moveCommandPaletteSelection(direction) {
+  const enabled = state.commandPalette.results.filter((command) => !command.disabledReason);
+  if (enabled.length === 0) return;
+  const selected = state.commandPalette.results[state.commandPalette.selectedIndex];
+  const currentEnabledIndex = Math.max(0, enabled.findIndex((command) => command.id === selected?.id));
+  const next = enabled[(currentEnabledIndex + direction + enabled.length) % enabled.length];
+  state.commandPalette.selectedIndex = state.commandPalette.results.findIndex((command) => command.id === next.id);
+  renderCommandPaletteResults();
+}
+
+function renderCommandPalette() {
+  const query = state.commandPalette.query.trim();
+  const commands = commandPaletteCommands(query);
+  state.commandPalette.results = query
+    ? searchCommandPaletteCommands(commands, query)
+    : recentCommandPaletteCommands(commands);
+  state.commandPalette.selectedIndex = firstEnabledCommandIndex(state.commandPalette.results);
+  renderCommandPaletteResults();
+}
+
+function renderCommandPaletteResults() {
+  const query = state.commandPalette.query.trim();
+  el.commandPaletteResults.innerHTML = '';
+
+  if (state.commandPalette.results.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'command-palette-empty';
+    empty.textContent = 'No results found';
+    el.commandPaletteResults.append(empty);
+    return;
+  }
+
+  state.commandPalette.results.forEach((command, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `command-palette-result${index === state.commandPalette.selectedIndex ? ' is-selected' : ''}`;
+    button.disabled = Boolean(command.disabledReason);
+    button.setAttribute('role', 'option');
+    button.setAttribute('aria-selected', index === state.commandPalette.selectedIndex ? 'true' : 'false');
+
+    const icon = document.createElement('span');
+    icon.className = `command-palette-icon ${command.category || ''}`;
+    icon.textContent = command.icon || '⚡';
+
+    const body = document.createElement('span');
+    body.className = 'command-palette-result-body';
+    const title = document.createElement('strong');
+    title.innerHTML = highlightCommandPaletteMatch(command.title, query);
+    const subtitle = document.createElement('span');
+    subtitle.innerHTML = highlightCommandPaletteMatch(command.disabledReason || command.subtitle || '', query);
+    body.append(title, subtitle);
+
+    const category = document.createElement('span');
+    category.className = 'command-palette-category';
+    category.textContent = command.categoryLabel || command.category || '';
+
+    button.append(icon, body, category);
+    button.addEventListener('pointermove', () => {
+      if (command.disabledReason) return;
+      state.commandPalette.selectedIndex = index;
+      renderCommandPaletteResults();
+    });
+    button.addEventListener('click', () => runCommandPaletteAction(command));
+    el.commandPaletteResults.append(button);
+  });
+}
+
+function commandPaletteCommands(query = '') {
+  const currentChannel = isServerTarget(state.activeChannel) ? '' : normalizeChannel(state.activeChannel);
+  const commands = [
+    paletteCommand('focus-chat', 'Focus chat input', 'Put the cursor in the message box.', 'Chat', '@', 'chat input message focus', () => {
+      activateTab('chat');
+      el.messageInput.focus();
+    }, { disabledReason: isServerTarget(state.activeChannel) ? 'The Server tab does not have a message input.' : '' }),
+    paletteCommand('clear-chat', 'Clear current chat view', 'Remove messages from this local view only.', 'Chat', '@', 'clear current chat local view', clearCurrentChatView, {
+      confirmation: `Clear the local chat view for ${state.activeChannel || 'this tab'}? This does not affect Twitch.`,
+      disabledReason: state.activeChannel ? '' : 'No active channel to clear.',
+    }),
+    paletteCommand('copy-channel', 'Copy current channel name', currentChannel || 'No channel selected.', 'Channel', '#', 'copy channel current', copyCurrentChannelName, {
+      disabledReason: currentChannel ? '' : 'Switch to a channel tab first.',
+    }),
+    paletteCommand('leave-current-channel', currentChannel ? `Leave ${currentChannel}` : 'Leave current channel', 'Part from the active channel.', 'Channel', '#', 'leave part current channel', () => leaveChannel(currentChannel), {
+      confirmation: currentChannel ? `Leave ${currentChannel}?` : '',
+      disabledReason: currentChannel ? '' : 'Switch to a channel tab first.',
+    }),
+    paletteCommand('add-current-auto-join', currentChannel ? `Add ${currentChannel} to Auto Join` : 'Add current channel to Auto Join', 'Join this channel automatically next time.', 'Channel', '#', 'auto join add current channel', () => addChannelToAutoJoin(currentChannel), {
+      disabledReason: !currentChannel
+        ? 'Switch to a channel tab first.'
+        : (channelIsAutoJoined(currentChannel) ? `${currentChannel} is already in Auto Join.` : ''),
+    }),
+    paletteCommand('open-logs-folder', 'Open Logs Folder', 'Open the configured channel log folder.', 'Settings', '⚙', 'logs folder open channel log', openConfiguredLogFolder, {
+      disabledReason: state.settings.preferences.channelLogFolder ? '' : 'Choose a channel log folder in Settings first.',
+    }),
+    paletteCommand('open-chat', 'Open Chat', 'Go to the chat workspace.', 'Navigation', '⚡', 'chat page tab', () => activateTab('chat')),
+    paletteCommand('open-bot', 'Open Bot Builder', 'Build self-hosted bot rules.', 'Bot', '/', 'bot builder rules', () => activateTab('bot')),
+    paletteCommand('open-commands', 'Open Commands', 'Manage mIRC and Python command scripts.', 'Command', '/', 'commands aliases scripts python mirc', () => activateTab('commands')),
+    paletteCommand('new-command', 'Create new command', 'Open Commands and focus the command name.', 'Command', '/', 'new command alias create', () => {
+      activateTab('commands');
+      el.aliasName.focus();
+    }),
+    paletteCommand('open-popups', 'Open Popups', 'Manage quick popup buttons.', 'Popup', '⚡', 'popups buttons actions', () => activateTab('popups')),
+    paletteCommand('new-popup', 'Create new popup', 'Open Popups and focus the label field.', 'Popup', '⚡', 'new popup action create', () => {
+      activateTab('popups');
+      el.popupLabel.focus();
+    }),
+    paletteCommand('open-timers', 'Open Timers', 'Manage timed messages.', 'Timer', '◷', 'timers timed messages clock', () => activateTab('timers')),
+    paletteCommand('new-timer', 'Create new timer', 'Open Timers and focus the message field.', 'Timer', '◷', 'new timer timed message create', () => {
+      activateTab('timers');
+      renderTimerChannelOptions();
+      if (currentChannel) el.timerChannel.value = currentChannel;
+      el.timerMessage.focus();
+    }),
+    paletteCommand('open-raw', 'Open Raw IRC', 'View protocol traffic and server notices.', 'Navigation', '⚡', 'raw irc protocol', () => activateTab('raw')),
+    paletteCommand('open-docs', 'Open Docs', 'Read the in-app guide.', 'Navigation', '⚙', 'docs help guide wiki', () => activateTab('docs')),
+    paletteCommand('open-settings', 'Open Settings', 'Open preferences, backups, and updates.', 'Settings', '⚙', 'settings preferences updates backups', () => activateTab('settings')),
+    paletteCommand('show-stream', 'Show stream preview', 'Open the stream player for the active channel.', 'Stream', '⚡', 'stream video show watch', () => setStreamPreviewVisible(true), {
+      disabledReason: streamChannelFromActiveChannel() ? '' : 'Switch to a channel tab first.',
+    }),
+    paletteCommand('hide-stream', 'Hide stream preview', 'Close the stream player.', 'Stream', '⚡', 'stream video hide', () => setStreamPreviewVisible(false), {
+      disabledReason: state.settings.appearance.twitchPlayer ? '' : 'The stream preview is already hidden.',
+    }),
+    paletteCommand('stream-play', 'Play stream', 'Resume the current stream preview.', 'Stream', '⚡', 'stream video play resume', () => setStreamPaused(false), {
+      disabledReason: state.streamPlayer ? '' : 'Open a stream preview first.',
+    }),
+    paletteCommand('stream-pause', 'Pause stream', 'Pause the current stream preview.', 'Stream', '⚡', 'stream video pause', () => setStreamPaused(true), {
+      disabledReason: state.streamPlayer ? '' : 'Open a stream preview first.',
+    }),
+    paletteCommand('stream-mute', 'Mute stream', 'Mute the current stream preview.', 'Stream', '⚡', 'stream video mute', () => setStreamMuted(true), {
+      disabledReason: state.streamPlayer ? '' : 'Open a stream preview first.',
+    }),
+    paletteCommand('stream-unmute', 'Unmute stream', 'Unmute the current stream preview.', 'Stream', '⚡', 'stream video unmute volume', () => setStreamMuted(false), {
+      disabledReason: state.streamPlayer ? '' : 'Open a stream preview first.',
+    }),
+    paletteCommand('stream-next', 'Next stream', 'Move to the next available stream.', 'Stream', '⚡', 'stream video next', () => navigateStream(1), {
+      disabledReason: streamChannels().length > 1 ? '' : 'There is only one stream target.',
+    }),
+    paletteCommand('stream-previous', 'Previous stream', 'Move to the previous available stream.', 'Stream', '⚡', 'stream video previous prev', () => navigateStream(-1), {
+      disabledReason: streamChannels().length > 1 ? '' : 'There is only one stream target.',
+    }),
+  ];
+
+  const joinChannel = joinChannelFromPaletteQuery(query);
+  if (joinChannel && !state.channels.includes(joinChannel)) {
+    commands.unshift(paletteCommand(`join-${joinChannel}`, `Join ${joinChannel}`, 'Join once without adding it to Auto Join.', 'Channel', '#', `join ${joinChannel}`, () => joinChannelOnce(joinChannel), {
+      disabledReason: state.connected ? '' : 'Connect before joining a channel.',
+    }));
+  }
+
+  const autoJoinChannel = autoJoinChannelFromPaletteQuery(query);
+  if (autoJoinChannel && !channelIsAutoJoined(autoJoinChannel)) {
+    commands.unshift(paletteCommand(`auto-join-${autoJoinChannel}`, `Auto Join ${autoJoinChannel}`, 'Add this channel to Auto Join.', 'Channel', '#', `auto join ${autoJoinChannel}`, () => addChannelToAutoJoin(autoJoinChannel)));
+  }
+
+  state.channels.forEach((channel) => {
+    commands.push(paletteCommand(`switch-${channel}`, `Switch ${channel}`, 'Open this joined channel tab.', 'Channel', '#', `switch channel ${channel}`, () => switchToChannel(channel)));
+    commands.push(paletteCommand(`leave-${channel}`, `Leave ${channel}`, 'Part from this channel.', 'Channel', '#', `leave part ${channel}`, () => leaveChannel(channel), {
+      confirmation: `Leave ${channel}?`,
+    }));
+  });
+
+  state.settings.connection.autoJoinChannels.forEach((channel) => {
+    commands.push(paletteCommand(`remove-auto-join-${channel}`, `Remove ${channel} from Auto Join`, 'Stop joining this channel automatically.', 'Channel', '#', `remove auto join ${channel}`, () => removeAutoJoinChannel(channel), {
+      confirmation: `Remove ${channel} from Auto Join?`,
+    }));
+  });
+
+  nickCompletionCandidates().slice(0, 40).forEach((nick) => {
+    commands.push(paletteCommand(`mention-${nick.toLowerCase()}`, `Mention ${nick}`, 'Insert this name into the message box.', 'User', '@', `mention user profile ${nick}`, () => mentionUser(nick), {
+      disabledReason: isServerTarget(state.activeChannel) ? 'Switch to a channel tab first.' : '',
+    }));
+    commands.push(paletteCommand(`profile-${nick.toLowerCase()}`, `Open profile for ${nick}`, 'Show roles, recent messages, notes, and moderation actions.', 'User', '@', `profile user drawer ${nick}`, () => openUserDrawer(state.activeChannel, nick), {
+      disabledReason: isServerTarget(state.activeChannel) ? 'Switch to a channel tab first.' : '',
+    }));
+  });
+
+  state.settings.aliases.forEach((alias) => {
+    commands.push(paletteCommand(`command-${alias.name}`, `Command /${alias.name}`, `${alias.type === 'python' ? 'Python' : 'mIRC'} command script.`, 'Command', '/', `command alias script ${alias.name} ${alias.output}`, () => {
+      activateTab('commands');
+      el.aliasName.value = alias.name;
+      el.aliasMode.value = alias.type === 'python' ? 'python' : 'mirc';
+      el.aliasOutput.value = alias.output;
+      el.aliasOutput.focus();
+    }));
+  });
+
+  state.settings.botRules.forEach((rule) => {
+    const name = rule.name || botRuleFallbackName(rule.triggerType, rule.triggerValue);
+    commands.push(paletteCommand(`toggle-bot-rule-${rule.id}`, `${rule.enabled ? 'Disable' : 'Enable'} bot rule: ${name}`, botRuleSummary(rule), 'Bot', '/', `bot rule toggle ${name}`, async () => {
+      rule.enabled = !rule.enabled;
+      await saveSettings();
+      renderBotRules();
+      renderChannelStatusStrip();
+    }));
+  });
+
+  state.settings.timedMessages.forEach((timer) => {
+    const summary = `${timer.channel} · Every ${formatTimerInterval(timer)} · ${timer.message}`;
+    commands.push(paletteCommand(`open-timer-${timer.id}`, `Timer: ${timer.message}`, summary, 'Timer', '◷', `timer ${timer.channel} ${timer.message}`, () => {
+      activateTab('timers');
+      renderTimerChannelOptions();
+      el.timerChannel.value = normalizeChannel(timer.channel);
+    }));
+    commands.push(paletteCommand(`toggle-timer-${timer.id}`, `${timer.enabled ? 'Pause' : 'Resume'} timer: ${timer.message}`, summary, 'Timer', '◷', `pause resume timer ${timer.channel} ${timer.message}`, async () => {
+      timer.enabled = !timer.enabled;
+      if (timer.enabled) clearExpiredDeadline(timer);
+      await saveSettings();
+      scheduleTimer(timer);
+      renderTimers();
+      renderTimerPills();
+    }));
+    commands.push(paletteCommand(`send-timer-${timer.id}`, `Send timer now: ${timer.message}`, summary, 'Timer', '◷', `send timer now ${timer.channel} ${timer.message}`, () => sendTimerNow(timer), {
+      disabledReason: state.connected ? '' : 'Connect before sending a timer.',
+    }));
+  });
+
+  state.settings.popups.forEach((popup, index) => {
+    const command = popup.command.replaceAll('$channel', state.activeChannel || '');
+    const isLeave = /^\/(?:part|leave)\b/i.test(command) || /leave/i.test(popup.label);
+    commands.push(paletteCommand(`popup-${index}-${popup.label}`, popup.label, `Run popup action: ${popup.command}`, 'Popup', '⚡', `popup action ${popup.label} ${popup.command}`, () => runInput(command), {
+      confirmation: isLeave ? `Run "${popup.label}"? This may leave the current channel.` : '',
+      disabledReason: isServerTarget(state.activeChannel) ? 'Switch to a channel tab first.' : '',
+    }));
+  });
+
+  return commands;
+}
+
+function paletteCommand(id, title, subtitle, category, icon, keywords, action, options = {}) {
+  return {
+    id,
+    title,
+    subtitle,
+    category: category.toLowerCase(),
+    categoryLabel: category,
+    icon,
+    keywords,
+    action,
+    confirmation: options.confirmation || '',
+    disabledReason: options.disabledReason || '',
+  };
+}
+
+function searchCommandPaletteCommands(commands, query) {
+  const tokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  return commands
+    .map((command) => ({ command, score: commandPaletteScore(command, tokens, query) }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.command.title.localeCompare(b.command.title))
+    .slice(0, 50)
+    .map((entry) => entry.command);
+}
+
+function commandPaletteScore(command, tokens, query) {
+  const haystack = `${command.title} ${command.subtitle} ${command.categoryLabel} ${command.keywords}`.toLowerCase();
+  if (!tokens.every((token) => haystack.includes(token))) return 0;
+  const title = command.title.toLowerCase();
+  let score = 10;
+  if (title.startsWith(query.toLowerCase())) score += 20;
+  if (title.includes(query.toLowerCase())) score += 8;
+  if (!command.disabledReason) score += 3;
+  return score;
+}
+
+function recentCommandPaletteCommands(commands) {
+  const recentIds = state.settings.preferences.recentCommandPaletteActions || [];
+  const byId = new Map(commands.map((command) => [command.id, command]));
+  const recent = recentIds.map((id) => byId.get(id)).filter(Boolean);
+  if (recent.length > 0) return recent.slice(0, 10);
+  return commands.filter((command) => [
+    'focus-chat',
+    'open-bot',
+    'open-commands',
+    'new-timer',
+    'open-settings',
+    'show-stream',
+  ].includes(command.id));
+}
+
+function firstEnabledCommandIndex(commands) {
+  const index = commands.findIndex((command) => !command.disabledReason);
+  return Math.max(0, index);
+}
+
+function highlightCommandPaletteMatch(value, query) {
+  let escaped = escapeHtml(value || '');
+  const trimmed = query.trim();
+  if (!trimmed) return escaped;
+  trimmed.split(/\s+/).filter(Boolean).forEach((token) => {
+    const safe = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    escaped = escaped.replace(new RegExp(`(${safe})`, 'ig'), '<mark>$1</mark>');
+  });
+  return escaped;
+}
+
+async function runSelectedCommandPaletteAction() {
+  const command = state.commandPalette.results[state.commandPalette.selectedIndex];
+  if (command) await runCommandPaletteAction(command);
+}
+
+async function runCommandPaletteAction(command) {
+  if (!command || command.disabledReason) return;
+  if (command.confirmation && !window.confirm(command.confirmation)) return;
+  closeCommandPalette();
+  await command.action();
+  recordCommandPaletteAction(command.id);
+}
+
+function recordCommandPaletteAction(id) {
+  const recent = state.settings.preferences.recentCommandPaletteActions || [];
+  state.settings.preferences.recentCommandPaletteActions = [id, ...recent.filter((entry) => entry !== id)].slice(0, 12);
+  saveSettings();
+}
+
+function joinChannelFromPaletteQuery(query) {
+  const match = String(query || '').trim().match(/^(?:join|\/join)\s+(#?[a-z0-9_]{1,25})$/i);
+  return match ? normalizeChannel(match[1]) : '';
+}
+
+function autoJoinChannelFromPaletteQuery(query) {
+  const match = String(query || '').trim().match(/^auto\s+join\s+(#?[a-z0-9_]{1,25})$/i);
+  return match ? normalizeChannel(match[1]) : '';
+}
+
+async function joinChannelOnce(channel) {
+  const normalized = normalizeChannel(channel);
+  if (!normalized || !state.connected) return;
+  window.macIRC.send({ target: normalized, text: `/join ${normalized}` });
+  appendStatus(`Joining ${normalized}.`, 'info');
+}
+
+async function addChannelToAutoJoin(channel) {
+  const normalized = normalizeChannel(channel);
+  if (!normalized || isServerTarget(normalized) || channelIsAutoJoined(normalized)) return;
+  state.settings.connection.autoJoinChannels = uniqueChannels([
+    ...state.settings.connection.autoJoinChannels,
+    normalized,
+  ]);
+  await saveSettings();
+  renderAutoJoinChannels();
+  renderChatActions();
+}
+
+async function removeAutoJoinChannel(channel) {
+  const normalized = normalizeChannel(channel);
+  state.settings.connection.autoJoinChannels = state.settings.connection.autoJoinChannels
+    .filter((entry) => normalizeChannel(entry) !== normalized);
+  await saveSettings();
+  renderAutoJoinChannels();
+  renderChatActions();
+}
+
+function clearCurrentChatView() {
+  if (!state.activeChannel) return;
+  state.messagesByTarget.set(state.activeChannel, []);
+  scheduleHistorySave();
+  renderMessages();
+  appendStatus(`Cleared ${state.activeChannel} from this local view.`, 'info');
+}
+
+async function copyCurrentChannelName() {
+  const channel = normalizeChannel(state.activeChannel);
+  if (!channel || isServerTarget(channel)) return;
+  await navigator.clipboard.writeText(channel);
+  appendStatus(`Copied ${channel} to clipboard.`, 'info');
+}
+
+function mentionUser(nick) {
+  if (!nick || isServerTarget(state.activeChannel)) return;
+  activateTab('chat');
+  const current = el.messageInput.value;
+  el.messageInput.value = `${current}${current && !current.endsWith(' ') ? ' ' : ''}@${nick} `;
+  el.messageInput.focus();
+}
+
+async function openConfiguredLogFolder() {
+  const folder = state.settings.preferences.channelLogFolder;
+  if (!folder) return;
+  const result = await window.macIRC.openLogFolder(folder);
+  if (!result?.ok) appendStatus(`Could not open logs folder: ${result?.error || 'unknown error'}`, 'error');
+}
+
+async function setStreamPreviewVisible(visible) {
+  if (visible) {
+    const channel = streamChannelFromActiveChannel();
+    if (!channel) return;
+    state.settings.appearance.twitchPlayer = true;
+    state.settings.appearance.twitchPlayerChannel = channel;
+  } else {
+    saveCurrentStreamPlayerState();
+    state.settings.appearance.twitchPlayer = false;
+    state.settings.appearance.twitchPlayerChannel = '';
+  }
+  await saveSettings();
+  renderStreamPlayer();
+}
+
+function setStreamPaused(paused) {
+  if (!state.streamPlayer) return;
+  try {
+    if (paused) state.streamPlayer.pause();
+    else state.streamPlayer.play();
+    setTimeout(() => {
+      saveCurrentStreamPlayerState();
+      updateStreamControlButtons();
+    }, 100);
+  } catch {
+    updateStreamControlButtons();
+  }
+}
+
+function setStreamMuted(muted) {
+  if (!state.streamPlayer) return;
+  try {
+    state.streamPlayer.setMuted(muted);
+    setTimeout(() => {
+      saveCurrentStreamPlayerState();
+      updateStreamControlButtons();
+    }, 100);
+  } catch {
+    updateStreamControlButtons();
+  }
+}
+
 function renderChannels() {
   syncChannelOrder();
   applySavedChannelOrder();
@@ -1148,20 +1655,7 @@ function renderChannels() {
       if (channel === 'server') return;
       showChannelContextMenu(event, channel);
     });
-    button.addEventListener('click', () => {
-      state.activeChannel = channel;
-      state.unreadChannels.delete(channel);
-      if (state.userDrawer.open) {
-        state.userDrawer.channel = channel;
-        renderUserDrawer();
-      }
-      renderChannels();
-      renderTopic();
-      renderRoster();
-      renderMessages();
-      renderChatActions();
-      renderStreamPlayer();
-    });
+    button.addEventListener('click', () => switchToChannel(channel));
     el.channels.append(button);
   });
 

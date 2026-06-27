@@ -1,0 +1,117 @@
+# ClovaChat Updates
+
+## Current App Identity
+
+ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command scripts, popup actions, timed messages, stream preview, logs, auto join, settings, and Twitch-focused workflow tools.
+
+## Completed / Existing Features
+
+- Twitch IRC connection
+- Channel tabs
+- Movable channel tabs
+- Right-click channel tab menu for leaving a channel
+- Multi-channel chat
+- User list per channel
+- Remembered moderator and VIP roles
+- Lead moderator and super moderator handling
+- User profile drawer for chat and roster usernames
+- Roster right-click tools for Monitor and Hide Chats
+- Stream preview panel
+- Stream preview navigation for multiple channels
+- Stream play, pause, mute, unmute, volume, and settings controls
+- Per-channel stream player state persistence
+- Popup actions
+- Command scripts
+- mIRC-style command replacements
+- Python command scripts
+- Timed messages
+- Timers Active and Timers Inactive channel status button
+- Bot Builder
+- Plain-language bot rule wizard
+- Channel-specific or all-channel bot rules
+- Raw IRC view
+- Docs page
+- Settings page
+- Auto Join sidebar
+- One-time `/join #channel` support without adding Auto Join
+- Add current channel to Auto Join action
+- Server Connection sidebar
+- Server tab as a notifications-only channel
+- Chat history between sessions
+- Channel logs
+- Open Logs Folder shortcut
+- Backup and restore settings
+- Dark mode
+- 7TV emotes
+- Twitch emotes
+- Desktop notifications
+- Notify when channel goes live
+- Move live channel tabs to the front
+- In-app update checks from GitHub Releases
+- macOS DMG update download/open flow
+- Windows EXE installer builds from GitHub Actions
+
+## Recent UI Upgrade
+
+- Sidebar redesigned into cleaner sections
+- Smaller ClovaChat logo
+- Connection status card added
+- Server, nick, and joined channel count shown
+- Open Logs Folder shortcut added
+- Stream controls kept visible while removing the bulky stream title overlay
+- Docs button added to the main workspace navigation
+- Server tab cleaned up so it does not show roster, popups, auto-join actions, quick chat buttons, or the message composer
+
+## Current Upgrade
+
+- Added a Command Palette opened with Cmd+K on macOS and Ctrl+K on Windows/Linux.
+- The palette searches channels, users, settings, timers, popups, bot rules, command scripts, stream controls, and app navigation.
+- It supports keyboard movement with Up/Down, Enter to run, and Escape to close.
+- Recent actions appear before typing.
+- Destructive actions require confirmation before running.
+- Disabled actions stay visible with a reason when the action is not currently available.
+
+## Command Palette Actions
+
+- Channel actions: join a channel once, leave current channel, switch joined channels, add current channel to Auto Join, remove channels from Auto Join, and open the logs folder.
+- Chat actions: focus message input, clear the local chat view, copy current channel name, mention a user, and open a user profile drawer.
+- Bot and command actions: open Bot Builder, open Commands, create a new command, open an existing command script, and toggle bot rules.
+- Timer actions: open Timers, create a new timer, pause or resume timers, send a timer now, and search timers.
+- Popup actions: run configured popup buttons, open Popups, and create a new popup.
+- Stream actions: show, hide, play, pause, mute, unmute, next stream, and previous stream.
+- App navigation: open Chat, Bot, Commands, Popups, Timers, Raw, Docs, and Settings.
+
+## Updating Flow
+
+- ClovaChat reads the app version from `package.json`.
+- On startup, the renderer asks the main process to check GitHub Releases.
+- The main process compares the current version with the newest GitHub release tag.
+- If the release is newer and has an installer for the current platform, ClovaChat prompts the user.
+- If the user accepts, ClovaChat downloads the installer to a temporary update folder.
+- On Windows, the downloaded `.exe` installer is opened and the app quits after the OS starts the installer.
+- On macOS, the downloaded `.dmg` is opened and the app quits after LaunchServices starts opening the disk image.
+- If automatic opening fails, the app shows the downloaded installer in Finder or File Explorer so it can be opened manually.
+
+## GitHub Uploading / Release Flow
+
+- The public repo is `MNIKevin202/ClovaChat`.
+- The iOS / phone app files should be excluded from the public desktop repo.
+- GitHub Actions should build only the Windows `.exe` installer.
+- macOS DMG files should be built and signed locally, then uploaded as release assets.
+- A new update requires bumping `package.json` to the new version, committing the app changes, tagging the version, and publishing a GitHub Release with matching installer assets.
+- Release tags should use the format `v1.2.9`, `v1.3.0`, and so on.
+
+## Local Build Notes
+
+- Install dependencies with `npm install` or `npm ci`.
+- Run the app locally with `npm start`.
+- Build macOS installers locally with `npm run dist:mac`.
+- Build the Windows installer with `npm run dist:win` on Windows or through GitHub Actions.
+- The macOS build uses `electron-builder` with DMG and ZIP targets.
+- The Windows build uses `electron-builder` with an NSIS installer target.
+
+## Requested Next Upgrades
+
+- Keep expanding the Command Palette as new features are added.
+- Consider adding direct delete actions to the palette for timers, commands, popups, or bot rules only if they include confirmation prompts.
+- Consider adding channel/user moderation palette actions such as timeout and ban only if moderator permissions are detected and the confirmation copy is very clear.
