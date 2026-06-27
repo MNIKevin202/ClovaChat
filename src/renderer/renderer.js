@@ -1949,10 +1949,59 @@ function renderTimers() {
     toggle.append(enabled, toggleLabel);
 
     const summary = document.createElement('div');
-    const expiryText = timer.expiresAt
+    summary.innerHTML = `<strong>${escapeHtml(timer.channel)}</strong><span>Every ${escapeHtml(formatTimerInterval(timer))}</span><code>${escapeHtml(timer.message)}</code>`;
+
+    const expirationRow = document.createElement('div');
+    expirationRow.className = 'timer-expiration-edit';
+
+    const status = document.createElement('span');
+    status.className = 'timer-expiration-status';
+    status.textContent = timer.expiresAt
       ? (timer.expiresAt > Date.now() ? `Expires in ${formatDuration(timer.expiresAt - Date.now())}` : 'Expired')
-      : '';
-    summary.innerHTML = `<strong>${escapeHtml(timer.channel)}</strong><span>Every ${escapeHtml(formatTimerInterval(timer))}</span>${expiryText ? `<span>${escapeHtml(expiryText)}</span>` : ''}<code>${escapeHtml(timer.message)}</code>`;
+      : 'No expiration';
+
+    const daysInput = document.createElement('input');
+    daysInput.type = 'number';
+    daysInput.min = '0';
+    daysInput.placeholder = 'Days';
+    const hoursInput = document.createElement('input');
+    hoursInput.type = 'number';
+    hoursInput.min = '0';
+    hoursInput.max = '23';
+    hoursInput.placeholder = 'Hours';
+    const minutesInput = document.createElement('input');
+    minutesInput.type = 'number';
+    minutesInput.min = '0';
+    minutesInput.max = '59';
+    minutesInput.placeholder = 'Minutes';
+
+    const setButton = document.createElement('button');
+    setButton.type = 'button';
+    setButton.textContent = timer.expiresAt ? 'Update' : 'Set Expiration';
+    setButton.addEventListener('click', async () => {
+      const days = Math.max(0, Number(daysInput.value || 0));
+      const hours = Math.max(0, Number(hoursInput.value || 0));
+      const minutes = Math.max(0, Number(minutesInput.value || 0));
+      const ms = ((days * 86400) + (hours * 3600) + (minutes * 60)) * 1000;
+      if (ms <= 0) return;
+      timer.expiresAt = Date.now() + ms;
+      await saveSettings();
+      renderTimers();
+      scheduleTimer(timer);
+    });
+
+    const clearButton = document.createElement('button');
+    clearButton.type = 'button';
+    clearButton.textContent = 'Clear';
+    clearButton.hidden = !timer.expiresAt;
+    clearButton.addEventListener('click', async () => {
+      timer.expiresAt = null;
+      await saveSettings();
+      renderTimers();
+      scheduleTimer(timer);
+    });
+
+    expirationRow.append(status, daysInput, hoursInput, minutesInput, setButton, clearButton);
 
     const showToggle = document.createElement('label');
     showToggle.className = 'timer-toggle';
@@ -1978,7 +2027,7 @@ function renderTimers() {
       renderTimers();
     });
 
-    item.append(toggle, summary, showToggle, remove);
+    item.append(toggle, summary, showToggle, remove, expirationRow);
     el.timerList.append(item);
   });
   renderTopic();
