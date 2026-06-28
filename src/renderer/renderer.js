@@ -1939,6 +1939,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.35',
+    date: '2026-06-28',
+    title: 'Navigation Layout Swap',
+    bullets: [
+      'Moved the Dashboard/Chat/Bot/Commands/Popups/Timers/Raw/Docs/What\'s New/Settings workspace buttons to a new bar across the top of the window.',
+      'Moved the channel list out of the top of Chat into the left sidebar, so it\'s visible alongside the connection card and stream controls.',
+      'This applies to both the Standard and Twitch Style layouts.',
+    ],
+  },
+  {
     version: 'v1.2.34',
     date: '2026-06-27',
     title: 'Disconnect Popup',

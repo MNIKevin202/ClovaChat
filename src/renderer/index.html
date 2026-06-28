@@ -9,11 +9,26 @@
   </head>
   <body>
     <div class="app-shell">
+      <header class="top-nav">
+        <div class="brand top-nav-brand">
+          <img class="brand-mark" src="../../images/logo.png" alt="ClovaChat" />
+        </div>
+        <nav class="tabs top-nav-tabs" aria-label="Workspace">
+          <button class="tab" data-tab="dashboard" title="Dashboard"><span class="tab-icon">▦</span>Dashboard</button>
+          <button class="tab is-active" data-tab="chat" title="Chat"><span class="tab-icon">💬</span>Chat</button>
+          <button class="tab" data-tab="bot" title="Bot Builder"><span class="tab-icon">🤖</span>Bot</button>
+          <button class="tab" data-tab="commands" title="Command Scripts"><span class="tab-icon">/</span>Commands</button>
+          <button class="tab" data-tab="popups" title="Popup Actions"><span class="tab-icon">⚡</span>Popups</button>
+          <button class="tab" data-tab="timers" title="Timed Messages"><span class="tab-icon">⏱</span>Timers</button>
+          <button class="tab" data-tab="raw" title="Raw IRC"><span class="tab-icon">&lt;/&gt;</span>Raw</button>
+          <button class="tab" data-tab="docs" title="Documentation"><span class="tab-icon">?</span>Docs</button>
+          <button class="tab" data-tab="whatsnew" title="What's New"><span class="tab-icon">🆕</span>What's New</button>
+          <button class="tab" data-tab="settings" title="Settings"><span class="tab-icon">⚙</span>Settings</button>
+        </nav>
+      </header>
+      <div class="app-body">
       <aside class="sidebar">
         <div class="sidebar-scroll">
-          <div class="brand">
-            <img class="brand-mark" src="../../images/logo.png" alt="ClovaChat" />
-          </div>
 
           <section class="card connection-card" id="connectionStatus">
             <div class="connection-card-header">
@@ -44,19 +59,8 @@
           </section>
 
           <section class="sidebar-section">
-            <h2 class="section-label">Workspace</h2>
-            <nav class="tabs" aria-label="Workspace">
-              <button class="tab" data-tab="dashboard" title="Dashboard"><span class="tab-icon">▦</span>Dashboard</button>
-              <button class="tab is-active" data-tab="chat" title="Chat"><span class="tab-icon">💬</span>Chat</button>
-              <button class="tab" data-tab="bot" title="Bot Builder"><span class="tab-icon">🤖</span>Bot</button>
-              <button class="tab" data-tab="commands" title="Command Scripts"><span class="tab-icon">/</span>Commands</button>
-              <button class="tab" data-tab="popups" title="Popup Actions"><span class="tab-icon">⚡</span>Popups</button>
-              <button class="tab" data-tab="timers" title="Timed Messages"><span class="tab-icon">⏱</span>Timers</button>
-              <button class="tab" data-tab="raw" title="Raw IRC"><span class="tab-icon">&lt;/&gt;</span>Raw</button>
-              <button class="tab" data-tab="docs" title="Documentation"><span class="tab-icon">?</span>Docs</button>
-              <button class="tab" data-tab="whatsnew" title="What's New"><span class="tab-icon">🆕</span>What's New</button>
-              <button class="tab" data-tab="settings" title="Settings"><span class="tab-icon">⚙</span>Settings</button>
-            </nav>
+            <h2 class="section-label">Channels</h2>
+            <div id="channels" class="channel-tabs sidebar-channels" aria-label="Open channels"></div>
           </section>
 
           <section class="connect-panel">
@@ -131,7 +135,6 @@
         </section>
 
         <section id="chatTab" class="view is-active">
-          <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="chatBody" class="chat-body">
             <div id="streamInfoHeader" class="stream-info-header" hidden></div>
@@ -316,7 +319,7 @@
                 <li>Use Twitch Preset for Twitch chat, or enter your own IRC server details.</li>
                 <li>Enter your nick and password. For Twitch, the password should be an OAuth token that starts with oauth:.</li>
                 <li>Enter a starting channel such as #mnikevin202.</li>
-                <li>Click Connect. Server events appear in the Server tab, and joined channels appear across the top of Chat.</li>
+                <li>Click Connect. Server events appear in the Server tab, and joined channels appear in the Channels list in the left sidebar.</li>
               </ol>
             </section>
 
@@ -335,7 +338,7 @@
             <section id="docs-dashboard" class="docs-section">
               <h3>Dashboard</h3>
               <ol>
-                <li>Open Dashboard from the Workspace section to see joined and Auto Join channels in one view.</li>
+                <li>Open Dashboard from the workspace buttons at the top of the window to see joined and Auto Join channels in one view.</li>
                 <li>Use Sort to prioritize live channels, active chats, alphabetical order, recent activity, or viewer count.</li>
                 <li>Use filters for All, Live, Offline, Active Chat, Auto Join, and Bot Enabled.</li>
                 <li>Each card shows live status, viewers when available, category, stream title, users, session messages, activity speed, last message, bot, timers, and logs.</li>
@@ -734,6 +737,7 @@
           </div>
         </section>
       </main>
+      </div>
 
       <section id="streamPanel" class="stream-panel" hidden>
         <div id="streamToolbar" class="stream-toolbar">

@@ -739,10 +739,49 @@ button.danger:hover {
 .app-shell {
   position: relative;
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100vh;
   min-height: 0;
   overflow: hidden;
+}
+
+.app-body {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--sidebar-bg, #ebe5d7);
+  overflow-x: auto;
+}
+
+.top-nav-brand {
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.top-nav-brand .brand-mark {
+  width: auto;
+  height: 28px;
+  max-width: none;
+}
+
+.top-nav-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--space-2);
+}
+
+.top-nav-tabs .tab {
+  flex: 0 0 auto;
 }
 
 .sidebar {
@@ -1126,7 +1165,7 @@ textarea:focus {
 
 #chatTab {
   position: relative;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100%;
   min-height: 0;
 }
@@ -1643,6 +1682,31 @@ textarea:focus {
   white-space: nowrap;
 }
 
+/* Channel list living in the sidebar instead of a top tab row. */
+.sidebar-channels {
+  flex-direction: column;
+  min-height: 0;
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 260px;
+  gap: var(--space-1);
+}
+
+.sidebar-channels .channel-tab {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 34px;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-channels .channel-tab-server {
+  margin-bottom: var(--space-1);
+}
+
 .channel-tab:hover:not(.is-active) {
   background: var(--button-bg, var(--card-bg));
 }
@@ -2079,52 +2143,6 @@ body[data-layout="twitch"] .roster-panel.is-open {
   transform: translateX(0);
 }
 
-/* Slimmer, calmer channel tabs in Twitch Style — overflow scrolls instead of
-   wrapping or squeezing tabs into illegibility. */
-body[data-layout="twitch"] .channel-tabs {
-  min-height: 38px;
-  padding: 6px var(--space-3) 0;
-  border-bottom: 1px solid var(--card-border, var(--line));
-  background: var(--bg);
-}
-
-body[data-layout="twitch"] .channel-tab {
-  height: 30px;
-  width: 108px;
-  min-width: 108px;
-  max-width: 108px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
-  background: transparent;
-  border-color: transparent;
-  border-bottom: 2px solid transparent;
-}
-
-body[data-layout="twitch"] .channel-tab-server {
-  width: 88px;
-  min-width: 88px;
-  max-width: 88px;
-}
-
-body[data-layout="twitch"] .channel-tab:hover:not(.is-active) {
-  background: var(--card-bg, var(--button-bg));
-}
-
-body[data-layout="twitch"] .channel-tab.is-active {
-  background: var(--card-bg, var(--button-bg));
-  border-color: transparent;
-  border-bottom-color: var(--accent);
-  color: var(--ink);
-  box-shadow: none;
-}
-
-body[data-layout="twitch"] .channel-tab-server {
-  border-right: 1px solid var(--card-border, var(--line));
-  border-radius: 0;
-  margin-right: var(--space-1);
-}
-
 /* Stream info header above the inline player: live badge, channel, category,
    viewer count. */
 .stream-info-header {
@@ -2221,21 +2239,19 @@ body[data-layout="twitch"] .message:hover {
     display: none;
   }
 
-  /* Collapse tab labels to icons-only without hiding the icons themselves
-     (the icon span keeps its own explicit font-size). */
-  body[data-layout="twitch"] .tab {
-    font-size: 0;
-    justify-content: center;
-    padding: 0;
-    gap: 0;
-  }
-
-  body[data-layout="twitch"] .tabs {
-    grid-template-columns: 1fr;
-  }
-
   body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
     grid-template-columns: minmax(0, 1fr) 320px;
+  }
+}
+
+/* Collapse the top workspace nav to icons-only on narrow windows, in either
+   layout, since it always lives in the top bar now. */
+@media (max-width: 760px) {
+  .top-nav-tabs .tab {
+    font-size: 0;
+    justify-content: center;
+    padding: 0 8px;
+    gap: 0;
   }
 }
 
@@ -2311,7 +2327,7 @@ body[data-layout="twitch"] .message:hover {
 }
 
 #chatTab.is-server-channel {
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 #chatTab.is-server-channel .chat-body {
