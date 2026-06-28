@@ -115,7 +115,9 @@ const el = {
   newMessagesButton: document.querySelector('#newMessagesButton'),
   emoteButton: document.querySelector('#emoteButton'),
   mentionsButton: document.querySelector('#mentionsButton'),
-  mentionsPanel: document.querySelector('#mentionsPanel'),
+  mentionsBackdrop: document.querySelector('#mentionsBackdrop'),
+  mentionsModal: document.querySelector('#mentionsModal'),
+  mentionsModalClose: document.querySelector('#mentionsModalClose'),
   mentionsList: document.querySelector('#mentionsList'),
   mentionsClearButton: document.querySelector('#mentionsClearButton'),
   emotePicker: document.querySelector('#emotePicker'),
@@ -1311,18 +1313,16 @@ function bindEvents() {
   el.emotePicker?.addEventListener('click', (event) => event.stopPropagation());
   document.addEventListener('click', () => {
     if (state.emotePicker.open) setEmotePickerOpen(false);
-    if (state.mentionsPanel.open) setMentionsPanelOpen(false);
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.emotePicker.open) setEmotePickerOpen(false);
     if (event.key === 'Escape' && state.mentionsPanel.open) setMentionsPanelOpen(false);
   });
 
-  el.mentionsButton?.addEventListener('click', (event) => {
-    event.stopPropagation();
-    setMentionsPanelOpen(!state.mentionsPanel.open);
-  });
-  el.mentionsPanel?.addEventListener('click', (event) => event.stopPropagation());
+  el.mentionsButton?.addEventListener('click', () => setMentionsPanelOpen(true));
+  el.mentionsModal?.addEventListener('click', (event) => event.stopPropagation());
+  el.mentionsBackdrop?.addEventListener('click', () => setMentionsPanelOpen(false));
+  el.mentionsModalClose?.addEventListener('click', () => setMentionsPanelOpen(false));
   el.mentionsClearButton?.addEventListener('click', clearMentions);
 
   el.autoJoinForm.addEventListener('submit', async (event) => {
@@ -1912,6 +1912,14 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.31',
+    date: '2026-06-27',
+    title: 'Mentions in a Modal',
+    bullets: [
+      'The @ button now opens a centered popup/modal listing all your mentions instead of a small anchored dropdown, with a clear close button and a Clear all action.',
+    ],
+  },
   {
     version: 'v1.2.30',
     date: '2026-06-27',
@@ -5093,7 +5101,7 @@ function renderMentionsButton() {
 
 function setMentionsPanelOpen(open) {
   state.mentionsPanel.open = open;
-  el.mentionsPanel.hidden = !open;
+  el.mentionsBackdrop.hidden = !open;
   if (open) renderMentionsPanel();
 }
 

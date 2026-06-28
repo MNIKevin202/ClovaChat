@@ -133,13 +133,6 @@
         <section id="chatTab" class="view is-active">
           <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
           <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@</button>
-          <div id="mentionsPanel" class="mentions-panel" hidden>
-            <header>
-              <h3>Mentions</h3>
-              <button id="mentionsClearButton" class="link-button" type="button">Clear</button>
-            </header>
-            <div id="mentionsList" class="mentions-list"></div>
-          </div>
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="chatBody" class="chat-body">
             <div id="streamInfoHeader" class="stream-info-header" hidden></div>
@@ -798,6 +791,19 @@
         </section>
       </div>
     </aside>
+
+    <div id="mentionsBackdrop" class="mentions-backdrop" hidden>
+      <section id="mentionsModal" class="mentions-modal" role="dialog" aria-modal="true" aria-labelledby="mentionsModalTitle">
+        <header>
+          <h2 id="mentionsModalTitle">Mentions</h2>
+          <div class="mentions-modal-actions">
+            <button id="mentionsClearButton" class="link-button" type="button">Clear all</button>
+            <button id="mentionsModalClose" class="icon-button" type="button" title="Close">✕</button>
+          </div>
+        </header>
+        <div id="mentionsList" class="mentions-list"></div>
+      </section>
+    </div>
 
     <div id="commandPaletteBackdrop" class="command-palette-backdrop" hidden>
       <section id="commandPalette" class="command-palette" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle">
