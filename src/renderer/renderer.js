@@ -1895,6 +1895,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.25',
+    date: '2026-06-27',
+    title: 'Sidebar & Chat Proportions',
+    bullets: [
+      'Condensed the sidebar (was 336px, now 290px) and tightened workspace button sizing so everything fits more comfortably.',
+      'Capped the docked stream player\'s height so it can no longer balloon and crowd out the rest of the sidebar.',
+      'Tightened the chat message columns (timestamp and username) to give message text more room across all layouts.',
+    ],
+  },
+  {
     version: 'v1.2.24',
     date: '2026-06-27',
     title: 'Twitch Style Layout Polish',

@@ -58,6 +58,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Sidebar & Chat Proportions
+
+- Condensed the sidebar from 336px to 290px and tightened workspace button sizing (height, font size, padding) so labels fit cleanly without crowding.
+- Capped the docked stream player's height so its embed/overlay content can't balloon and push the rest of the sidebar out of proportion.
+- Tightened the fixed timestamp and username columns in chat rows, giving message text more horizontal room across all layouts.
+
 ## Twitch Style Layout Polish
 
 - Widened the chat column relative to the stream in Twitch Style layout so message text has more breathing room instead of being squeezed into a narrow strip.
