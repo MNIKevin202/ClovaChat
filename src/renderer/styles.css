@@ -499,6 +499,42 @@ button.danger:hover {
   gap: 10px;
 }
 
+.onboarding-layout-options {
+  margin-bottom: 4px;
+}
+
+.onboarding-body .layout-option {
+  background: #1c2128;
+  border-color: rgba(143, 215, 221, 0.18);
+}
+
+.onboarding-body .layout-option.is-active {
+  border-color: #62c5cd;
+  box-shadow: 0 0 0 1px #62c5cd;
+}
+
+.onboarding-body .layout-option-preview {
+  background: #11141a;
+  border-color: rgba(143, 215, 221, 0.18);
+}
+
+.onboarding-body .layout-preview-chat,
+.onboarding-body .layout-preview-users,
+.onboarding-body .layout-preview-stream {
+  background: rgba(143, 215, 221, 0.14);
+  border-color: rgba(143, 215, 221, 0.18);
+}
+
+.onboarding-body .layout-option-title {
+  color: #f2efe8;
+}
+
+.onboarding-body .layout-option-desc {
+  color: #c8c1b7;
+  font-weight: 500;
+  text-transform: none;
+}
+
 .onboarding-channel-add,
 .button-row {
   display: flex;

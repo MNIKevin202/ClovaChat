@@ -668,6 +668,7 @@ function onboardingDraftFromSettings() {
     timestamps: state.settings.preferences.chatDisplay.showTimestamps,
     badges: state.settings.preferences.chatDisplay.showBadges,
     sevenTv: state.settings.appearance.sevenTvEmotes,
+    layoutStyle: state.settings.appearance.layout || 'standard',
     starterDiscord: false,
     starterLurk: false,
     starterTimer: false,
@@ -786,18 +787,79 @@ function renderOnboardingChannels() {
 
 function renderOnboardingLayout() {
   el.onboardingTitle.textContent = 'Choose Your Chat Layout';
-  const preview = document.createElement('div');
-  preview.className = 'onboarding-preview-card';
-  preview.textContent = '[11:42 PM] mod_username: Welcome to ClovaChat Kappa';
+  el.onboardingBody.append(onboardingLayoutStylePicker());
   el.onboardingBody.append(
     onboardingCheck('streamPreview', 'Stream preview on'),
     onboardingCheck('userList', 'User list on'),
     onboardingCheck('compact', 'Compact chat mode'),
     onboardingCheck('timestamps', 'Show timestamps'),
     onboardingCheck('badges', 'Show badges'),
-    onboardingCheck('sevenTv', 'Enable 7TV emotes'),
-    preview
+    onboardingCheck('sevenTv', 'Enable 7TV emotes')
   );
+  const preview = document.createElement('div');
+  preview.className = 'onboarding-preview-card';
+  preview.textContent = '[11:42 PM] mod_username: Welcome to ClovaChat Kappa';
+  el.onboardingBody.append(preview);
+}
+
+// Placeholder hand-drawn frames standing in for real screenshots/PNGs that
+// may replace these previews later — see Settings > Layout for the same
+// frame style used outside onboarding.
+function onboardingLayoutStylePicker() {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'layout-options onboarding-layout-options';
+
+  const options = [
+    {
+      value: 'standard',
+      title: 'Standard',
+      desc: 'Chat and user list side by side. Stream preview lives in the sidebar.',
+      frame: 'standard',
+    },
+    {
+      value: 'twitchStyle',
+      title: 'Twitch Style',
+      desc: 'Stream in the middle, chat on the right. The user list tucks behind an icon.',
+      frame: 'twitch',
+    },
+  ];
+
+  options.forEach((option) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'layout-option';
+    button.classList.toggle('is-active', state.onboarding.draft.layoutStyle === option.value);
+
+    const frame = document.createElement('span');
+    frame.className = `layout-option-preview layout-preview-${option.frame}`;
+    if (option.frame === 'standard') {
+      frame.append(
+        Object.assign(document.createElement('span'), { className: 'layout-preview-chat' }),
+        Object.assign(document.createElement('span'), { className: 'layout-preview-users' })
+      );
+    } else {
+      frame.append(
+        Object.assign(document.createElement('span'), { className: 'layout-preview-stream' }),
+        Object.assign(document.createElement('span'), { className: 'layout-preview-chat' })
+      );
+    }
+
+    const title = document.createElement('span');
+    title.className = 'layout-option-title';
+    title.textContent = option.title;
+    const desc = document.createElement('span');
+    desc.className = 'layout-option-desc';
+    desc.textContent = option.desc;
+
+    button.append(frame, title, desc);
+    button.addEventListener('click', () => {
+      state.onboarding.draft.layoutStyle = option.value;
+      renderOnboarding();
+    });
+    wrapper.append(button);
+  });
+
+  return wrapper;
 }
 
 function renderOnboardingStarterTools() {
@@ -820,6 +882,7 @@ function renderOnboardingFinish() {
     <strong>Channels added</strong><span>${escapeHtml((draft.channels || []).join(', ') || 'None yet')}</span>
     <strong>Auto join</strong><span>${draft.autoJoin ? 'On' : 'Off'}</span>
     <strong>Stream preview</strong><span>${draft.streamPreview ? 'On' : 'Off'}</span>
+    <strong>Layout</strong><span>${draft.layoutStyle === 'twitchStyle' ? 'Twitch Style' : 'Standard'}</span>
     <strong>Logs</strong><span>${draft.logs ? 'On' : 'Off'}</span>
     <strong>Starter tools</strong><span>${[draft.starterDiscord && '!discord', draft.starterLurk && '!lurk', draft.starterTimer && 'follow timer', draft.starterWave && 'wave popup'].filter(Boolean).join(', ') || 'None'}</span>
   </div>`;
@@ -854,11 +917,13 @@ function applyOnboardingLayout() {
   const draft = state.onboarding.draft;
   state.settings.appearance.twitchPlayer = Boolean(draft.streamPreview);
   state.settings.appearance.sevenTvEmotes = Boolean(draft.sevenTv);
+  state.settings.appearance.layout = draft.layoutStyle === 'twitchStyle' ? 'twitchStyle' : 'standard';
   state.settings.preferences.moveLiveTabsToFront = Boolean(draft.moveLive);
   state.settings.preferences.chatDisplay.density = draft.compact ? 'compact' : 'comfortable';
   state.settings.preferences.chatDisplay.showTimestamps = Boolean(draft.timestamps);
   state.settings.preferences.chatDisplay.showBadges = Boolean(draft.badges);
   hydrateChatDisplaySettings();
+  applyLayout(state.settings.appearance.layout);
 }
 
 async function finishOnboarding() {
@@ -1829,6 +1894,14 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.23',
+    date: '2026-06-27',
+    title: 'Layout Choice in Onboarding',
+    bullets: [
+      'The onboarding wizard\'s Choose Your Chat Layout step now shows Standard vs Twitch Style as visual frames you pick between, matching the new Layouts setting (placeholder frames for now, real preview images may follow).',
+    ],
+  },
   {
     version: 'v1.2.22',
     date: '2026-06-27',
