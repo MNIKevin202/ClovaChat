@@ -92,8 +92,6 @@ const el = {
   dashboardGrid: document.querySelector('#dashboardGrid'),
   chatTab: document.querySelector('#chatTab'),
   channels: document.querySelector('#channels'),
-  sidebarChannelsSection: document.querySelector('#sidebarChannelsSection'),
-  sidebarChannelList: document.querySelector('#sidebarChannelList'),
   streamInfoHeader: document.querySelector('#streamInfoHeader'),
   topicBar: document.querySelector('#topicBar'),
   channelStatusStrip: document.querySelector('#channelStatusStrip'),
@@ -1554,8 +1552,6 @@ function applyLayout(layout) {
     option.classList.toggle('is-active', option.dataset.layout === (isTwitchStyle ? 'twitchStyle' : 'standard'));
   });
   if (!isTwitchStyle) setRosterDrawerOpen(false);
-  if (el.sidebarChannelsSection) el.sidebarChannelsSection.hidden = !isTwitchStyle;
-  if (isTwitchStyle) renderSidebarChannelList();
   renderStreamPlayer();
 }
 
@@ -1899,6 +1895,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.28',
+    date: '2026-06-27',
+    title: 'Twitch Style Sizing Fix & Sidebar Cleanup',
+    bullets: [
+      'Fixed the stream and chat panels collapsing to a tiny box on channels with little or no chat instead of filling the available height — a leftover grid row definition from before the layout refactor was misplacing them.',
+      'Removed the vertical channel list from the sidebar in Twitch Style since the top channel tabs already cover that.',
+    ],
+  },
   {
     version: 'v1.2.27',
     date: '2026-06-27',
@@ -3257,7 +3262,6 @@ function renderChannels() {
     el.channels.append(empty);
   }
 
-  renderSidebarChannelList();
   renderTopic();
   renderTimerChannelOptions();
   renderChannelChrome();
@@ -3343,23 +3347,6 @@ function showChannelContextMenu(event, channel) {
   document.body.append(menu);
   positionContextMenu(menu, event.clientX, event.clientY);
   state.activeContextMenu = menu;
-}
-
-function renderSidebarChannelList() {
-  if (!el.sidebarChannelList) return;
-  el.sidebarChannelList.innerHTML = '';
-  displayChannels().forEach((channel) => {
-    const normalized = channel.replace(/^#/, '').toLowerCase();
-    const isLive = state.liveChannels.has(normalized);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `sidebar-channel-item${channel === state.activeChannel ? ' is-active' : ''}`;
-    const dot = document.createElement('span');
-    dot.className = `sidebar-channel-dot${isLive ? ' is-live' : ''}`;
-    button.append(dot, document.createTextNode(channelDisplayName(channel)));
-    button.addEventListener('click', () => switchToChannel(channel));
-    el.sidebarChannelList.append(button);
-  });
 }
 
 function renderStreamInfoHeader() {

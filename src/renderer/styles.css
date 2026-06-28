@@ -1125,7 +1125,7 @@ textarea:focus {
 }
 
 #chatTab {
-  grid-template-rows: auto auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto auto minmax(0, 1fr);
   height: 100%;
   min-height: 0;
 }
@@ -1998,54 +1998,6 @@ body[data-layout="twitch"] .stream-info-header:not([hidden]) {
   font-size: 12px;
 }
 
-/* Vertical channel list in the sidebar, shown only in Twitch Style. */
-.sidebar-channel-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.sidebar-channel-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  height: 32px;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border-color: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  font-weight: 600;
-  text-align: left;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sidebar-channel-item:hover {
-  background: var(--card-bg, var(--button-bg));
-  color: var(--ink);
-}
-
-.sidebar-channel-item.is-active {
-  background: var(--accent);
-  color: #fff;
-}
-
-.sidebar-channel-dot {
-  flex: 0 0 auto;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #68707a;
-}
-
-.sidebar-channel-dot.is-live {
-  background: var(--green);
-  box-shadow: 0 0 0 3px rgba(130, 212, 155, 0.18);
-}
-
 /* More compact, less noisy chat rows in Twitch Style. */
 /* Real Twitch chat flows "time username: message" as one wrapping line
    instead of a boxy multi-column row. */
@@ -2097,10 +2049,9 @@ body[data-layout="twitch"] .message:hover {
     display: none;
   }
 
-  /* Collapse tab/channel labels to icons-only without hiding the icons
-     themselves (the icon span keeps its own explicit font-size). */
-  body[data-layout="twitch"] .tab,
-  body[data-layout="twitch"] .sidebar-channel-item {
+  /* Collapse tab labels to icons-only without hiding the icons themselves
+     (the icon span keeps its own explicit font-size). */
+  body[data-layout="twitch"] .tab {
     font-size: 0;
     justify-content: center;
     padding: 0;
