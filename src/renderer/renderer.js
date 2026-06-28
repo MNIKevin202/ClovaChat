@@ -1610,6 +1610,7 @@ function handleIrcEvent(event) {
     appendStatus('Connected.', 'success');
     scheduleAllTimers();
     setupLiveNotifications(event.server);
+    renderChatActions();
   }
 
   if (event.type === 'disconnected') {
@@ -1634,6 +1635,7 @@ function handleIrcEvent(event) {
     renderRoster();
     renderStreamPlayer();
     renderDashboard();
+    renderChatActions();
     hideNickSuggestion();
     if (!state.userInitiatedDisconnect) showDisconnectedOverlay();
     state.userInitiatedDisconnect = false;
@@ -1938,6 +1940,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.38',
+    date: '2026-06-28',
+    title: 'Chat Header & Composer Polish',
+    bullets: [
+      'Removed the awkward horizontal scrollbar on the chat header pills (Live/Users/Messages/Connection/etc.) — they now wrap to a new line instead of scrolling.',
+      'The message box now shows "Message #channel..." for the active channel, and disables itself with a clear placeholder when disconnected or no channel is selected, instead of silently failing to send.',
+    ],
+  },
   {
     version: 'v1.2.37',
     date: '2026-06-28',
@@ -4413,6 +4424,22 @@ function renderChatActions() {
   el.chatActionBar.hidden = !canAutoJoin;
   el.addAutoJoinCurrentButton.hidden = !canAutoJoin;
   if (canAutoJoin) el.addAutoJoinCurrentButton.textContent = `Add ${channel} to Auto Join`;
+  updateComposerState(channel);
+}
+
+function updateComposerState(channel) {
+  if (!el.messageInput || !el.inputForm) return;
+  const canSend = state.connected && Boolean(channel);
+  el.messageInput.disabled = !canSend;
+  const submitButton = el.inputForm.querySelector('button[type="submit"]');
+  if (submitButton) submitButton.disabled = !canSend;
+  if (!state.connected) {
+    el.messageInput.placeholder = 'Connect to start chatting...';
+  } else if (!channel) {
+    el.messageInput.placeholder = 'Select a channel to chat';
+  } else {
+    el.messageInput.placeholder = `Message ${channel}...`;
+  }
 }
 
 function channelIsAutoJoined(channel) {

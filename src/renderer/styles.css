@@ -1866,13 +1866,12 @@ textarea:focus {
 .channel-status-strip {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
   min-height: 0;
-  padding: var(--space-2) var(--space-5);
-  border-bottom: 1px solid var(--line);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--card-border, var(--line));
   background: var(--bar-bg, #faf7ef);
-  overflow-x: auto;
-  white-space: nowrap;
 }
 
 .channel-status-strip:empty {
@@ -2962,6 +2961,11 @@ body[data-layout="twitch"] .message:hover {
   min-height: 42px;
   border-radius: var(--radius-md);
   background: var(--input-bg-strong, #fff);
+}
+
+.input-row input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .input-row input:focus {

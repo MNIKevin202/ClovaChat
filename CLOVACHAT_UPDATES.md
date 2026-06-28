@@ -58,6 +58,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Chat Header & Composer Polish
+
+- Removed the horizontal scrollbar on the chat header pill row — pills wrap to a new line instead of scrolling.
+- The message input now shows "Message #channel..." for the active channel and disables itself with a clear placeholder ("Connect to start chatting...", "Select a channel to chat") when disconnected or no channel is active, instead of letting you type into a box that can't send.
+
 ## Fix Missing Top Nav Tabs
 
 - Fixed a CSS specificity bug: a later `.tabs { display: grid; grid-template-columns: repeat(2, 1fr); }` rule (left over from the old sidebar grid) was overriding the top nav's flex layout, squeezing all 10 workspace buttons into a clipped 2-column grid so only Dashboard and Chat were visible.
