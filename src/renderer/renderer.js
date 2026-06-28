@@ -96,6 +96,9 @@ const el = {
   channelStatusStrip: document.querySelector('#channelStatusStrip'),
   messages: document.querySelector('#messages'),
   chatBody: document.querySelector('.chat-body'),
+  chatStreamSlot: document.querySelector('#chatStreamSlot'),
+  rosterToggleButton: document.querySelector('#rosterToggleButton'),
+  layoutOptions: document.querySelectorAll('.layout-option'),
   rosterPanel: document.querySelector('.roster-panel'),
   roster: document.querySelector('#roster'),
   rosterCount: document.querySelector('#rosterCount'),
@@ -446,6 +449,7 @@ function ensureSettingsShape() {
   state.settings.appearance.sevenTvEmotes ??= true;
   state.settings.appearance.twitchPlayer ??= false;
   state.settings.appearance.twitchPlayerDocked ??= true;
+  state.settings.appearance.layout ||= 'standard';
   state.settings.appearance.twitchPlayerBounds ||= null;
   state.settings.appearance.twitchPlayerChannel ||= '';
   state.settings.appearance.twitchPlayerStates ||= {};
@@ -587,6 +591,7 @@ function hydrateSettings() {
   setDashboardFilter(state.settings.preferences.dashboardFilter || 'all', { save: false });
   updateChannelLogFolderLabel();
   applyTheme(state.settings.appearance.theme);
+  applyLayout(state.settings.appearance.layout);
   state.activeChannel = quick.channel;
 }
 
@@ -1089,6 +1094,16 @@ function bindEvents() {
     applyTheme(state.settings.appearance.theme);
     await saveSettings();
   });
+  el.layoutOptions.forEach((option) => {
+    option.addEventListener('click', async () => {
+      state.settings.appearance.layout = option.dataset.layout;
+      applyLayout(state.settings.appearance.layout);
+      await saveSettings();
+    });
+  });
+  el.rosterToggleButton?.addEventListener('click', () => {
+    setRosterDrawerOpen(!el.rosterPanel.classList.contains('is-open'));
+  });
   el.sevenTvToggle.addEventListener('change', async () => {
     state.settings.appearance.sevenTvEmotes = el.sevenTvToggle.checked;
     await saveSettings();
@@ -1464,6 +1479,21 @@ function applyTheme(theme) {
   document.body.dataset.theme = theme === 'dark' ? 'dark' : 'light';
 }
 
+function applyLayout(layout) {
+  const isTwitchStyle = layout === 'twitchStyle';
+  document.body.dataset.layout = isTwitchStyle ? 'twitch' : 'standard';
+  el.layoutOptions.forEach((option) => {
+    option.classList.toggle('is-active', option.dataset.layout === (isTwitchStyle ? 'twitchStyle' : 'standard'));
+  });
+  if (!isTwitchStyle) setRosterDrawerOpen(false);
+  renderStreamPlayer();
+}
+
+function setRosterDrawerOpen(open) {
+  el.rosterPanel.classList.toggle('is-open', open);
+  el.rosterToggleButton.title = open ? 'Hide users' : 'Show users';
+}
+
 function handleIrcEvent(event) {
   if (event.type === 'connected') {
     state.connected = true;
@@ -1799,6 +1829,14 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.22',
+    date: '2026-06-27',
+    title: 'Layouts: Standard & Twitch Style',
+    bullets: [
+      'Added a Layouts section in Settings with two options: Standard (the existing layout) and Twitch Style, which puts the stream in the middle, chat on the right, and tucks the user list behind a toggle icon.',
+    ],
+  },
   {
     version: 'v1.2.21',
     date: '2026-06-27',
@@ -3301,11 +3339,16 @@ function openActiveChannelTimers() {
   if (channel && state.channels.includes(channel)) el.timerChannel.value = channel;
 }
 
+function isTwitchStyleLayout() {
+  return state.settings.appearance.layout === 'twitchStyle';
+}
+
 function renderStreamPlayer() {
   const configuredChannel = state.settings.appearance.twitchPlayerChannel || streamChannelFromActiveChannel();
   const enabled = state.settings.appearance.twitchPlayer && Boolean(configuredChannel);
   el.streamSidebarButton.textContent = enabled ? 'Hide Stream' : 'Watch Active Stream';
   el.streamPanel.hidden = !enabled;
+  if (el.chatStreamSlot) el.chatStreamSlot.hidden = !enabled || !isTwitchStyleLayout();
   if (!enabled) {
     clearStreamPlayer();
     return;
@@ -3531,6 +3574,17 @@ function streamPanelBounds() {
 }
 
 function applyStreamPanelPlacement() {
+  if (isTwitchStyleLayout()) {
+    el.streamPanel.classList.remove('is-docked', 'is-floating');
+    el.streamPanel.classList.add('is-inline');
+    el.streamPanel.style.left = '';
+    el.streamPanel.style.top = '';
+    el.streamPanel.style.width = '';
+    el.streamPanel.style.height = '';
+    if (!el.chatStreamSlot.contains(el.streamPanel)) el.chatStreamSlot.append(el.streamPanel);
+    return;
+  }
+  el.streamPanel.classList.remove('is-inline');
   if (isStreamPanelDocked()) {
     el.streamPanel.classList.remove('is-floating');
     el.streamPanel.classList.add('is-docked');
@@ -3564,7 +3618,7 @@ function clampStreamPanelBounds(bounds) {
 }
 
 function clampStreamPanelToWindow() {
-  if (el.streamPanel.hidden || isStreamPanelDocked()) return;
+  if (el.streamPanel.hidden || isStreamPanelDocked() || isTwitchStyleLayout()) return;
   applyStreamPanelPlacement();
 }
 
@@ -3575,7 +3629,7 @@ async function saveStreamPanelBounds(bounds, docked) {
 }
 
 function startStreamDrag(event) {
-  if (!state.settings.appearance.twitchPlayer) return;
+  if (!state.settings.appearance.twitchPlayer || isTwitchStyleLayout()) return;
   if (event.target.closest('button')) return;
   event.preventDefault();
   const startX = event.clientX;
@@ -3642,7 +3696,7 @@ function startStreamDrag(event) {
 }
 
 function startStreamPanelResize(event) {
-  if (!state.settings.appearance.twitchPlayer || isStreamPanelDocked()) return;
+  if (!state.settings.appearance.twitchPlayer || isStreamPanelDocked() || isTwitchStyleLayout()) return;
   event.preventDefault();
   event.stopPropagation();
   const startX = event.clientX;

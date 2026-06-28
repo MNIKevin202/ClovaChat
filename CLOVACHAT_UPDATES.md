@@ -53,6 +53,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Layouts: Standard & Twitch Style
+
+- Added a Layouts section in Settings with two options.
+- Standard keeps the existing layout: chat and user list side by side, stream player in the sidebar (dockable/floatable as before).
+- Twitch Style places the stream inline in the middle of the chat view with chat on the right, and tucks the user list behind a toggle icon instead of an always-visible column.
+
 ## Emote Picker
 
 - Added an emote button next to the message box that opens a searchable picker with Twitch and 7TV tabs.

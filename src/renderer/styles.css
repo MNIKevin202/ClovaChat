@@ -1684,10 +1684,146 @@ textarea:focus {
 }
 
 .chat-body {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
   min-height: 0;
   overflow: hidden;
+}
+
+.chat-stream-slot {
+  display: none;
+}
+
+.roster-toggle-button {
+  display: none;
+}
+
+/* Twitch Style layout: stream in the middle, chat on the right, users tucked
+   behind a toggle drawer instead of an always-visible column. */
+body[data-layout="twitch"] .chat-body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
+  grid-template-columns: minmax(280px, 1.1fr) minmax(280px, 1fr);
+}
+
+body[data-layout="twitch"] .chat-stream-slot {
+  display: block;
+  min-height: 0;
+  border-right: 1px solid var(--card-border, var(--line));
+  background: #000;
+}
+
+body[data-layout="twitch"] .chat-stream-slot .stream-panel.is-inline {
+  position: static;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+}
+
+body[data-layout="twitch"] .roster-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 32;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 16px;
+}
+
+body[data-layout="twitch"] .roster-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 260px;
+  z-index: 31;
+  transform: translateX(100%);
+  transition: transform 160ms ease;
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+}
+
+body[data-layout="twitch"] .roster-panel.is-open {
+  transform: translateX(0);
+}
+
+.layout-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.layout-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  height: auto;
+  padding: var(--space-3);
+  text-align: left;
+  background: var(--card-bg, var(--button-bg));
+  border-color: var(--card-border, var(--line));
+  white-space: normal;
+}
+
+.layout-option.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.layout-option-preview {
+  display: flex;
+  gap: 3px;
+  height: 56px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--sidebar-bg, #ebe5d7);
+  border: 1px solid var(--card-border, var(--line));
+}
+
+.layout-preview-chat,
+.layout-preview-users,
+.layout-preview-stream {
+  border-radius: 3px;
+  background: var(--button-bg, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--card-border, var(--line));
+}
+
+.layout-preview-standard .layout-preview-chat {
+  flex: 1;
+}
+
+.layout-preview-standard .layout-preview-users {
+  width: 16px;
+}
+
+.layout-preview-twitch .layout-preview-stream {
+  flex: 1.1;
+  background: #000;
+}
+
+.layout-preview-twitch .layout-preview-chat {
+  flex: 1;
+}
+
+.layout-option-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.layout-option-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 #chatTab.is-server-channel {
@@ -1742,7 +1878,8 @@ textarea:focus {
   display: contents;
 }
 
-.stream-panel.is-docked .stream-resize-grip {
+.stream-panel.is-docked .stream-resize-grip,
+.stream-panel.is-inline .stream-resize-grip {
   display: none;
 }
 
@@ -1755,6 +1892,10 @@ textarea:focus {
   border-bottom: 1px solid var(--card-border, var(--line));
   cursor: move;
   user-select: none;
+}
+
+.stream-panel.is-inline .stream-toolbar {
+  cursor: default;
 }
 
 .stream-toolbar span {

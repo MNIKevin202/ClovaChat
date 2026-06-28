@@ -68,6 +68,7 @@ const DEFAULT_SETTINGS = {
       sevenTvEmotes: true,
       twitchPlayer: false,
       twitchPlayerDocked: true,
+      layout: 'standard',
       twitchPlayerBounds: null
     },
     connection: {

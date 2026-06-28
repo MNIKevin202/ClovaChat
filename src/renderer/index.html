@@ -134,8 +134,10 @@
           <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="channelStatusStrip" class="channel-status-strip"></div>
-          <div class="chat-body">
+          <div id="chatBody" class="chat-body">
+            <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
             <div id="messages" class="messages" aria-live="polite"></div>
+            <button id="rosterToggleButton" class="roster-toggle-button" type="button" title="Show users">👥</button>
             <aside class="roster-panel" aria-label="Users in chat">
               <header>
                 <h2>Users</h2>
@@ -405,6 +407,8 @@
                 <li>Use the app controls for quick play, pause, mute, and unmute.</li>
                 <li>Use the Twitch player controls inside the video for volume, settings, theater-style controls, and fullscreen.</li>
                 <li>Muted, paused, volume, and playing state are remembered per channel when switching tabs or streams.</li>
+                <li>By default the player is docked in the sidebar; drag its toolbar out to float it anywhere, and drop it back near the sidebar to re-dock.</li>
+                <li>Switch to the Twitch Style layout in Settings to put the stream inline in the middle of the chat view with chat on the right, instead of in the sidebar.</li>
               </ol>
             </section>
 
@@ -563,6 +567,29 @@
                 <span>7TV Emotes</span>
                 <input id="sevenTvToggle" type="checkbox" />
               </label>
+            </section>
+
+            <section class="settings-group">
+              <h3>Layout</h3>
+              <p class="settings-hint">Choose how the chat workspace is arranged.</p>
+              <div id="layoutOptions" class="layout-options">
+                <button type="button" class="layout-option" data-layout="standard">
+                  <span class="layout-option-preview layout-preview-standard">
+                    <span class="layout-preview-chat"></span>
+                    <span class="layout-preview-users"></span>
+                  </span>
+                  <span class="layout-option-title">Standard</span>
+                  <span class="layout-option-desc">Chat and user list side by side. Stream preview lives in the sidebar.</span>
+                </button>
+                <button type="button" class="layout-option" data-layout="twitchStyle">
+                  <span class="layout-option-preview layout-preview-twitch">
+                    <span class="layout-preview-stream"></span>
+                    <span class="layout-preview-chat"></span>
+                  </span>
+                  <span class="layout-option-title">Twitch Style</span>
+                  <span class="layout-option-desc">Stream in the middle, chat on the right. The user list tucks behind an icon.</span>
+                </button>
+              </div>
             </section>
 
             <section class="settings-group">
