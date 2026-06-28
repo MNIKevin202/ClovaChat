@@ -1800,6 +1800,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.21',
+    date: '2026-06-27',
+    title: 'Emote Picker Ordering',
+    bullets: [
+      'The emote picker now sorts groups with the active channel first, other joined channels next, and the Twitch Global section last.',
+    ],
+  },
+  {
     version: 'v1.2.20',
     date: '2026-06-27',
     title: 'Emote Picker Grouped by Streamer',
@@ -5510,10 +5518,10 @@ function emotePickerGroups() {
       .filter((group) => group.emotes && group.emotes.size > 0);
   }
 
-  const groups = [{ label: 'Global', emotes: state.twitchEmotes.global }];
-  orderedChannels.forEach((channel) => {
-    groups.push({ label: channel.replace(/^#/, ''), emotes: state.twitchEmotes.byChannel.get(channel) });
-  });
+  const groups = orderedChannels.map((channel) => (
+    { label: channel.replace(/^#/, ''), emotes: state.twitchEmotes.byChannel.get(channel) }
+  ));
+  groups.push({ label: 'Global', emotes: state.twitchEmotes.global });
   return groups.filter((group) => group.emotes && group.emotes.size > 0);
 }
 
