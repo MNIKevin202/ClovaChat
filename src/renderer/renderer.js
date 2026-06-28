@@ -1900,6 +1900,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.27',
+    date: '2026-06-27',
+    title: 'Uniform Channel Tab Sizing',
+    bullets: [
+      'In Twitch Style layout, channel tabs are now a fixed equal width regardless of channel name length or activity, instead of resizing to fit content.',
+    ],
+  },
+  {
     version: 'v1.2.26',
     date: '2026-06-27',
     title: 'Twitch Style Layout Refactor',

@@ -1918,13 +1918,21 @@ body[data-layout="twitch"] .channel-tabs {
 
 body[data-layout="twitch"] .channel-tab {
   height: 30px;
-  min-width: 84px;
+  width: 108px;
+  min-width: 108px;
+  max-width: 108px;
   font-size: 12px;
   font-weight: 600;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   background: transparent;
   border-color: transparent;
   border-bottom: 2px solid transparent;
+}
+
+body[data-layout="twitch"] .channel-tab-server {
+  width: 88px;
+  min-width: 88px;
+  max-width: 88px;
 }
 
 body[data-layout="twitch"] .channel-tab:hover:not(.is-active) {
