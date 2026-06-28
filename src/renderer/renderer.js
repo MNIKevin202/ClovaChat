@@ -1896,6 +1896,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.29',
+    date: '2026-06-27',
+    title: 'Stream Player Follows the Active Channel',
+    bullets: [
+      'Switching channel tabs now switches the stream player to that channel automatically, instead of leaving it stuck on whichever streamer was last selected.',
+      'Since there\'s only ever one active video, leaving a tab effectively stops that streamer\'s video instead of leaving it playing in the background.',
+    ],
+  },
+  {
     version: 'v1.2.28',
     date: '2026-06-27',
     title: 'Twitch Style Sizing Fix & Sidebar Cleanup',
@@ -2704,6 +2713,11 @@ function truncateText(value, maxLength) {
 function switchToChannel(channel) {
   const normalized = channel === 'server' ? 'server' : normalizeChannel(channel);
   if (!normalized) return;
+  if (state.settings.appearance.twitchPlayer && normalized !== 'server' && normalized !== state.activeChannel) {
+    saveCurrentStreamPlayerState();
+    state.settings.appearance.twitchPlayerChannel = normalized.replace(/^#/, '').toLowerCase();
+    saveSettings();
+  }
   state.activeChannel = normalized;
   state.unreadChannels.delete(normalized);
   if (state.emotePicker.open) renderEmotePickerGrid();

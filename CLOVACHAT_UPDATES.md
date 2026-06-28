@@ -58,6 +58,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Stream Player Follows the Active Channel
+
+- Switching channel tabs now switches the stream player to that channel's stream automatically, instead of leaving it locked on whichever streamer was last explicitly selected.
+- Since there's only one stream player instance, leaving a tab now reliably stops that streamer's video rather than leaving it running while you're elsewhere.
+
 ## Twitch Style Sizing Fix & Sidebar Cleanup
 
 - Fixed a row-track mismatch left over from the layout refactor that caused the stream/chat area to collapse to a small box instead of filling the available height on channels with little or no chat.
