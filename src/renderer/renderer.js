@@ -77,6 +77,8 @@ const el = {
   streamNextButton: document.querySelector('#streamNextButton'),
   streamPlayButton: document.querySelector('#streamPlayButton'),
   streamMuteButton: document.querySelector('#streamMuteButton'),
+  streamLatency: document.querySelector('#streamLatency'),
+  streamCatchUpButton: document.querySelector('#streamCatchUpButton'),
   streamToggleButton: document.querySelector('#streamToggleButton'),
   streamToolbar: document.querySelector('#streamToolbar'),
   streamResizeGrip: document.querySelector('#streamResizeGrip'),
@@ -1295,6 +1297,7 @@ function bindEvents() {
   el.streamNextButton.addEventListener('click', () => navigateStream(1));
   el.streamPlayButton.addEventListener('click', toggleStreamPlayback);
   el.streamMuteButton.addEventListener('click', toggleStreamMute);
+  el.streamCatchUpButton?.addEventListener('click', catchUpStreamToLiveEdge);
   el.streamToolbar?.addEventListener('pointerdown', startStreamDrag);
   el.streamResizeGrip?.addEventListener('pointerdown', startStreamPanelResize);
   window.addEventListener('resize', clampStreamPanelToWindow);
@@ -1912,6 +1915,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.33',
+    date: '2026-06-27',
+    title: 'Stream Latency Display & Catch Up',
+    bullets: [
+      'The stream toolbar now shows an estimated delay behind the broadcaster (e.g. "4.2s behind"), highlighted when it gets unusually high.',
+      'Added a Catch Up button that nudges the player closer to the live edge to cut down delay, since Twitch\'s embed doesn\'t expose a direct seek-to-live control.',
+    ],
+  },
   {
     version: 'v1.2.32',
     date: '2026-06-27',
@@ -3656,6 +3668,7 @@ function createStreamPlayer(channel) {
     if (!state.streamUserPaused) state.streamPlayer?.play();
   });
   startStreamWatchdog();
+  startStreamLatencyPolling();
 }
 
 function startStreamWatchdog() {
@@ -3675,8 +3688,51 @@ function stopStreamWatchdog() {
   state.streamWatchdog = null;
 }
 
+function startStreamLatencyPolling() {
+  stopStreamLatencyPolling();
+  updateStreamLatencyLabel();
+  state.streamLatencyTimer = setInterval(updateStreamLatencyLabel, 3000);
+}
+
+function stopStreamLatencyPolling() {
+  if (state.streamLatencyTimer) clearInterval(state.streamLatencyTimer);
+  state.streamLatencyTimer = null;
+  if (el.streamLatency) el.streamLatency.hidden = true;
+}
+
+function updateStreamLatencyLabel() {
+  if (!el.streamLatency || !state.streamPlayer) return;
+  try {
+    const stats = state.streamPlayer.getPlaybackStats?.();
+    const latency = Number(stats?.hlsLatencyBroadcaster);
+    if (!Number.isFinite(latency) || latency <= 0) {
+      el.streamLatency.hidden = true;
+      return;
+    }
+    el.streamLatency.hidden = false;
+    el.streamLatency.textContent = `${latency.toFixed(1)}s behind`;
+    el.streamLatency.classList.toggle('is-high', latency > 8);
+  } catch {
+    el.streamLatency.hidden = true;
+  }
+}
+
+function catchUpStreamToLiveEdge() {
+  if (!state.streamPlayer) return;
+  try {
+    state.streamPlayer.pause();
+    setTimeout(() => {
+      if (!state.streamUserPaused) state.streamPlayer?.play();
+      setTimeout(updateStreamLatencyLabel, 1500);
+    }, 250);
+  } catch {
+    // ignore; the player may not be ready yet
+  }
+}
+
 function clearStreamPlayer() {
   stopStreamWatchdog();
+  stopStreamLatencyPolling();
   state.streamPlayer = null;
   state.streamPlayerChannel = '';
   el.streamPlayer.innerHTML = '';

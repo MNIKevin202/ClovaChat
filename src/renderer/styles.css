@@ -2355,6 +2355,29 @@ body[data-layout="twitch"] .message:hover {
   text-transform: uppercase;
 }
 
+.stream-latency {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--button-bg, rgba(255, 255, 255, 0.08));
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: none;
+}
+
+.stream-latency.is-high {
+  background: var(--mention-bg, rgba(230, 184, 70, 0.18));
+  color: var(--orange);
+}
+
+.stream-latency[hidden] {
+  display: none;
+}
+
 .stream-toolbar button {
   min-height: 22px;
   padding: 0 6px;

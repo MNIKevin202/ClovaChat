@@ -58,6 +58,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Stream Latency Display & Catch Up
+
+- Added a live-updating delay indicator to the stream toolbar (e.g. "4.2s behind"), pulled from the Twitch embed's playback stats (`hlsLatencyBroadcaster`), highlighted when delay gets unusually high.
+- Added a Catch Up button that briefly pauses and resumes the player to nudge it closer to the live edge. Twitch's public embed API has no direct seek-to-live method, so this relies on the common trick of forcing a resync via pause/resume.
+
 ## Bigger Mentions Button
 
 - Moved the Mentions button to sit under the popup action row instead of floating near the channel tabs, and made it bigger with a visible label instead of a small icon-only circle.

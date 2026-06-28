@@ -415,6 +415,8 @@
                 <li>Muted, paused, volume, and playing state are remembered per channel when switching tabs or streams.</li>
                 <li>By default the player is docked in the sidebar; drag its toolbar out to float it anywhere, and drop it back near the sidebar to re-dock.</li>
                 <li>Switch to the Twitch Style layout in Settings to put the stream inline in the middle of the chat view with chat on the right, instead of in the sidebar.</li>
+                <li>The toolbar shows an estimated delay (e.g. "4.2s behind") while a live stream plays.</li>
+                <li>Click Catch Up to nudge the player closer to the live edge and reduce delay if it's grown large.</li>
               </ol>
             </section>
 
@@ -736,9 +738,11 @@
         <div id="streamToolbar" class="stream-toolbar">
           <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
           <span id="streamTitle">Stream</span>
+          <span id="streamLatency" class="stream-latency" hidden title="Estimated delay behind the broadcaster"></span>
           <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
           <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
           <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
+          <button id="streamCatchUpButton" type="button" title="Jump closer to the live edge to reduce delay">⏩ Catch Up</button>
           <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
         </div>
         <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
