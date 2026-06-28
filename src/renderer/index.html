@@ -49,6 +49,7 @@
                 <span id="connectionChannelCount">0 joined</span>
               </div>
             </div>
+            <button id="connectionToggleButton" class="primary connection-toggle-button" type="button">Connect</button>
             <button id="openLogFolderButton" class="link-button" type="button" hidden>📁 Open Logs Folder</button>
           </section>
 
@@ -58,8 +59,12 @@
             <div id="streamDockSlot" class="stream-dock-slot"></div>
           </section>
 
-          <section class="sidebar-section">
+          <section class="sidebar-section sidebar-channels-section">
             <h2 class="section-label">Channels</h2>
+            <form id="joinChannelForm" class="join-channel-form">
+              <input id="joinChannelInput" placeholder="Enter channel name..." autocomplete="off" />
+              <button type="submit" title="Join channel">Join</button>
+            </form>
             <div id="channels" class="channel-tabs sidebar-channels" aria-label="Open channels"></div>
           </section>
 
@@ -326,6 +331,8 @@
                 <li>Enter your nick and password. For Twitch, the password should be an OAuth token that starts with oauth:.</li>
                 <li>Enter a starting channel such as #mnikevin202.</li>
                 <li>Click Connect. Server events appear in the Server tab, and joined channels appear in the Channels list in the left sidebar.</li>
+                <li>The connection card's Connect/Disconnect button always matches your current state, so you don't need to open Server Connection just to reconnect.</li>
+                <li>Use the Enter channel name field above the Channels list to join a new channel without typing /join.</li>
               </ol>
             </section>
 

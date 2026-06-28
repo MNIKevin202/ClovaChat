@@ -115,14 +115,23 @@ class IrcManager {
 
   disconnect() {
     this.stopWatchdog();
-    if (this.socket) {
+    const socket = this.socket;
+    const wasConnected = this.connected;
+    if (socket) {
+      // Remove the 'close' listener before destroying: it checks
+      // this.socket !== socket to ignore stale closes from a
+      // watchdog-triggered reconnect, but that same check would also
+      // swallow this intentional disconnect once this.socket is nulled
+      // below (close fires asynchronously, after this method returns).
+      socket.removeAllListeners('close');
       this.raw('QUIT :Leaving ClovaChat');
-      this.socket.destroy();
+      socket.destroy();
     }
     this.socket = null;
     this.buffer = '';
     this.channels.clear();
     this.connected = false;
+    if (wasConnected) this.emit({ type: 'disconnected', text: 'Disconnected.' });
     return { ok: true };
   }
 

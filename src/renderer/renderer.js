@@ -60,6 +60,9 @@ const el = {
   connectionNick: document.querySelector('#connectionNick'),
   connectionChannelCount: document.querySelector('#connectionChannelCount'),
   openLogFolderButton: document.querySelector('#openLogFolderButton'),
+  connectionToggleButton: document.querySelector('#connectionToggleButton'),
+  joinChannelForm: document.querySelector('#joinChannelForm'),
+  joinChannelInput: document.querySelector('#joinChannelInput'),
   host: document.querySelector('#host'),
   port: document.querySelector('#port'),
   tls: document.querySelector('#tls'),
@@ -1171,6 +1174,18 @@ function bindEvents() {
   el.disconnectButton.addEventListener('click', disconnect);
   el.disconnectedReconnectButton?.addEventListener('click', connect);
   el.disconnectedDismissButton?.addEventListener('click', hideDisconnectedOverlay);
+  el.connectionToggleButton?.addEventListener('click', toggleConnection);
+  el.joinChannelForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const channel = normalizeChannel(el.joinChannelInput.value);
+    el.joinChannelInput.value = '';
+    if (!channel) return;
+    if (!state.connected) {
+      appendStatus('Connect to the server before joining a channel.', 'error');
+      return;
+    }
+    await joinChannelOnce(channel);
+  });
   el.twitchPresetButton.addEventListener('click', applyTwitchPreset);
   el.twitchTokenButton.addEventListener('click', openTwitchTokenPage);
   el.darkModeToggle.addEventListener('change', async () => {
@@ -1540,6 +1555,24 @@ async function disconnect() {
   await window.macIRC.disconnect();
 }
 
+async function toggleConnection() {
+  if (state.connectionToggleBusy) return;
+  state.connectionToggleBusy = true;
+  const button = el.connectionToggleButton;
+  const goingOffline = state.connected;
+  if (button) {
+    button.disabled = true;
+    button.textContent = goingOffline ? 'Disconnecting...' : 'Connecting...';
+  }
+  try {
+    if (goingOffline) await disconnect();
+    else await connect();
+  } finally {
+    state.connectionToggleBusy = false;
+    renderConnectionCard();
+  }
+}
+
 function showDisconnectedOverlay() {
   if (!el.disconnectedBackdrop) return;
   el.disconnectedMessage.textContent = state.settings.profile.nick
@@ -1580,6 +1613,19 @@ function renderConnectionCard() {
 
   const folder = state.settings.preferences.channelLogFolder;
   el.openLogFolderButton.hidden = !folder;
+
+  if (el.connectionToggleButton && !state.connectionToggleBusy) {
+    el.connectionToggleButton.disabled = false;
+    if (state.connected) {
+      el.connectionToggleButton.textContent = 'Disconnect';
+      el.connectionToggleButton.classList.add('danger');
+      el.connectionToggleButton.classList.remove('primary');
+    } else {
+      el.connectionToggleButton.textContent = 'Connect';
+      el.connectionToggleButton.classList.add('primary');
+      el.connectionToggleButton.classList.remove('danger');
+    }
+  }
 }
 
 function applyTheme(theme) {
@@ -1941,6 +1987,18 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.40',
+    date: '2026-06-28',
+    title: 'Sidebar Overhaul: Connect Button, Join Channel, Taller List',
+    bullets: [
+      'Fixed a real bug where Disconnect didn\'t reliably update the UI — a stale-connection guard added for the auto-reconnect watchdog was also swallowing the close event from a manual disconnect.',
+      'Added a single state-driven Connect/Disconnect button directly on the connection card, with a loading state while connecting or disconnecting.',
+      'Added an "Enter channel name..." field with a Join button above the channel list, so you can join a channel without typing /join.',
+      'The channel list now grows to fill the sidebar\'s available height instead of stopping at a fixed short height.',
+      'Enlarged the ClovaChat logo in the top nav bar.',
+    ],
+  },
   {
     version: 'v1.2.39',
     date: '2026-06-28',
