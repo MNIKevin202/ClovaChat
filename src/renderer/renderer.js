@@ -1800,6 +1800,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.20',
+    date: '2026-06-27',
+    title: 'Emote Picker Grouped by Streamer',
+    bullets: [
+      'The emote picker now groups emotes by streamer instead of one flat list, covering every channel you have joined, not just the active one.',
+      'The Twitch tab also breaks out a separate Global section for emotes available everywhere.',
+    ],
+  },
+  {
     version: 'v1.2.19',
     date: '2026-06-27',
     title: 'Emote Picker Fix',
@@ -5491,25 +5500,37 @@ async function loadTwitchChannelEmotes(channel, roomId) {
   }
 }
 
-function emotePickerEmotes() {
+function emotePickerGroups() {
+  const orderedChannels = uniqueChannels([state.activeChannel, ...state.channels])
+    .filter((channel) => !isServerTarget(channel));
+
   if (state.emotePicker.source === '7tv') {
-    return state.sevenTv.emotesByChannel.get(state.activeChannel) || new Map();
+    return orderedChannels
+      .map((channel) => ({ label: channel.replace(/^#/, ''), emotes: state.sevenTv.emotesByChannel.get(channel) }))
+      .filter((group) => group.emotes && group.emotes.size > 0);
   }
-  const merged = new Map(state.twitchEmotes.global || []);
-  const channelEmotes = state.twitchEmotes.byChannel.get(state.activeChannel);
-  if (channelEmotes) channelEmotes.forEach((url, name) => merged.set(name, url));
-  return merged;
+
+  const groups = [{ label: 'Global', emotes: state.twitchEmotes.global }];
+  orderedChannels.forEach((channel) => {
+    groups.push({ label: channel.replace(/^#/, ''), emotes: state.twitchEmotes.byChannel.get(channel) });
+  });
+  return groups.filter((group) => group.emotes && group.emotes.size > 0);
 }
 
 function renderEmotePickerGrid() {
   if (!el.emotePickerGrid) return;
   el.emotePickerGrid.innerHTML = '';
   const search = state.emotePicker.search.trim().toLowerCase();
-  const entries = Array.from(emotePickerEmotes().entries())
-    .filter(([name]) => !search || name.toLowerCase().includes(search))
-    .sort(([a], [b]) => a.localeCompare(b));
+  const groups = emotePickerGroups()
+    .map((group) => ({
+      label: group.label,
+      entries: Array.from(group.emotes.entries())
+        .filter(([name]) => !search || name.toLowerCase().includes(search))
+        .sort(([a], [b]) => a.localeCompare(b)),
+    }))
+    .filter((group) => group.entries.length > 0);
 
-  if (entries.length === 0) {
+  if (groups.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'emote-picker-empty';
     empty.textContent = 'No emotes found.';
@@ -5517,18 +5538,28 @@ function renderEmotePickerGrid() {
     return;
   }
 
-  entries.forEach(([name, url]) => {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'emote-picker-item';
-    button.title = name;
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = name;
-    img.loading = 'lazy';
-    button.append(img);
-    button.addEventListener('click', () => insertEmoteIntoComposer(name));
-    el.emotePickerGrid.append(button);
+  groups.forEach((group) => {
+    const label = document.createElement('div');
+    label.className = 'emote-picker-group-label';
+    label.textContent = group.label;
+    el.emotePickerGrid.append(label);
+
+    const grid = document.createElement('div');
+    grid.className = 'emote-picker-group-grid';
+    group.entries.forEach(([name, url]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'emote-picker-item';
+      button.title = name;
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = name;
+      img.loading = 'lazy';
+      button.append(img);
+      button.addEventListener('click', () => insertEmoteIntoComposer(name));
+      grid.append(button);
+    });
+    el.emotePickerGrid.append(grid);
   });
 }
 
