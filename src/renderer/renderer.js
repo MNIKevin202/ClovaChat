@@ -1913,6 +1913,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.32',
+    date: '2026-06-27',
+    title: 'Bigger Mentions Button',
+    bullets: [
+      'Moved the Mentions button to sit under the popup action row, and made it bigger and labeled instead of a small floating icon.',
+    ],
+  },
+  {
     version: 'v1.2.31',
     date: '2026-06-27',
     title: 'Mentions in a Modal',

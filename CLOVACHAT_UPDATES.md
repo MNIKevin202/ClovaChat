@@ -58,6 +58,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Bigger Mentions Button
+
+- Moved the Mentions button to sit under the popup action row instead of floating near the channel tabs, and made it bigger with a visible label instead of a small icon-only circle.
+
 ## Mentions in a Modal
 
 - Converted the @ button's mentions list from a small anchored dropdown into a proper centered popup/modal (with backdrop, close button, and a Clear all action), matching the look of the Command Palette and Channel Settings modals.
