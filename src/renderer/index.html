@@ -132,6 +132,14 @@
 
         <section id="chatTab" class="view is-active">
           <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
+          <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@</button>
+          <div id="mentionsPanel" class="mentions-panel" hidden>
+            <header>
+              <h3>Mentions</h3>
+              <button id="mentionsClearButton" class="link-button" type="button">Clear</button>
+            </header>
+            <div id="mentionsList" class="mentions-list"></div>
+          </div>
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="chatBody" class="chat-body">
             <div id="streamInfoHeader" class="stream-info-header" hidden></div>
@@ -384,6 +392,8 @@
                 <li>If you scroll up, ClovaChat keeps your place and shows a New Messages button when fresh chat arrives.</li>
                 <li>Open Settings, then Chat Display, to change density, font size, timestamps, badges, emotes, mention highlighting, grouped messages, hover actions, and reduced motion.</li>
                 <li>Messages that mention your nick can trigger desktop notifications when that setting is enabled.</li>
+                <li>When you're mentioned in a channel you're not currently viewing, its tab shows a small @ badge.</li>
+                <li>Click the @ button above the channel tabs to see every recent mention across all channels and jump straight to it.</li>
               </ol>
             </section>
 

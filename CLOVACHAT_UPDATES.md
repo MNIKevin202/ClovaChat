@@ -58,6 +58,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Mention Badges & Mentions Panel
+
+- Channel tabs show a small @ badge when you're mentioned in a channel you're not currently viewing.
+- Added an @ button above the channel tabs that opens a panel listing every recent mention (across all channels), with channel, nick, and a text preview; clicking one switches to that channel and scrolls to/flashes the message.
+
 ## Stream Player Follows the Active Channel
 
 - Switching channel tabs now switches the stream player to that channel's stream automatically, instead of leaving it locked on whichever streamer was last explicitly selected.

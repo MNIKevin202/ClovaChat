@@ -3,6 +3,9 @@ const state = {
   activeChannel: '',
   channels: [],
   unreadChannels: new Set(),
+  mentionedChannels: new Set(),
+  mentions: [],
+  mentionsPanel: { open: false },
   messagesByTarget: new Map(),
   rosters: new Map(),
   roleMemory: new Map(),
@@ -111,6 +114,10 @@ const el = {
   nickSuggest: document.querySelector('#nickSuggest'),
   newMessagesButton: document.querySelector('#newMessagesButton'),
   emoteButton: document.querySelector('#emoteButton'),
+  mentionsButton: document.querySelector('#mentionsButton'),
+  mentionsPanel: document.querySelector('#mentionsPanel'),
+  mentionsList: document.querySelector('#mentionsList'),
+  mentionsClearButton: document.querySelector('#mentionsClearButton'),
   emotePicker: document.querySelector('#emotePicker'),
   emotePickerSearch: document.querySelector('#emotePickerSearch'),
   emotePickerGrid: document.querySelector('#emotePickerGrid'),
@@ -1304,10 +1311,19 @@ function bindEvents() {
   el.emotePicker?.addEventListener('click', (event) => event.stopPropagation());
   document.addEventListener('click', () => {
     if (state.emotePicker.open) setEmotePickerOpen(false);
+    if (state.mentionsPanel.open) setMentionsPanelOpen(false);
   });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && state.emotePicker.open) setEmotePickerOpen(false);
+    if (event.key === 'Escape' && state.mentionsPanel.open) setMentionsPanelOpen(false);
   });
+
+  el.mentionsButton?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setMentionsPanelOpen(!state.mentionsPanel.open);
+  });
+  el.mentionsPanel?.addEventListener('click', (event) => event.stopPropagation());
+  el.mentionsClearButton?.addEventListener('click', clearMentions);
 
   el.autoJoinForm.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -1885,6 +1901,7 @@ function renderAll() {
   renderPopupEditor();
   renderTimers();
   renderStreamPlayer();
+  renderMentionsButton();
   renderChangelog();
   scheduleAllTimers();
 
@@ -1895,6 +1912,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.30',
+    date: '2026-06-27',
+    title: 'Mention Badges & Mentions Panel',
+    bullets: [
+      'Channel tabs now show a small @ badge when you\'re mentioned in a channel you\'re not currently viewing.',
+      'Added an @ button above the channel tabs that lists every recent mention across all channels — click one to jump straight to that channel and message.',
+    ],
+  },
   {
     version: 'v1.2.29',
     date: '2026-06-27',
@@ -2720,6 +2746,7 @@ function switchToChannel(channel) {
   }
   state.activeChannel = normalized;
   state.unreadChannels.delete(normalized);
+  state.mentionedChannels.delete(normalized);
   if (state.emotePicker.open) renderEmotePickerGrid();
   if (state.userDrawer.open) {
     state.userDrawer.channel = normalized;
@@ -3235,6 +3262,7 @@ function renderChannels() {
       channel === 'server' ? 'channel-tab-server' : '',
       channel === state.activeChannel ? 'is-active' : '',
       state.unreadChannels.has(channel) ? 'has-unread' : '',
+      state.mentionedChannels.has(channel) ? 'has-mention' : '',
       isLive ? 'is-live' : '',
     ].filter(Boolean).join(' ');
     button.textContent = channel === 'server' ? 'Server' : channelDisplayName(channel);
@@ -5020,6 +5048,7 @@ function appendMessage(event) {
   const shouldScroll = isActiveTarget ? chatIsAtBottom() : false;
   const role = event.roleKnown ? (event.role || '') : (event.role || rememberedUserRole(target, event.nick));
   const entry = {
+    id: `${event.timestamp}-${Math.random().toString(36).slice(2)}`,
     kind: 'message',
     direction: event.direction || '',
     target,
@@ -5034,9 +5063,87 @@ function appendMessage(event) {
   logChannelMessage(event.target, entry);
   renderDashboard();
   notifyChannelSpecificUser(entry);
+  recordMentionIfNeeded(entry);
   if (!isActiveTarget) return;
   if (!shouldScroll) state.pendingNewMessages += 1;
   renderMessages({ forceScroll: shouldScroll });
+}
+
+const MAX_TRACKED_MENTIONS = 100;
+
+function recordMentionIfNeeded(entry) {
+  if (entry.direction !== 'in' || !messageMentionsNick(entry.text)) return;
+  state.mentions = [
+    { id: entry.id, channel: entry.target, nick: entry.nick, text: entry.text, timestamp: entry.timestamp },
+    ...state.mentions,
+  ].slice(0, MAX_TRACKED_MENTIONS);
+  if (entry.target !== state.activeChannel) {
+    state.mentionedChannels.add(entry.target);
+    renderChannels();
+  }
+  renderMentionsButton();
+  if (state.mentionsPanel.open) renderMentionsPanel();
+}
+
+function renderMentionsButton() {
+  if (!el.mentionsButton) return;
+  el.mentionsButton.hidden = state.mentions.length === 0;
+  el.mentionsButton.classList.toggle('has-mentions', state.mentionedChannels.size > 0);
+}
+
+function setMentionsPanelOpen(open) {
+  state.mentionsPanel.open = open;
+  el.mentionsPanel.hidden = !open;
+  if (open) renderMentionsPanel();
+}
+
+function renderMentionsPanel() {
+  if (!el.mentionsList) return;
+  el.mentionsList.innerHTML = '';
+  if (state.mentions.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'mentions-empty';
+    empty.textContent = 'No mentions yet.';
+    el.mentionsList.append(empty);
+    return;
+  }
+  state.mentions.forEach((mention) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'mentions-item';
+    const meta = document.createElement('div');
+    meta.className = 'mentions-item-meta';
+    meta.append(
+      document.createTextNode(`${mention.channel} • ${mention.nick}`),
+      document.createTextNode(formatTime(mention.timestamp))
+    );
+    const text = document.createElement('div');
+    text.className = 'mentions-item-text';
+    text.textContent = mention.text;
+    item.append(meta, text);
+    item.addEventListener('click', () => jumpToMention(mention));
+    el.mentionsList.append(item);
+  });
+}
+
+function jumpToMention(mention) {
+  setMentionsPanelOpen(false);
+  if (mention.channel !== state.activeChannel) switchToChannel(mention.channel);
+  requestAnimationFrame(() => {
+    const row = el.messages.querySelector(`[data-message-id="${mention.id}"]`);
+    if (!row) return;
+    row.scrollIntoView({ block: 'center' });
+    row.classList.add('jump-highlight');
+    setTimeout(() => row.classList.remove('jump-highlight'), 1500);
+  });
+}
+
+function clearMentions() {
+  state.mentions = [];
+  state.mentionedChannels.clear();
+  renderMentionsButton();
+  renderMentionsPanel();
+  renderChannels();
 }
 
 function logMonitoredMessage(entry) {
@@ -5161,6 +5268,7 @@ function renderMessageRow(event, previousMessage = null) {
   const isFirstTime = channelSettingValue(channel, 'chat.highlightFirstTimeChatters', false)
     && getUserStats(channel, event.nick).messageCount <= 1;
   row.className = `message ${event.direction || ''}${isMention ? ' mention' : ''}${isMonitored(event.nick || '') ? ' monitored' : ''}${isHighlightedUser ? ' highlighted-user' : ''}${isFirstTime ? ' first-time' : ''}${showTimestamps ? '' : ' no-time'}${grouped ? ' grouped' : ''}`;
+  if (event.id) row.dataset.messageId = event.id;
   const time = document.createElement('span');
   time.className = 'time';
   time.textContent = grouped ? '' : formatTime(event.timestamp);
@@ -5326,6 +5434,7 @@ function removeJoinedChannel(channel) {
     .filter((entry) => normalizeChannel(entry) !== normalized);
   state.rosters.delete(normalized);
   state.unreadChannels.delete(normalized);
+  state.mentionedChannels.delete(normalized);
   if (state.activeChannel === normalized) {
     state.activeChannel = state.channels[0] || 'server';
   }
