@@ -834,13 +834,13 @@ function onboardingLayoutStylePicker() {
       value: 'standard',
       title: 'Standard',
       desc: 'Chat and user list side by side. Stream preview lives in the sidebar.',
-      frame: 'standard',
+      image: '../../images/StandardStyle.png',
     },
     {
       value: 'twitchStyle',
       title: 'Twitch Style',
       desc: 'Stream in the middle, chat on the right. The user list tucks behind an icon.',
-      frame: 'twitch',
+      image: '../../images/TwitchStyle.png',
     },
   ];
 
@@ -851,18 +851,11 @@ function onboardingLayoutStylePicker() {
     button.classList.toggle('is-active', state.onboarding.draft.layoutStyle === option.value);
 
     const frame = document.createElement('span');
-    frame.className = `layout-option-preview layout-preview-${option.frame}`;
-    if (option.frame === 'standard') {
-      frame.append(
-        Object.assign(document.createElement('span'), { className: 'layout-preview-chat' }),
-        Object.assign(document.createElement('span'), { className: 'layout-preview-users' })
-      );
-    } else {
-      frame.append(
-        Object.assign(document.createElement('span'), { className: 'layout-preview-stream' }),
-        Object.assign(document.createElement('span'), { className: 'layout-preview-chat' })
-      );
-    }
+    frame.className = 'layout-option-preview';
+    const img = document.createElement('img');
+    img.src = option.image;
+    img.alt = `${option.title} layout preview`;
+    frame.append(img);
 
     const title = document.createElement('span');
     title.className = 'layout-option-title';
@@ -1987,6 +1980,14 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.41',
+    date: '2026-06-28',
+    title: 'Real Layout Preview Screenshots',
+    bullets: [
+      'The Layout picker in Settings and the onboarding wizard now show real screenshots of the Standard and Twitch Style layouts instead of placeholder CSS drawings.',
+    ],
+  },
   {
     version: 'v1.2.40',
     date: '2026-06-28',

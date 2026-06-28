@@ -58,6 +58,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Real Layout Preview Screenshots
+
+- Replaced the placeholder CSS-drawn layout frames (in Settings and the onboarding wizard) with real screenshots (`images/StandardStyle.png`, `images/TwitchStyle.png`).
+
 ## Sidebar Overhaul: Connect Button, Join Channel, Taller List
 
 - Fixed the actual Disconnect bug: a stale-connection guard added earlier for the auto-reconnect watchdog (`this.socket !== socket` check in the `close` handler) was also silently swallowing the close event from a manual disconnect, since `this.socket` gets nulled before that event fires. The IRC manager now removes the `close` listener and emits `disconnected` itself when you disconnect on purpose.
