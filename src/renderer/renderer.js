@@ -1800,6 +1800,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.19',
+    date: '2026-06-27',
+    title: 'Emote Picker Fix',
+    bullets: [
+      'Fixed Twitch emotes not rendering in the emote picker (they showed broken image icons) while 7TV emotes worked fine, caused by a function name collision that mangled the image URLs.',
+    ],
+  },
+  {
     version: 'v1.2.18',
     date: '2026-06-27',
     title: 'Emote Picker',
@@ -5426,15 +5434,11 @@ function sevenTvEmoteUrl(emote) {
   return `https:${host}/${file.name}`;
 }
 
-function twitchEmoteUrl(emote) {
-  const template = emote.template
-    || 'https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}';
-  const format = (emote.format || []).includes('static') ? 'static' : (emote.format?.[0] || 'static');
-  return template
-    .replace('{{id}}', emote.id)
-    .replace('{{format}}', format)
-    .replace('{{theme_mode}}', 'dark')
-    .replace('{{scale}}', '2.0');
+function twitchHelixEmoteUrl(emote) {
+  if (emote.images?.url_4x || emote.images?.url_2x || emote.images?.url_1x) {
+    return emote.images.url_4x || emote.images.url_2x || emote.images.url_1x;
+  }
+  return `https://static-cdn.jtvnw.net/emoticons/v2/${encodeURIComponent(emote.id)}/default/dark/2.0`;
 }
 
 async function loadGlobalTwitchEmotes() {
@@ -5446,7 +5450,7 @@ async function loadGlobalTwitchEmotes() {
     if (!result.ok) return;
     const emotes = new Map();
     for (const emote of result.data?.data || []) {
-      const url = twitchEmoteUrl(emote);
+      const url = twitchHelixEmoteUrl(emote);
       if (emote.name && url) emotes.set(emote.name, url);
     }
     state.twitchEmotes.global = emotes;
@@ -5475,7 +5479,7 @@ async function loadTwitchChannelEmotes(channel, roomId) {
     }
     const emotes = new Map();
     for (const emote of result.data?.data || []) {
-      const url = twitchEmoteUrl(emote);
+      const url = twitchHelixEmoteUrl(emote);
       if (emote.name && url) emotes.set(emote.name, url);
     }
     state.twitchEmotes.byChannel.set(normalized, emotes);
