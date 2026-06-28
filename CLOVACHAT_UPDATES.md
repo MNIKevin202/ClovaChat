@@ -58,6 +58,15 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Sidebar Simplification & Stream/Chat Reorg
+
+- Server Connection moved from a sidebar accordion into a modal opened from a button on the connection card.
+- Removed the Auto Join accordion. The sidebar's Add channel field now always saves the channel for auto-join, joins it immediately if connected, and switches to it — there's no separate "join once" path anymore.
+- The stream area now hides and shows a "Disconnected from chat" empty state (with a Connect button) when the IRC connection drops, instead of leaving a stale video on screen.
+- Catch Up clears any manual-pause flag and retries play automatically; if playback is still blocked after a short delay, it shows "click Play to resume" instead of silently doing nothing.
+- Popups (Wave/Say hello/etc.) moved to sit directly above the message input. Channel Settings and Mentions moved to a small action row under the video, alongside a new Open Stream in Browser button.
+- Renamed the "Chat" tab to "Streams/Chat" in the top navigation.
+
 ## Real Layout Preview Screenshots
 
 - Replaced the placeholder CSS-drawn layout frames (in Settings and the onboarding wizard) with real screenshots (`images/StandardStyle.png`, `images/TwitchStyle.png`).

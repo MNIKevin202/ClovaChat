@@ -60,6 +60,11 @@ const el = {
   connectionNick: document.querySelector('#connectionNick'),
   connectionChannelCount: document.querySelector('#connectionChannelCount'),
   openLogFolderButton: document.querySelector('#openLogFolderButton'),
+  serverConnectionButton: document.querySelector('#serverConnectionButton'),
+  serverConnectionBackdrop: document.querySelector('#serverConnectionBackdrop'),
+  serverConnectionSaveButton: document.querySelector('#serverConnectionSaveButton'),
+  serverConnectionCloseButton: document.querySelector('#serverConnectionCloseButton'),
+  serverConnectionCloseX: document.querySelector('#serverConnectionCloseX'),
   connectionToggleButton: document.querySelector('#connectionToggleButton'),
   joinChannelForm: document.querySelector('#joinChannelForm'),
   joinChannelInput: document.querySelector('#joinChannelInput'),
@@ -111,6 +116,9 @@ const el = {
   chatBody: document.querySelector('.chat-body'),
   chatStreamSlot: document.querySelector('#chatStreamSlot'),
   streamEmptyState: document.querySelector('#streamEmptyState'),
+  streamEmptyStateTitle: document.querySelector('#streamEmptyStateTitle'),
+  streamEmptyStateHint: document.querySelector('#streamEmptyStateHint'),
+  streamEmptyStateConnectButton: document.querySelector('#streamEmptyStateConnectButton'),
   rosterToggleButton: document.querySelector('#rosterToggleButton'),
   layoutOptions: document.querySelectorAll('.layout-option'),
   rosterPanel: document.querySelector('.roster-panel'),
@@ -125,6 +133,8 @@ const el = {
   newMessagesButton: document.querySelector('#newMessagesButton'),
   emoteButton: document.querySelector('#emoteButton'),
   mentionsButton: document.querySelector('#mentionsButton'),
+  channelToolsSettingsButton: document.querySelector('#channelToolsSettingsButton'),
+  openStreamInBrowserButton: document.querySelector('#openStreamInBrowserButton'),
   mentionsBackdrop: document.querySelector('#mentionsBackdrop'),
   mentionsModal: document.querySelector('#mentionsModal'),
   mentionsModalClose: document.querySelector('#mentionsModalClose'),
@@ -1163,21 +1173,24 @@ function bindEvents() {
     await setDashboardFilter(button.dataset.dashboardFilter);
   });
 
-  el.connectButton.addEventListener('click', connect);
-  el.disconnectButton.addEventListener('click', disconnect);
   el.disconnectedReconnectButton?.addEventListener('click', connect);
   el.disconnectedDismissButton?.addEventListener('click', hideDisconnectedOverlay);
   el.connectionToggleButton?.addEventListener('click', toggleConnection);
+  el.serverConnectionButton?.addEventListener('click', () => setServerConnectionModalOpen(true));
+  el.serverConnectionCloseButton?.addEventListener('click', () => setServerConnectionModalOpen(false));
+  el.serverConnectionCloseX?.addEventListener('click', () => setServerConnectionModalOpen(false));
+  el.serverConnectionBackdrop?.addEventListener('click', (event) => {
+    if (event.target === el.serverConnectionBackdrop) setServerConnectionModalOpen(false);
+  });
+  el.serverConnectionSaveButton?.addEventListener('click', async () => {
+    await persistConnectionFields();
+    appendStatus('Server connection settings saved.', 'success');
+    setServerConnectionModalOpen(false);
+  });
+  el.streamEmptyStateConnectButton?.addEventListener('click', connect);
   el.joinChannelForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
-    const channel = normalizeChannel(el.joinChannelInput.value);
-    el.joinChannelInput.value = '';
-    if (!channel) return;
-    if (!state.connected) {
-      appendStatus('Connect to the server before joining a channel.', 'error');
-      return;
-    }
-    await joinChannelOnce(channel);
+    await joinAndSaveChannel(el.joinChannelInput.value);
   });
   el.twitchPresetButton.addEventListener('click', applyTwitchPreset);
   el.twitchTokenButton.addEventListener('click', openTwitchTokenPage);
@@ -1343,23 +1356,6 @@ function bindEvents() {
   el.mentionsModalClose?.addEventListener('click', () => setMentionsPanelOpen(false));
   el.mentionsClearButton?.addEventListener('click', clearMentions);
 
-  el.autoJoinForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const channel = normalizeChannel(el.autoJoinChannel.value);
-    if (!channel || isServerTarget(channel)) return;
-    setChannelSetting(channel, 'autoJoin', true);
-    state.settings.connection.autoJoinChannels = uniqueChannels([
-      ...state.settings.connection.autoJoinChannels,
-      channel,
-    ]);
-    el.autoJoinChannel.value = '';
-    await saveSettings();
-    renderAutoJoinChannels();
-    renderChatActions();
-    renderDashboard();
-    if (state.connected) window.macIRC.send({ target: channel, text: `/join ${channel}` });
-  });
-
   el.addAutoJoinCurrentButton.addEventListener('click', async () => {
     const channel = normalizeChannel(state.activeChannel);
     if (!channel || isServerTarget(channel) || channelIsAutoJoined(channel)) return;
@@ -1524,8 +1520,7 @@ async function openTwitchTokenPage() {
   appendStatus('Opened Twitch Token Generator in your browser. Choose chat:read, chat:edit, and moderator:read:chatters for automatic rosters, then paste the token here with oauth: at the front.', 'info');
 }
 
-async function connect() {
-  hideDisconnectedOverlay();
+async function persistConnectionFields() {
   const config = formConfig();
   state.settings.profile.nick = config.nick;
   state.settings.profile.username = config.username;
@@ -1540,7 +1535,17 @@ async function connect() {
   state.settings.connection.autoJoinChannels = uniqueChannels(state.settings.connection.autoJoinChannels);
   state.activeChannel = normalizeChannel(config.channel);
   await saveSettings();
+  return config;
+}
+
+async function connect() {
+  hideDisconnectedOverlay();
+  const config = await persistConnectionFields();
   await window.macIRC.connect(config);
+}
+
+function setServerConnectionModalOpen(open) {
+  if (el.serverConnectionBackdrop) el.serverConnectionBackdrop.hidden = !open;
 }
 
 async function disconnect() {
@@ -1980,6 +1985,19 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.42',
+    date: '2026-06-28',
+    title: 'Sidebar Simplification & Stream/Chat Reorg',
+    bullets: [
+      'Server Connection is now a modal opened from the connection card instead of a sidebar accordion.',
+      'Removed the Auto Join accordion — joining a channel from the sidebar\'s Add channel field now always saves it for auto-join, joins it immediately if connected, and selects it.',
+      'The stream now hides and shows a "Disconnected from chat" state with a Connect button when the server connection drops, instead of continuing to show a stale video.',
+      'Catch Up now clears any manual-pause state and retries play automatically, falling back to "click Play to resume" only if playback is genuinely blocked.',
+      'Moved popups (Wave/Say hello/etc.) to sit directly above the message input. Moved Channel Settings and Mentions under the video, and added an Open Stream in Browser button there.',
+      'Renamed the "Chat" tab to "Streams/Chat" in the top navigation.',
+    ],
+  },
   {
     version: 'v1.2.41',
     date: '2026-06-28',
@@ -3305,6 +3323,33 @@ async function joinChannelOnce(channel) {
   appendStatus(`Joining ${normalized}.`, 'info');
 }
 
+async function joinAndSaveChannel(rawInput) {
+  const normalized = normalizeChannel(rawInput);
+  if (!normalized || isServerTarget(normalized)) return;
+  if (channelIsAutoJoined(normalized) || state.channels.includes(normalized)) {
+    appendStatus(`${normalized} is already added.`, 'error');
+    return;
+  }
+  el.joinChannelInput.value = '';
+  setChannelSetting(normalized, 'autoJoin', true);
+  state.settings.connection.autoJoinChannels = uniqueChannels([
+    ...state.settings.connection.autoJoinChannels,
+    normalized,
+  ]);
+  await saveSettings();
+  renderAutoJoinChannels();
+  renderChatActions();
+  renderDashboard();
+  if (state.connected) {
+    window.macIRC.send({ target: normalized, text: `/join ${normalized}` });
+    appendStatus(`Joining ${normalized}. It will also auto-join on future connections.`, 'info');
+  } else {
+    addChannel(normalized);
+    appendStatus(`${normalized} saved — it will join automatically next time you connect.`, 'info');
+  }
+  switchToChannel(normalized);
+}
+
 async function addChannelToAutoJoin(channel) {
   const normalized = normalizeChannel(channel);
   if (!normalized || isServerTarget(normalized) || channelIsAutoJoined(normalized)) return;
@@ -3559,6 +3604,21 @@ function showChannelContextMenu(event, channel) {
   state.activeContextMenu = menu;
 }
 
+function renderStreamEmptyState(wantsStream) {
+  if (!el.streamEmptyStateTitle) return;
+  if (!state.connected) {
+    el.streamEmptyStateTitle.textContent = 'Disconnected from chat';
+    el.streamEmptyStateHint.textContent = 'Connect to view streams and chat.';
+    el.streamEmptyStateConnectButton.hidden = false;
+  } else {
+    el.streamEmptyStateTitle.textContent = wantsStream ? 'Stream unavailable' : 'No stream selected.';
+    el.streamEmptyStateHint.textContent = wantsStream
+      ? 'The stream could not be loaded for this channel.'
+      : 'Pick a channel on the left, or click Watch Active Stream in the sidebar.';
+    el.streamEmptyStateConnectButton.hidden = true;
+  }
+}
+
 function renderStreamInfoHeader() {
   if (!el.streamInfoHeader) return;
   const channel = streamChannelFromActiveChannel();
@@ -3623,6 +3683,7 @@ function renderTopic() {
 }
 
 function renderChannelStatusStrip() {
+  renderChannelToolsRow();
   if (!el.channelStatusStrip) return;
   el.channelStatusStrip.innerHTML = '';
   if (!state.activeChannel || state.activeChannel === 'server') return;
@@ -3654,13 +3715,20 @@ function renderChannelStatusStrip() {
     statusPill('Bot', botOn ? 'On' : 'Off', botOn ? 'is-good' : ''),
     statusPill('Logs', logsOn ? 'On' : 'Off', logsOn ? 'is-good' : '')
   );
+}
 
-  const settingsButton = document.createElement('button');
-  settingsButton.type = 'button';
-  settingsButton.className = 'channel-settings-chip';
-  settingsButton.textContent = 'Channel Settings';
-  settingsButton.addEventListener('click', () => openChannelSettings(channel));
-  el.channelStatusStrip.append(settingsButton);
+function renderChannelToolsRow() {
+  const channel = isServerTarget(state.activeChannel) ? '' : normalizeChannel(state.activeChannel);
+  if (el.channelToolsSettingsButton) {
+    el.channelToolsSettingsButton.disabled = !channel;
+    el.channelToolsSettingsButton.onclick = channel ? () => openChannelSettings(channel) : null;
+  }
+  if (el.openStreamInBrowserButton) {
+    el.openStreamInBrowserButton.disabled = !channel;
+    el.openStreamInBrowserButton.onclick = channel
+      ? () => window.macIRC.openExternal(`https://www.twitch.tv/${channel.replace(/^#/, '')}`)
+      : null;
+  }
 }
 
 function statusPill(label, value, extraClass = '') {
@@ -3710,11 +3778,13 @@ function isTwitchStyleLayout() {
 
 function renderStreamPlayer() {
   const configuredChannel = state.settings.appearance.twitchPlayerChannel || streamChannelFromActiveChannel();
-  const enabled = state.settings.appearance.twitchPlayer && Boolean(configuredChannel);
-  el.streamSidebarButton.textContent = enabled ? 'Hide Stream' : 'Watch Active Stream';
+  const wantsStream = state.settings.appearance.twitchPlayer && Boolean(configuredChannel);
+  const enabled = wantsStream && state.connected;
+  el.streamSidebarButton.textContent = wantsStream ? 'Hide Stream' : 'Watch Active Stream';
   el.streamPanel.hidden = !enabled;
   if (el.chatStreamSlot) el.chatStreamSlot.hidden = !enabled || !isTwitchStyleLayout();
   if (el.streamEmptyState) el.streamEmptyState.hidden = enabled || !isTwitchStyleLayout();
+  renderStreamEmptyState(wantsStream);
   renderStreamInfoHeader();
   if (!enabled) {
     clearStreamPlayer();
@@ -3860,11 +3930,26 @@ function updateStreamLatencyLabel() {
 
 function catchUpStreamToLiveEdge() {
   if (!state.streamPlayer) return;
+  state.streamUserPaused = false;
   try {
     state.streamPlayer.pause();
     setTimeout(() => {
-      if (!state.streamUserPaused) state.streamPlayer?.play();
-      setTimeout(updateStreamLatencyLabel, 1500);
+      try {
+        state.streamPlayer?.play();
+      } catch {
+        // ignore; checked again below
+      }
+      setTimeout(() => {
+        updateStreamLatencyLabel();
+        try {
+          if (state.streamPlayer?.isPaused()) {
+            appendStatus('Catch Up paused — click Play to resume.', 'info');
+            updateStreamControlButtons();
+          }
+        } catch {
+          // player not ready; nothing more to report
+        }
+      }, 1200);
     }, 250);
   } catch {
     // ignore; the player may not be ready yet
@@ -4293,6 +4378,7 @@ function formatLogLine(entry) {
 }
 
 function renderAutoJoinChannels() {
+  if (!el.autoJoinList) return;
   el.autoJoinList.innerHTML = '';
   if (state.settings.connection.autoJoinChannels.length === 0) {
     const empty = document.createElement('div');

@@ -15,7 +15,7 @@
         </div>
         <nav class="tabs top-nav-tabs" aria-label="Workspace">
           <button class="tab" data-tab="dashboard" title="Dashboard"><span class="tab-icon">▦</span>Dashboard</button>
-          <button class="tab is-active" data-tab="chat" title="Chat"><span class="tab-icon">💬</span>Chat</button>
+          <button class="tab is-active" data-tab="chat" title="Streams/Chat"><span class="tab-icon">💬</span>Streams/Chat</button>
           <button class="tab" data-tab="bot" title="Bot Builder"><span class="tab-icon">🤖</span>Bot</button>
           <button class="tab" data-tab="commands" title="Command Scripts"><span class="tab-icon">/</span>Commands</button>
           <button class="tab" data-tab="popups" title="Popup Actions"><span class="tab-icon">⚡</span>Popups</button>
@@ -50,6 +50,7 @@
               </div>
             </div>
             <button id="connectionToggleButton" class="primary connection-toggle-button" type="button">Connect</button>
+            <button id="serverConnectionButton" class="secondary connection-toggle-button" type="button">⚙ Server Connection</button>
             <button id="openLogFolderButton" class="link-button" type="button" hidden>📁 Open Logs Folder</button>
           </section>
 
@@ -62,45 +63,11 @@
           <section class="sidebar-section sidebar-channels-section">
             <h2 class="section-label">Channels</h2>
             <form id="joinChannelForm" class="join-channel-form">
-              <input id="joinChannelInput" placeholder="Enter channel name..." autocomplete="off" />
+              <input id="joinChannelInput" placeholder="Add channel..." autocomplete="off" />
               <button type="submit" title="Join channel">Join</button>
             </form>
+            <span class="join-channel-hint">Joined channels are saved automatically.</span>
             <div id="channels" class="channel-tabs sidebar-channels" aria-label="Open channels"></div>
-          </section>
-
-          <section class="connect-panel">
-            <details class="connection-details card">
-              <summary>Auto Join</summary>
-              <div class="auto-join-panel">
-                <div id="autoJoinList" class="auto-join-list"></div>
-                <form id="autoJoinForm" class="auto-join-form">
-                  <input id="autoJoinChannel" placeholder="#channel" autocomplete="off" />
-                  <button type="submit">Add</button>
-                </form>
-              </div>
-            </details>
-
-            <details class="connection-details card">
-              <summary>Server Connection</summary>
-              <div class="connection-fields">
-                <label>Server<input id="host" autocomplete="off" /></label>
-                <div class="two-col">
-                  <label>Port<input id="port" type="number" min="1" max="65535" /></label>
-                  <label class="check-row"><input id="tls" type="checkbox" /> TLS</label>
-                </div>
-                <label>Nick<input id="nick" autocomplete="username" /></label>
-                <label>Password<input id="password" type="password" autocomplete="current-password" placeholder="oauth:... for Twitch" /></label>
-                <div class="button-row twitch-tools">
-                  <button id="twitchPresetButton" type="button">Twitch Preset</button>
-                  <button id="twitchTokenButton" type="button">Get Token</button>
-                </div>
-                <label>Channel<input id="channel" autocomplete="off" /></label>
-                <div class="button-row">
-                  <button id="connectButton" class="primary">Connect</button>
-                  <button id="disconnectButton" class="danger">Disconnect</button>
-                </div>
-              </div>
-            </details>
           </section>
         </div>
 
@@ -146,15 +113,19 @@
               <div id="streamInfoHeader" class="stream-info-header" hidden></div>
               <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
               <div id="streamEmptyState" class="stream-empty-state">
-                <p>No stream selected.</p>
-                <span>Pick a channel on the left, or click Watch Active Stream in the sidebar.</span>
+                <p id="streamEmptyStateTitle">No stream selected.</p>
+                <span id="streamEmptyStateHint">Pick a channel on the left, or click Watch Active Stream in the sidebar.</span>
+                <button id="streamEmptyStateConnectButton" class="primary" type="button" hidden>Connect</button>
               </div>
               <div id="streamActionRow" class="stream-action-row">
-                <div id="popupBar" class="popup-bar"></div>
                 <div class="chat-action-bar">
                   <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
                 </div>
-                <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@ Mentions</button>
+                <div class="channel-tools-row">
+                  <button id="channelToolsSettingsButton" type="button" title="Channel Settings">⚙ Channel Settings</button>
+                  <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@ Mentions</button>
+                  <button id="openStreamInBrowserButton" type="button" title="Open Stream in Browser" disabled>↗ Open Stream in Browser</button>
+                </div>
               </div>
             </div>
             <div id="channelStatusStrip" class="channel-status-strip"></div>
@@ -177,6 +148,7 @@
               <input id="emotePickerSearch" class="emote-picker-search" type="text" placeholder="Search emotes" autocomplete="off" />
               <div id="emotePickerGrid" class="emote-picker-grid"></div>
             </div>
+            <div id="popupBar" class="popup-bar"></div>
             <form id="inputForm" class="input-row">
               <button id="emoteButton" class="emote-button" type="button" title="Emotes">☺</button>
               <input id="messageInput" autocomplete="off" placeholder="Type a message or /command or /join #channel" />
@@ -811,6 +783,33 @@
         </section>
       </div>
     </aside>
+
+    <div id="serverConnectionBackdrop" class="server-connection-backdrop" hidden>
+      <section class="server-connection-modal" role="dialog" aria-modal="true" aria-labelledby="serverConnectionTitle">
+        <header>
+          <h2 id="serverConnectionTitle">Server Connection</h2>
+          <button id="serverConnectionCloseX" class="icon-button" type="button" title="Close">✕</button>
+        </header>
+        <div class="connection-fields">
+          <label>Server<input id="host" autocomplete="off" /></label>
+          <div class="two-col">
+            <label>Port<input id="port" type="number" min="1" max="65535" /></label>
+            <label class="check-row"><input id="tls" type="checkbox" /> TLS</label>
+          </div>
+          <label>Nick<input id="nick" autocomplete="username" /></label>
+          <label>Password / OAuth Token<input id="password" type="password" autocomplete="current-password" placeholder="oauth:... for Twitch" /></label>
+          <div class="button-row twitch-tools">
+            <button id="twitchPresetButton" type="button">Twitch Preset</button>
+            <button id="twitchTokenButton" type="button">Get Token</button>
+          </div>
+          <label>Starting Channel<input id="channel" autocomplete="off" /></label>
+        </div>
+        <div class="button-row server-connection-modal-actions">
+          <button id="serverConnectionSaveButton" class="primary" type="button">Save</button>
+          <button id="serverConnectionCloseButton" type="button">Close</button>
+        </div>
+      </section>
+    </div>
 
     <div id="disconnectedBackdrop" class="disconnected-backdrop" hidden>
       <section class="disconnected-modal" role="dialog" aria-modal="true" aria-labelledby="disconnectedTitle">
