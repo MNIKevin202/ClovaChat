@@ -43,6 +43,11 @@
             <div id="streamDockSlot" class="stream-dock-slot"></div>
           </section>
 
+          <section id="sidebarChannelsSection" class="sidebar-section" hidden>
+            <h2 class="section-label">Channels</h2>
+            <div id="sidebarChannelList" class="sidebar-channel-list"></div>
+          </section>
+
           <section class="sidebar-section">
             <h2 class="section-label">Workspace</h2>
             <nav class="tabs" aria-label="Workspace">
@@ -133,9 +138,16 @@
         <section id="chatTab" class="view is-active">
           <div id="channels" class="channel-tabs" aria-label="Open channels"></div>
           <div id="topicBar" class="topic-bar">No active channel</div>
-          <div id="channelStatusStrip" class="channel-status-strip"></div>
           <div id="chatBody" class="chat-body">
+            <div id="streamInfoHeader" class="stream-info-header" hidden></div>
             <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
+            <div id="streamActionRow" class="stream-action-row">
+              <div id="popupBar" class="popup-bar"></div>
+              <div class="chat-action-bar">
+                <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
+              </div>
+            </div>
+            <div id="channelStatusStrip" class="channel-status-strip"></div>
             <div id="messages" class="messages" aria-live="polite"></div>
             <button id="rosterToggleButton" class="roster-toggle-button" type="button" title="Show users">👥</button>
             <aside class="roster-panel" aria-label="Users in chat">
@@ -145,27 +157,23 @@
               </header>
               <div id="roster" class="roster-list"></div>
             </aside>
-          </div>
-          <div id="popupBar" class="popup-bar"></div>
-          <div id="timerPills" class="timer-pills"></div>
-          <button id="newMessagesButton" class="new-messages-button" type="button" hidden>New messages</button>
-          <div class="chat-action-bar">
-            <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
-          </div>
-          <div id="emotePicker" class="emote-picker" hidden>
-            <div class="emote-picker-tabs">
-              <button type="button" class="emote-picker-tab is-active" data-emote-source="twitch">Twitch</button>
-              <button type="button" class="emote-picker-tab" data-emote-source="7tv">7TV</button>
+            <div id="timerPills" class="timer-pills"></div>
+            <button id="newMessagesButton" class="new-messages-button" type="button" hidden>New messages</button>
+            <div id="emotePicker" class="emote-picker" hidden>
+              <div class="emote-picker-tabs">
+                <button type="button" class="emote-picker-tab is-active" data-emote-source="twitch">Twitch</button>
+                <button type="button" class="emote-picker-tab" data-emote-source="7tv">7TV</button>
+              </div>
+              <input id="emotePickerSearch" class="emote-picker-search" type="text" placeholder="Search emotes" autocomplete="off" />
+              <div id="emotePickerGrid" class="emote-picker-grid"></div>
             </div>
-            <input id="emotePickerSearch" class="emote-picker-search" type="text" placeholder="Search emotes" autocomplete="off" />
-            <div id="emotePickerGrid" class="emote-picker-grid"></div>
+            <form id="inputForm" class="input-row">
+              <button id="emoteButton" class="emote-button" type="button" title="Emotes">☺</button>
+              <input id="messageInput" autocomplete="off" placeholder="Type a message or /command or /join #channel" />
+              <div id="nickSuggest" class="nick-suggest" hidden></div>
+              <button type="submit">Send</button>
+            </form>
           </div>
-          <form id="inputForm" class="input-row">
-            <button id="emoteButton" class="emote-button" type="button" title="Emotes">☺</button>
-            <input id="messageInput" autocomplete="off" placeholder="Type a message or /command or /join #channel" />
-            <div id="nickSuggest" class="nick-suggest" hidden></div>
-            <button type="submit">Send</button>
-          </form>
         </section>
 
         <section id="botTab" class="view settings-view">

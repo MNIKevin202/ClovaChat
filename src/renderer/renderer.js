@@ -92,6 +92,9 @@ const el = {
   dashboardGrid: document.querySelector('#dashboardGrid'),
   chatTab: document.querySelector('#chatTab'),
   channels: document.querySelector('#channels'),
+  sidebarChannelsSection: document.querySelector('#sidebarChannelsSection'),
+  sidebarChannelList: document.querySelector('#sidebarChannelList'),
+  streamInfoHeader: document.querySelector('#streamInfoHeader'),
   topicBar: document.querySelector('#topicBar'),
   channelStatusStrip: document.querySelector('#channelStatusStrip'),
   messages: document.querySelector('#messages'),
@@ -1551,6 +1554,8 @@ function applyLayout(layout) {
     option.classList.toggle('is-active', option.dataset.layout === (isTwitchStyle ? 'twitchStyle' : 'standard'));
   });
   if (!isTwitchStyle) setRosterDrawerOpen(false);
+  if (el.sidebarChannelsSection) el.sidebarChannelsSection.hidden = !isTwitchStyle;
+  if (isTwitchStyle) renderSidebarChannelList();
   renderStreamPlayer();
 }
 
@@ -1894,6 +1899,17 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.26',
+    date: '2026-06-27',
+    title: 'Twitch Style Layout Refactor',
+    bullets: [
+      'Rebuilt Twitch Style into a real 3-column layout: a condensed sidebar with a vertical channel list, a flexible stream area in the middle with a live/title/category/viewers header, and a fixed-width chat panel on the right.',
+      'Chat rows now flow like real Twitch chat (time, colored username, message inline on one line) instead of boxy multi-column rows.',
+      'Slimmer channel tabs, a sticky chat header, and a stream action bar (Wave/Say hello/Leave channel) positioned under the video.',
+      'The sidebar collapses to icons only on narrow windows, and the stream area shrinks while staying 16:9.',
+    ],
+  },
   {
     version: 'v1.2.25',
     date: '2026-06-27',
@@ -3233,6 +3249,7 @@ function renderChannels() {
     el.channels.append(empty);
   }
 
+  renderSidebarChannelList();
   renderTopic();
   renderTimerChannelOptions();
   renderChannelChrome();
@@ -3318,6 +3335,57 @@ function showChannelContextMenu(event, channel) {
   document.body.append(menu);
   positionContextMenu(menu, event.clientX, event.clientY);
   state.activeContextMenu = menu;
+}
+
+function renderSidebarChannelList() {
+  if (!el.sidebarChannelList) return;
+  el.sidebarChannelList.innerHTML = '';
+  displayChannels().forEach((channel) => {
+    const normalized = channel.replace(/^#/, '').toLowerCase();
+    const isLive = state.liveChannels.has(normalized);
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `sidebar-channel-item${channel === state.activeChannel ? ' is-active' : ''}`;
+    const dot = document.createElement('span');
+    dot.className = `sidebar-channel-dot${isLive ? ' is-live' : ''}`;
+    button.append(dot, document.createTextNode(channelDisplayName(channel)));
+    button.addEventListener('click', () => switchToChannel(channel));
+    el.sidebarChannelList.append(button);
+  });
+}
+
+function renderStreamInfoHeader() {
+  if (!el.streamInfoHeader) return;
+  const channel = streamChannelFromActiveChannel();
+  const showHeader = isTwitchStyleLayout() && state.settings.appearance.twitchPlayer && Boolean(channel);
+  el.streamInfoHeader.hidden = !showHeader;
+  if (!showHeader) return;
+
+  const details = state.streamDetails.get(channel.toLowerCase()) || {};
+  const isLive = state.liveChannels.has(channel.toLowerCase());
+  el.streamInfoHeader.innerHTML = '';
+
+  if (isLive) {
+    const live = document.createElement('span');
+    live.className = 'stream-info-live';
+    live.textContent = 'Live';
+    el.streamInfoHeader.append(live);
+  }
+
+  const name = document.createElement('span');
+  name.className = 'stream-info-name';
+  name.textContent = `#${channel}`;
+  el.streamInfoHeader.append(name);
+
+  const metaParts = [];
+  if (details.game_name) metaParts.push(details.game_name);
+  if (typeof details.viewer_count === 'number') metaParts.push(`${details.viewer_count.toLocaleString()} viewers`);
+  if (metaParts.length > 0) {
+    const meta = document.createElement('span');
+    meta.className = 'stream-info-meta';
+    meta.textContent = metaParts.join(' • ');
+    el.streamInfoHeader.append(meta);
+  }
 }
 
 function renderTopic() {
@@ -3441,6 +3509,7 @@ function renderStreamPlayer() {
   el.streamSidebarButton.textContent = enabled ? 'Hide Stream' : 'Watch Active Stream';
   el.streamPanel.hidden = !enabled;
   if (el.chatStreamSlot) el.chatStreamSlot.hidden = !enabled || !isTwitchStyleLayout();
+  renderStreamInfoHeader();
   if (!enabled) {
     clearStreamPlayer();
     return;

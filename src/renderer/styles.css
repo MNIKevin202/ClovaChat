@@ -1728,37 +1728,117 @@ textarea:focus {
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
+  grid-template-areas:
+    "chathead chathead"
+    "messages roster"
+    "streamactions streamactions"
+    "timers timers"
+    "input input";
   min-height: 0;
   overflow: hidden;
 }
 
+.stream-info-header,
 .chat-stream-slot {
   display: none;
+}
+
+.channel-status-strip {
+  grid-area: chathead;
+}
+
+.stream-action-row {
+  grid-area: streamactions;
+  display: flex;
+  flex-direction: column;
+}
+
+#messages {
+  grid-area: messages;
+}
+
+.roster-panel {
+  grid-area: roster;
+}
+
+.timer-pills {
+  grid-area: timers;
+}
+
+.input-row {
+  grid-area: input;
 }
 
 .roster-toggle-button {
   display: none;
 }
 
-/* Twitch Style layout: stream in the middle, chat on the right, users tucked
-   behind a toggle drawer instead of an always-visible column. */
+/* Twitch Style layout: clean 3-column feel — thin sidebar (handled at the
+   app-shell level), flexible stream in the middle, fixed-width chat on the
+   right, with the user list tucked behind a toggle drawer. */
 body[data-layout="twitch"] {
-  --sidebar-width: 240px;
+  --sidebar-width: 260px;
 }
 
 body[data-layout="twitch"] .chat-body {
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg);
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "streaminfo"
+    "chathead"
+    "messages"
+    "timers"
+    "input";
 }
 
 body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
-  grid-template-columns: minmax(280px, 0.85fr) minmax(420px, 1.3fr);
+  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    "streaminfo chathead"
+    "stream messages"
+    "streamactions timers"
+    "streamactions input";
+}
+
+body[data-layout="twitch"] .timer-pills {
+  grid-area: timers;
+}
+
+body[data-layout="twitch"] .stream-info-header {
+  grid-area: streaminfo;
 }
 
 body[data-layout="twitch"] .chat-stream-slot {
-  display: block;
+  display: flex;
+  grid-area: stream;
   min-height: 0;
-  border-right: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-lg);
   background: #000;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+body[data-layout="twitch"] .stream-action-row {
+  display: flex;
+  flex-direction: column;
+  grid-area: streamactions;
+  align-self: end;
+}
+
+body[data-layout="twitch"] .channel-status-strip {
+  grid-area: chathead;
+}
+
+body[data-layout="twitch"] #messages {
+  grid-area: messages;
+}
+
+body[data-layout="twitch"] .input-row {
+  grid-area: input;
 }
 
 body[data-layout="twitch"] .chat-stream-slot .stream-panel.is-inline {
@@ -1766,7 +1846,32 @@ body[data-layout="twitch"] .chat-stream-slot .stream-panel.is-inline {
   width: 100%;
   height: 100%;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius-lg);
+}
+
+body[data-layout="twitch"] .messages,
+body[data-layout="twitch"] .channel-status-strip,
+body[data-layout="twitch"] .input-row {
+  border-radius: var(--radius-lg);
+}
+
+body[data-layout="twitch"] .messages {
+  background: var(--panel);
+  border: none;
+}
+
+body[data-layout="twitch"] .channel-status-strip {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  border: none;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  background: var(--panel);
+}
+
+body[data-layout="twitch"] .input-row {
+  border: none;
+  background: var(--panel);
 }
 
 body[data-layout="twitch"] .roster-toggle-button {
@@ -1786,18 +1891,221 @@ body[data-layout="twitch"] .roster-toggle-button {
 
 body[data-layout="twitch"] .roster-panel {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: var(--space-3);
+  right: var(--space-3);
+  bottom: var(--space-3);
   width: 260px;
   z-index: 31;
-  transform: translateX(100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--card-border, var(--line));
+  transform: translateX(calc(100% + var(--space-3)));
   transition: transform 160ms ease;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 
 body[data-layout="twitch"] .roster-panel.is-open {
   transform: translateX(0);
+}
+
+/* Slimmer, calmer channel tabs in Twitch Style — overflow scrolls instead of
+   wrapping or squeezing tabs into illegibility. */
+body[data-layout="twitch"] .channel-tabs {
+  min-height: 38px;
+  padding: 6px var(--space-3) 0;
+  border-bottom: 1px solid var(--card-border, var(--line));
+  background: var(--bg);
+}
+
+body[data-layout="twitch"] .channel-tab {
+  height: 30px;
+  min-width: 84px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: transparent;
+  border-color: transparent;
+  border-bottom: 2px solid transparent;
+}
+
+body[data-layout="twitch"] .channel-tab:hover:not(.is-active) {
+  background: var(--card-bg, var(--button-bg));
+}
+
+body[data-layout="twitch"] .channel-tab.is-active {
+  background: var(--card-bg, var(--button-bg));
+  border-color: transparent;
+  border-bottom-color: var(--accent);
+  color: var(--ink);
+  box-shadow: none;
+}
+
+body[data-layout="twitch"] .channel-tab-server {
+  border-right: 1px solid var(--card-border, var(--line));
+  border-radius: 0;
+  margin-right: var(--space-1);
+}
+
+/* Stream info header above the inline player: live badge, channel, category,
+   viewer count. */
+.stream-info-header {
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-1);
+}
+
+body[data-layout="twitch"] .stream-info-header:not([hidden]) {
+  display: flex;
+}
+
+.stream-info-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(130, 212, 155, 0.16);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stream-info-live::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.stream-info-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.stream-info-meta {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* Vertical channel list in the sidebar, shown only in Twitch Style. */
+.sidebar-channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-channel-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-channel-item:hover {
+  background: var(--card-bg, var(--button-bg));
+  color: var(--ink);
+}
+
+.sidebar-channel-item.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.sidebar-channel-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #68707a;
+}
+
+.sidebar-channel-dot.is-live {
+  background: var(--green);
+  box-shadow: 0 0 0 3px rgba(130, 212, 155, 0.18);
+}
+
+/* More compact, less noisy chat rows in Twitch Style. */
+/* Real Twitch chat flows "time username: message" as one wrapping line
+   instead of a boxy multi-column row. */
+body[data-layout="twitch"] .message {
+  display: block;
+  padding: 3px var(--space-2);
+  border-bottom: none;
+  line-height: 1.45;
+}
+
+body[data-layout="twitch"] .message .time {
+  margin-right: 6px;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+body[data-layout="twitch"] .message .nick {
+  margin-right: 2px;
+}
+
+body[data-layout="twitch"] .message .nick::after {
+  content: ":";
+}
+
+body[data-layout="twitch"] .message .text {
+  word-break: break-word;
+}
+
+body[data-layout="twitch"] .message:hover {
+  background: var(--card-bg, rgba(255, 255, 255, 0.04));
+  border-radius: var(--radius-sm);
+}
+
+/* Responsive: collapse the sidebar to icons only on narrow windows, keep
+   chat fixed-width, let the stream shrink while staying 16:9. */
+@media (max-width: 980px) {
+  body[data-layout="twitch"] {
+    --sidebar-width: 64px;
+  }
+
+  body[data-layout="twitch"] .brand-mark,
+  body[data-layout="twitch"] .connection-card-grid,
+  body[data-layout="twitch"] .connection-card-header span:not(.status-dot),
+  body[data-layout="twitch"] .section-label,
+  body[data-layout="twitch"] .stream-sidebar-button,
+  body[data-layout="twitch"] .link-button,
+  body[data-layout="twitch"] .connection-details,
+  body[data-layout="twitch"] .brand-version {
+    display: none;
+  }
+
+  /* Collapse tab/channel labels to icons-only without hiding the icons
+     themselves (the icon span keeps its own explicit font-size). */
+  body[data-layout="twitch"] .tab,
+  body[data-layout="twitch"] .sidebar-channel-item {
+    font-size: 0;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+  }
+
+  body[data-layout="twitch"] .tabs {
+    grid-template-columns: 1fr;
+  }
+
+  body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
+    grid-template-columns: minmax(0, 1fr) 320px;
+  }
 }
 
 .layout-options {
