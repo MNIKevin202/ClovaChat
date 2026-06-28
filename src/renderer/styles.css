@@ -1158,6 +1158,46 @@ textarea:focus {
   backdrop-filter: blur(10px);
 }
 
+.disconnected-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 13, 0.6);
+  backdrop-filter: blur(10px);
+}
+
+.disconnected-backdrop[hidden] {
+  display: none;
+}
+
+.disconnected-modal {
+  width: min(380px, calc(100vw - 48px));
+  padding: var(--space-5);
+  background: var(--card-bg, var(--panel));
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+  text-align: center;
+}
+
+.disconnected-modal h2 {
+  margin: 0 0 var(--space-2);
+  font-size: 18px;
+  color: var(--red);
+}
+
+.disconnected-modal p {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.disconnected-modal .button-row {
+  justify-content: center;
+}
+
 .mentions-backdrop[hidden] {
   display: none;
 }

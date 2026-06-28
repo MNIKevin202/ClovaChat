@@ -58,6 +58,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Disconnect Popup
+
+- When the IRC connection drops unexpectedly, ClovaChat now shows a popup ("You've been disconnected") with Reconnect and Dismiss actions, instead of silently going offline.
+- Clicking Disconnect yourself does not trigger the popup — it's reserved for unexpected drops.
+
 ## Stream Latency Display & Catch Up
 
 - Added a live-updating delay indicator to the stream toolbar (e.g. "4.2s behind"), pulled from the Twitch embed's playback stats (`hlsLatencyBroadcaster`), highlighted when delay gets unusually high.

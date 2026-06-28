@@ -91,6 +91,10 @@ const el = {
   twitchTokenButton: document.querySelector('#twitchTokenButton'),
   connectButton: document.querySelector('#connectButton'),
   disconnectButton: document.querySelector('#disconnectButton'),
+  disconnectedBackdrop: document.querySelector('#disconnectedBackdrop'),
+  disconnectedMessage: document.querySelector('#disconnectedMessage'),
+  disconnectedReconnectButton: document.querySelector('#disconnectedReconnectButton'),
+  disconnectedDismissButton: document.querySelector('#disconnectedDismissButton'),
   dashboardTab: document.querySelector('#dashboardTab'),
   dashboardSort: document.querySelector('#dashboardSort'),
   dashboardFilters: document.querySelector('#dashboardFilters'),
@@ -1164,6 +1168,8 @@ function bindEvents() {
 
   el.connectButton.addEventListener('click', connect);
   el.disconnectButton.addEventListener('click', disconnect);
+  el.disconnectedReconnectButton?.addEventListener('click', connect);
+  el.disconnectedDismissButton?.addEventListener('click', hideDisconnectedOverlay);
   el.twitchPresetButton.addEventListener('click', applyTwitchPreset);
   el.twitchTokenButton.addEventListener('click', openTwitchTokenPage);
   el.darkModeToggle.addEventListener('change', async () => {
@@ -1510,6 +1516,7 @@ async function openTwitchTokenPage() {
 }
 
 async function connect() {
+  hideDisconnectedOverlay();
   const config = formConfig();
   state.settings.profile.nick = config.nick;
   state.settings.profile.username = config.username;
@@ -1528,7 +1535,21 @@ async function connect() {
 }
 
 async function disconnect() {
+  state.userInitiatedDisconnect = true;
   await window.macIRC.disconnect();
+}
+
+function showDisconnectedOverlay() {
+  if (!el.disconnectedBackdrop) return;
+  el.disconnectedMessage.textContent = state.settings.profile.nick
+    ? `The connection to ${state.settings.quickConnect.host} was lost.`
+    : 'The connection to the server was lost.';
+  el.disconnectedBackdrop.hidden = false;
+}
+
+function hideDisconnectedOverlay() {
+  if (!el.disconnectedBackdrop) return;
+  el.disconnectedBackdrop.hidden = true;
 }
 
 function formConfig() {
@@ -1614,6 +1635,8 @@ function handleIrcEvent(event) {
     renderStreamPlayer();
     renderDashboard();
     hideNickSuggestion();
+    if (!state.userInitiatedDisconnect) showDisconnectedOverlay();
+    state.userInitiatedDisconnect = false;
   }
 
   if (event.type === 'status') {
@@ -1915,6 +1938,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.34',
+    date: '2026-06-27',
+    title: 'Disconnect Popup',
+    bullets: [
+      'When the server connection is lost unexpectedly, ClovaChat now shows a popup offering to reconnect immediately, instead of leaving you to notice and hunt for the Connect button.',
+      'Disconnecting on purpose (via the Disconnect button) doesn\'t trigger the popup.',
+    ],
+  },
   {
     version: 'v1.2.33',
     date: '2026-06-27',
