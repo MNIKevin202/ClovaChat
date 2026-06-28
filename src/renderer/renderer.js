@@ -107,6 +107,7 @@ const el = {
   messages: document.querySelector('#messages'),
   chatBody: document.querySelector('.chat-body'),
   chatStreamSlot: document.querySelector('#chatStreamSlot'),
+  streamEmptyState: document.querySelector('#streamEmptyState'),
   rosterToggleButton: document.querySelector('#rosterToggleButton'),
   layoutOptions: document.querySelectorAll('.layout-option'),
   rosterPanel: document.querySelector('.roster-panel'),
@@ -1941,6 +1942,17 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.39',
+    date: '2026-06-28',
+    title: 'Stream Card & Empty States',
+    bullets: [
+      'In Twitch Style layout, the stream header, video, and action row are now one cohesive card that sizes to its own content instead of stretching to fill the column — removing the dead space that used to sit above the video.',
+      'The stream card now shows a friendly empty state ("No stream selected") instead of just disappearing when no stream is active.',
+      'Added a "No channel selected" empty state with guidance, and changed the no-messages state to "No messages yet — say hello to start the chat."',
+      'Made the stream toolbar buttons (Prev/Next/Play/Mute/Catch Up/Hide) taller and more consistent.',
+    ],
+  },
+  {
     version: 'v1.2.38',
     date: '2026-06-28',
     title: 'Chat Header & Composer Polish',
@@ -3643,6 +3655,7 @@ function renderStreamPlayer() {
   el.streamSidebarButton.textContent = enabled ? 'Hide Stream' : 'Watch Active Stream';
   el.streamPanel.hidden = !enabled;
   if (el.chatStreamSlot) el.chatStreamSlot.hidden = !enabled || !isTwitchStyleLayout();
+  if (el.streamEmptyState) el.streamEmptyState.hidden = enabled || !isTwitchStyleLayout();
   renderStreamInfoHeader();
   if (!enabled) {
     clearStreamPlayer();
@@ -5393,15 +5406,20 @@ function renderNewMessagesButton() {
 }
 
 function renderChatEmptyState(visibleMessageCount) {
-  if (!state.activeChannel || state.activeChannel === 'server' || visibleMessageCount >= 3) return;
+  if (state.activeChannel === 'server' || visibleMessageCount >= 3) return;
   const empty = document.createElement('div');
   empty.className = 'chat-empty-state';
   const title = document.createElement('div');
   title.className = 'chat-empty-state-title';
-  title.textContent = `Waiting for messages in ${state.activeChannel}`;
   const hint = document.createElement('div');
   hint.className = 'chat-empty-state-hint';
-  hint.textContent = 'Try sending a message, using a popup, or switching channels.';
+  if (!state.activeChannel) {
+    title.textContent = 'No channel selected';
+    hint.textContent = 'Choose a channel on the left to view stream and chat.';
+  } else {
+    title.textContent = 'No messages yet';
+    hint.textContent = `Say hello to start the chat in ${state.activeChannel}.`;
+  }
   empty.append(title, hint);
   el.messages.append(empty);
 }

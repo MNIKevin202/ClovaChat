@@ -137,14 +137,20 @@
         <section id="chatTab" class="view is-active">
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="chatBody" class="chat-body">
-            <div id="streamInfoHeader" class="stream-info-header" hidden></div>
-            <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
-            <div id="streamActionRow" class="stream-action-row">
-              <div id="popupBar" class="popup-bar"></div>
-              <div class="chat-action-bar">
-                <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
+            <div id="streamCard" class="stream-card">
+              <div id="streamInfoHeader" class="stream-info-header" hidden></div>
+              <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
+              <div id="streamEmptyState" class="stream-empty-state">
+                <p>No stream selected.</p>
+                <span>Pick a channel on the left, or click Watch Active Stream in the sidebar.</span>
               </div>
-              <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@ Mentions</button>
+              <div id="streamActionRow" class="stream-action-row">
+                <div id="popupBar" class="popup-bar"></div>
+                <div class="chat-action-bar">
+                  <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
+                </div>
+                <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@ Mentions</button>
+              </div>
             </div>
             <div id="channelStatusStrip" class="channel-status-strip"></div>
             <div id="messages" class="messages" aria-live="polite"></div>

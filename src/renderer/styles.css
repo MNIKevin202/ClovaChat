@@ -2012,8 +2012,15 @@ textarea:focus {
 }
 
 .stream-info-header,
-.chat-stream-slot {
+.chat-stream-slot,
+.stream-empty-state {
   display: none;
+}
+
+/* Standard layout: the card wrapper disappears so its children act like
+   direct children of .chat-body, same as before this was introduced. */
+.stream-card {
+  display: contents;
 }
 
 .channel-status-strip {
@@ -2057,48 +2064,83 @@ body[data-layout="twitch"] .chat-body {
   gap: var(--space-3);
   padding: var(--space-3);
   background: var(--bg);
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "streaminfo"
-    "chathead"
-    "messages"
-    "timers"
-    "input";
+    "streamcard chathead"
+    "streamcard messages"
+    "streamcard input";
 }
 
-body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
-  grid-template-columns: minmax(0, 1fr) 380px;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
-  grid-template-areas:
-    "streaminfo chathead"
-    "stream messages"
-    "streamactions timers"
-    "streamactions input";
+body[data-layout="twitch"] #topicBar {
+  display: none;
 }
 
 body[data-layout="twitch"] .timer-pills {
   grid-area: timers;
 }
 
+/* The stream card sizes to its own content (header + 16:9 video + action
+   row) and sits at the top of its column instead of stretching to fill —
+   that's what removes the dead space that used to sit above the video. */
+body[data-layout="twitch"] .stream-card {
+  display: flex;
+  flex-direction: column;
+  grid-area: streamcard;
+  align-self: start;
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--card-border, var(--line));
+  background: var(--card-bg, var(--panel));
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
 body[data-layout="twitch"] .stream-info-header {
-  grid-area: streaminfo;
+  flex: 0 0 auto;
 }
 
 body[data-layout="twitch"] .chat-stream-slot {
   display: flex;
-  grid-area: stream;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   min-height: 0;
-  border-radius: var(--radius-lg);
   background: #000;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
 }
 
 body[data-layout="twitch"] .stream-action-row {
   display: flex;
   flex-direction: column;
-  grid-area: streamactions;
-  align-self: end;
+  flex: 0 0 auto;
+}
+
+body[data-layout="twitch"] .stream-empty-state:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: var(--space-5);
+  background: var(--button-bg, rgba(0, 0, 0, 0.03));
+  text-align: center;
+}
+
+body[data-layout="twitch"] .stream-empty-state p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+body[data-layout="twitch"] .stream-empty-state span {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 280px;
 }
 
 body[data-layout="twitch"] .channel-status-strip {
@@ -2275,7 +2317,7 @@ body[data-layout="twitch"] .message:hover {
     display: none;
   }
 
-  body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
+  body[data-layout="twitch"] .chat-body {
     grid-template-columns: minmax(0, 1fr) 320px;
   }
 }
@@ -2423,8 +2465,9 @@ body[data-layout="twitch"] .message:hover {
 .stream-toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 var(--space-2);
+  gap: var(--space-2);
+  min-height: 42px;
+  padding: var(--space-1) var(--space-3);
   background: var(--bar-bg, #faf7ef);
   border-bottom: 1px solid var(--card-border, var(--line));
   cursor: move;
@@ -2471,13 +2514,14 @@ body[data-layout="twitch"] .message:hover {
 }
 
 .stream-toolbar button {
-  min-height: 22px;
-  padding: 0 6px;
-  font-size: 11px;
+  height: 30px;
+  padding: 0 var(--space-2);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .stream-toolbar .stream-nav-button {
-  min-width: 32px;
+  min-width: 40px;
   border-color: var(--accent);
   color: var(--accent);
   background: rgba(48, 158, 165, 0.12);

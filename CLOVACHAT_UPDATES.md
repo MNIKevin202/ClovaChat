@@ -58,6 +58,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Stream Card & Empty States
+
+- In Twitch Style layout, merged the stream header, video, and action row into one bordered card that sizes to its own content (header + 16:9 video + actions) instead of stretching to fill the column, removing the dead space that used to sit above the video.
+- Added a "No stream selected" empty state for the stream card, a "No channel selected" empty state in chat, and reworded the no-messages state to "No messages yet — say hello to start the chat."
+- Made the stream toolbar buttons taller (30px) and more visually consistent.
+
 ## Chat Header & Composer Polish
 
 - Removed the horizontal scrollbar on the chat header pill row — pills wrap to a new line instead of scrolling.
