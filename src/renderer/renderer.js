@@ -1939,6 +1939,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.37',
+    date: '2026-06-28',
+    title: 'Fix Missing Top Nav Tabs',
+    bullets: [
+      'Fixed a CSS rule conflict that squeezed the top navigation into a clipped 2-column grid, hiding Bot, Commands, Popups, Timers, Raw, Docs, What\'s New, and Settings — only Dashboard and Chat were visible.',
+    ],
+  },
+  {
     version: 'v1.2.36',
     date: '2026-06-28',
     title: 'Top Navigation Polish',
