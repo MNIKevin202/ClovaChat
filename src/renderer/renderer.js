@@ -1939,6 +1939,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.36',
+    date: '2026-06-28',
+    title: 'Top Navigation Polish',
+    bullets: [
+      'Restyled the new top navigation bar: taller, cleaner tab links with an underline-style active state instead of boxy mismatched buttons, and a clearer divider next to the logo.',
+    ],
+  },
+  {
     version: 'v1.2.35',
     date: '2026-06-28',
     title: 'Navigation Layout Swap',

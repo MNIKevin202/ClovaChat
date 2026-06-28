@@ -58,6 +58,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
 - The frames are placeholder CSS drawings for now; real screenshot/PNG previews may replace them later.
 
+## Top Navigation Polish
+
+- Restyled the top navigation bar: taller, transparent-by-default tab links with an underline-style active state (instead of boxy mismatched buttons that all looked the same), and a divider between the logo and the tabs.
+
 ## Navigation Layout Swap
 
 - Moved the workspace navigation (Dashboard, Chat, Bot, Commands, Popups, Timers, Raw, Docs, What's New, Settings) into a new top bar that spans the window, instead of a button grid in the sidebar.
