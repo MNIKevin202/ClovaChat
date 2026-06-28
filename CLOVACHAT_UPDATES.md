@@ -53,6 +53,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Emote Picker
+
+- Added an emote button next to the message box that opens a searchable picker with Twitch and 7TV tabs for the active channel's emotes.
+- Twitch emotes are fetched from Helix (global emotes plus the channel's emote set) reusing the existing Twitch token/client-id; 7TV emotes reuse the per-channel set already loaded for chat rendering.
+- Clicking an emote inserts it into the message box at the cursor.
+
 ## Dockable Stream Player & Stale Connection Fix
 
 - The stream player is docked back in the sidebar by default. Dragging it by its toolbar detaches it into a floating, resizable panel that can go anywhere in the window, including on top of chat; dropping it back near the sidebar re-docks it.

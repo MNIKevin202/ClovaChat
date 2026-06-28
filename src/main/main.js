@@ -286,6 +286,40 @@ ipcMain.handle('twitch:getChatters', async (_event, payload = {}) => {
   }
 });
 
+ipcMain.handle('twitch:getEmotes', async (_event, payload = {}) => {
+  const token = String(payload.token || '').trim();
+  const clientId = String(payload.clientId || '').trim();
+  const broadcasterId = String(payload.broadcasterId || '').trim();
+
+  if (!token || !clientId) {
+    return { ok: false, status: 400, error: 'Missing Twitch credentials.' };
+  }
+
+  const url = broadcasterId
+    ? `https://api.twitch.tv/helix/chat/emotes?broadcaster_id=${encodeURIComponent(broadcasterId)}`
+    : 'https://api.twitch.tv/helix/chat/emotes/global';
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'Client-Id': clientId,
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        error: data.message || `Twitch returned ${response.status}`,
+      };
+    }
+    return { ok: true, status: response.status, data };
+  } catch (error) {
+    return { ok: false, status: 0, error: error.message };
+  }
+});
+
 ipcMain.handle('log:chooseFile', async (_event, suggestedName) => {
   if (!mainWindow) return { ok: false };
   const result = await dialog.showSaveDialog(mainWindow, {

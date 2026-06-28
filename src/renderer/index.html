@@ -150,7 +150,16 @@
           <div class="chat-action-bar">
             <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
           </div>
+          <div id="emotePicker" class="emote-picker" hidden>
+            <div class="emote-picker-tabs">
+              <button type="button" class="emote-picker-tab is-active" data-emote-source="twitch">Twitch</button>
+              <button type="button" class="emote-picker-tab" data-emote-source="7tv">7TV</button>
+            </div>
+            <input id="emotePickerSearch" class="emote-picker-search" type="text" placeholder="Search emotes" autocomplete="off" />
+            <div id="emotePickerGrid" class="emote-picker-grid"></div>
+          </div>
           <form id="inputForm" class="input-row">
+            <button id="emoteButton" class="emote-button" type="button" title="Emotes">☺</button>
             <input id="messageInput" autocomplete="off" placeholder="Type a message or /command or /join #channel" />
             <div id="nickSuggest" class="nick-suggest" hidden></div>
             <button type="submit">Send</button>
@@ -404,6 +413,7 @@
               <ol>
                 <li>Twitch emotes show automatically when Twitch sends emote data with chat messages.</li>
                 <li>7TV emotes load per channel when 7TV Emotes is enabled in Settings.</li>
+                <li>Click the emote button next to the message box to browse and insert Twitch or 7TV emotes for the active channel, with search.</li>
                 <li>If a channel has no 7TV room or 7TV returns an error, normal chat still works.</li>
                 <li>Turn 7TV Emotes off in Settings if you want plain text for third-party emotes.</li>
               </ol>

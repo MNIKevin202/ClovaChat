@@ -11,6 +11,12 @@ const state = {
     loadingChannels: new Set(),
     roomIdsByChannel: new Map(),
   },
+  twitchEmotes: {
+    global: null,
+    byChannel: new Map(),
+    loadingChannels: new Set(),
+  },
+  emotePicker: { open: false, source: 'twitch', search: '' },
   recentChatters: [],
   nickSuggestion: '',
   commandSuggestion: '',
@@ -100,6 +106,11 @@ const el = {
   messageInput: document.querySelector('#messageInput'),
   nickSuggest: document.querySelector('#nickSuggest'),
   newMessagesButton: document.querySelector('#newMessagesButton'),
+  emoteButton: document.querySelector('#emoteButton'),
+  emotePicker: document.querySelector('#emotePicker'),
+  emotePickerSearch: document.querySelector('#emotePickerSearch'),
+  emotePickerGrid: document.querySelector('#emotePickerGrid'),
+  emotePickerTabs: document.querySelectorAll('.emote-picker-tab'),
   aliasList: document.querySelector('#aliasList'),
   aliasForm: document.querySelector('#aliasForm'),
   aliasName: document.querySelector('#aliasName'),
@@ -1198,6 +1209,25 @@ function bindEvents() {
   el.streamResizeGrip?.addEventListener('pointerdown', startStreamPanelResize);
   window.addEventListener('resize', clampStreamPanelToWindow);
 
+  el.emoteButton?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    setEmotePickerOpen(!state.emotePicker.open);
+  });
+  el.emotePickerTabs.forEach((tab) => {
+    tab.addEventListener('click', () => setEmotePickerSource(tab.dataset.emoteSource));
+  });
+  el.emotePickerSearch?.addEventListener('input', () => {
+    state.emotePicker.search = el.emotePickerSearch.value;
+    renderEmotePickerGrid();
+  });
+  el.emotePicker?.addEventListener('click', (event) => event.stopPropagation());
+  document.addEventListener('click', () => {
+    if (state.emotePicker.open) setEmotePickerOpen(false);
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.emotePicker.open) setEmotePickerOpen(false);
+  });
+
   el.autoJoinForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const channel = normalizeChannel(el.autoJoinChannel.value);
@@ -1503,6 +1533,7 @@ function handleIrcEvent(event) {
     state.sevenTv.roomIdsByChannel.set(normalizeChannel(event.channel), event.roomId);
     loadSevenTvEmotes(event.channel, event.roomId);
     loadTwitchChatters(event.channel, event.roomId);
+    loadTwitchChannelEmotes(event.channel, event.roomId);
   }
 
   if (event.type === 'userstate') {
@@ -1768,6 +1799,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.18',
+    date: '2026-06-27',
+    title: 'Emote Picker',
+    bullets: [
+      'Added an emote button next to the message box that opens a searchable picker for Twitch (global + channel) and 7TV emotes for the active channel.',
+      'Clicking an emote inserts it into your message at the cursor.',
+    ],
+  },
   {
     version: 'v1.2.17',
     date: '2026-06-27',
@@ -2482,6 +2522,7 @@ function switchToChannel(channel) {
   if (!normalized) return;
   state.activeChannel = normalized;
   state.unreadChannels.delete(normalized);
+  if (state.emotePicker.open) renderEmotePickerGrid();
   if (state.userDrawer.open) {
     state.userDrawer.channel = normalized;
     renderUserDrawer();
@@ -4560,6 +4601,7 @@ async function setupLiveNotifications(host) {
   }
 
   loadKnownTwitchChatters();
+  loadGlobalTwitchEmotes();
   scheduleLivePolling();
 }
 
@@ -5382,6 +5424,135 @@ function sevenTvEmoteUrl(emote) {
   if (!file) return '';
   const host = emote.data.host.url || `//cdn.7tv.app/emote/${emote.id}`;
   return `https:${host}/${file.name}`;
+}
+
+function twitchEmoteUrl(emote) {
+  const template = emote.template
+    || 'https://static-cdn.jtvnw.net/emoticons/v2/{{id}}/{{format}}/{{theme_mode}}/{{scale}}';
+  const format = (emote.format || []).includes('static') ? 'static' : (emote.format?.[0] || 'static');
+  return template
+    .replace('{{id}}', emote.id)
+    .replace('{{format}}', format)
+    .replace('{{theme_mode}}', 'dark')
+    .replace('{{scale}}', '2.0');
+}
+
+async function loadGlobalTwitchEmotes() {
+  if (state.twitchEmotes.global || !state.twitchClientId) return;
+  const token = stripOauthPrefix(state.settings.profile.password);
+  if (!token) return;
+  try {
+    const result = await window.macIRC.getTwitchEmotes({ token, clientId: state.twitchClientId });
+    if (!result.ok) return;
+    const emotes = new Map();
+    for (const emote of result.data?.data || []) {
+      const url = twitchEmoteUrl(emote);
+      if (emote.name && url) emotes.set(emote.name, url);
+    }
+    state.twitchEmotes.global = emotes;
+    if (state.emotePicker.open) renderEmotePickerGrid();
+  } catch {
+    // global Twitch emotes are a nice-to-have for the picker; ignore failures
+  }
+}
+
+async function loadTwitchChannelEmotes(channel, roomId) {
+  const normalized = normalizeChannel(channel);
+  const token = stripOauthPrefix(state.settings.profile.password);
+  if (!normalized || !roomId || !token || !state.twitchClientId) return;
+  if (state.twitchEmotes.byChannel.has(normalized) || state.twitchEmotes.loadingChannels.has(normalized)) return;
+
+  state.twitchEmotes.loadingChannels.add(normalized);
+  try {
+    const result = await window.macIRC.getTwitchEmotes({
+      token,
+      clientId: state.twitchClientId,
+      broadcasterId: roomId,
+    });
+    if (!result.ok) {
+      state.twitchEmotes.byChannel.set(normalized, new Map());
+      return;
+    }
+    const emotes = new Map();
+    for (const emote of result.data?.data || []) {
+      const url = twitchEmoteUrl(emote);
+      if (emote.name && url) emotes.set(emote.name, url);
+    }
+    state.twitchEmotes.byChannel.set(normalized, emotes);
+    if (state.emotePicker.open && normalized === state.activeChannel) renderEmotePickerGrid();
+  } catch {
+    state.twitchEmotes.byChannel.set(normalized, new Map());
+  } finally {
+    state.twitchEmotes.loadingChannels.delete(normalized);
+  }
+}
+
+function emotePickerEmotes() {
+  if (state.emotePicker.source === '7tv') {
+    return state.sevenTv.emotesByChannel.get(state.activeChannel) || new Map();
+  }
+  const merged = new Map(state.twitchEmotes.global || []);
+  const channelEmotes = state.twitchEmotes.byChannel.get(state.activeChannel);
+  if (channelEmotes) channelEmotes.forEach((url, name) => merged.set(name, url));
+  return merged;
+}
+
+function renderEmotePickerGrid() {
+  if (!el.emotePickerGrid) return;
+  el.emotePickerGrid.innerHTML = '';
+  const search = state.emotePicker.search.trim().toLowerCase();
+  const entries = Array.from(emotePickerEmotes().entries())
+    .filter(([name]) => !search || name.toLowerCase().includes(search))
+    .sort(([a], [b]) => a.localeCompare(b));
+
+  if (entries.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'emote-picker-empty';
+    empty.textContent = 'No emotes found.';
+    el.emotePickerGrid.append(empty);
+    return;
+  }
+
+  entries.forEach(([name, url]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'emote-picker-item';
+    button.title = name;
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = name;
+    img.loading = 'lazy';
+    button.append(img);
+    button.addEventListener('click', () => insertEmoteIntoComposer(name));
+    el.emotePickerGrid.append(button);
+  });
+}
+
+function insertEmoteIntoComposer(name) {
+  const input = el.messageInput;
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+  const needsLeadingSpace = start > 0 && !/\s$/.test(input.value.slice(0, start));
+  const insertion = `${needsLeadingSpace ? ' ' : ''}${name} `;
+  input.value = `${input.value.slice(0, start)}${insertion}${input.value.slice(end)}`;
+  const cursor = start + insertion.length;
+  input.setSelectionRange(cursor, cursor);
+  input.focus();
+}
+
+function setEmotePickerOpen(open) {
+  state.emotePicker.open = open;
+  el.emotePicker.hidden = !open;
+  el.emoteButton.classList.toggle('is-active', open);
+  if (open) renderEmotePickerGrid();
+}
+
+function setEmotePickerSource(source) {
+  state.emotePicker.source = source;
+  el.emotePickerTabs.forEach((tab) => {
+    tab.classList.toggle('is-active', tab.dataset.emoteSource === source);
+  });
+  renderEmotePickerGrid();
 }
 
 function renderMessageText(container, text, channel, twitchEmotes = []) {

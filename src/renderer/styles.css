@@ -2238,7 +2238,7 @@ textarea:focus {
 
 .input-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 96px;
+  grid-template-columns: 42px minmax(0, 1fr) 96px;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
@@ -2269,6 +2269,107 @@ textarea:focus {
 .input-row button[type="submit"]:hover {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
+}
+
+.emote-button {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  font-size: 18px;
+  line-height: 1;
+  background: var(--button-bg, var(--card-bg));
+}
+
+.emote-button.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.emote-picker {
+  position: absolute;
+  left: var(--space-5);
+  bottom: 86px;
+  z-index: 40;
+  width: 320px;
+  max-height: 360px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-md);
+  background: var(--card-bg, var(--panel));
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.emote-picker[hidden] {
+  display: none;
+}
+
+.emote-picker-tabs {
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--card-border, var(--line));
+}
+
+.emote-picker-tab {
+  flex: 1;
+  height: 28px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--button-bg, var(--card-bg));
+}
+
+.emote-picker-tab.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.emote-picker-search {
+  margin: var(--space-2);
+  height: 30px;
+}
+
+.emote-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 40px);
+  gap: var(--space-2);
+  padding: 0 var(--space-2) var(--space-3);
+  overflow-y: auto;
+}
+
+.emote-picker-item {
+  width: 40px;
+  height: 40px;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border-color: transparent;
+}
+
+.emote-picker-item:hover {
+  background: var(--button-bg, rgba(255, 255, 255, 0.08));
+  border-color: var(--card-border, var(--line));
+}
+
+.emote-picker-item img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.emote-picker-empty {
+  grid-column: 1 / -1;
+  padding: var(--space-3);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 .nick-suggest {
