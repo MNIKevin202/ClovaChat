@@ -1,6 +1,6 @@
 {
   "name": "clovachat",
-  "version": "1.2.25",
+  "version": "1.2.26",
   "description": "A mIRC-inspired desktop IRC client for macOS with Twitch support.",
   "main": "src/main/main.js",
   "author": "Kevin Poulos",
