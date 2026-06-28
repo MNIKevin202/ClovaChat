@@ -1895,6 +1895,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.24',
+    date: '2026-06-27',
+    title: 'Twitch Style Layout Polish',
+    bullets: [
+      'In Twitch Style layout, the chat column is now noticeably wider relative to the stream so message text isn\'t squeezed into a narrow strip.',
+      'The left sidebar is now thinner in Twitch Style layout, freeing up more room for the stream and chat.',
+    ],
+  },
+  {
     version: 'v1.2.23',
     date: '2026-06-27',
     title: 'Layout Choice in Onboarding',

@@ -1737,12 +1737,16 @@ textarea:focus {
 
 /* Twitch Style layout: stream in the middle, chat on the right, users tucked
    behind a toggle drawer instead of an always-visible column. */
+body[data-layout="twitch"] {
+  --sidebar-width: 240px;
+}
+
 body[data-layout="twitch"] .chat-body {
   grid-template-columns: minmax(0, 1fr);
 }
 
 body[data-layout="twitch"] .chat-body:has(> .chat-stream-slot:not([hidden])) {
-  grid-template-columns: minmax(280px, 1.1fr) minmax(280px, 1fr);
+  grid-template-columns: minmax(280px, 0.85fr) minmax(420px, 1.3fr);
 }
 
 body[data-layout="twitch"] .chat-stream-slot {
