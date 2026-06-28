@@ -67,6 +67,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Popups (Wave/Say hello/etc.) moved to sit directly above the message input. Channel Settings and Mentions moved to a small action row under the video, alongside a new Open Stream in Browser button.
 - Renamed the "Chat" tab to "Streams/Chat" in the top navigation.
 
+## Stream Reload & Sidebar Channel List Polish
+
+- Added a Reload button next to Catch Up, and automatic stuck-stream detection: if the embed's live-edge latency reading hasn't changed in 45 seconds (the embed JS API has no direct way to detect "frozen on an ad," so this heartbeat-style check is the fallback), the player reloads itself.
+- Polished the sidebar channel list: borderless rows by default (background-only hover/active instead of boxy outlines), a custom thin scrollbar, and a more visually distinct Server row.
+
 ## Real Layout Preview Screenshots
 
 - Replaced the placeholder CSS-drawn layout frames (in Settings and the onboarding wizard) with real screenshots (`images/StandardStyle.png`, `images/TwitchStyle.png`).

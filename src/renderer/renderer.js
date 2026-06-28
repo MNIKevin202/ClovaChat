@@ -87,6 +87,7 @@ const el = {
   streamMuteButton: document.querySelector('#streamMuteButton'),
   streamLatency: document.querySelector('#streamLatency'),
   streamCatchUpButton: document.querySelector('#streamCatchUpButton'),
+  streamReloadButton: document.querySelector('#streamReloadButton'),
   streamToggleButton: document.querySelector('#streamToggleButton'),
   streamToolbar: document.querySelector('#streamToolbar'),
   streamResizeGrip: document.querySelector('#streamResizeGrip'),
@@ -1326,6 +1327,7 @@ function bindEvents() {
   el.streamPlayButton.addEventListener('click', toggleStreamPlayback);
   el.streamMuteButton.addEventListener('click', toggleStreamMute);
   el.streamCatchUpButton?.addEventListener('click', catchUpStreamToLiveEdge);
+  el.streamReloadButton?.addEventListener('click', reloadStreamPlayer);
   el.streamToolbar?.addEventListener('pointerdown', startStreamDrag);
   el.streamResizeGrip?.addEventListener('pointerdown', startStreamPanelResize);
   window.addEventListener('resize', clampStreamPanelToWindow);
@@ -1985,6 +1987,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.43',
+    date: '2026-06-28',
+    title: 'Stream Reload & Sidebar Channel List Polish',
+    bullets: [
+      'Added a Reload button next to Catch Up, plus automatic stuck-stream detection: if the live-edge delay reading hasn\'t moved for 45 seconds (a common symptom after a Twitch ad break freezes the embed), ClovaChat reloads the player on its own.',
+      'Polished the sidebar channel list: cleaner borderless rows, a custom thin scrollbar, a more distinct Server row, and smoother hover/active states.',
+    ],
+  },
   {
     version: 'v1.2.42',
     date: '2026-06-28',
@@ -3882,8 +3893,13 @@ function createStreamPlayer(channel) {
   startStreamLatencyPolling();
 }
 
+const STREAM_STUCK_THRESHOLD_MS = 45000;
+
 function startStreamWatchdog() {
   stopStreamWatchdog();
+  state.streamLastLatency = null;
+  state.streamLastLatencyChangeAt = Date.now();
+  state.streamAutoReloaded = false;
   state.streamWatchdog = setInterval(() => {
     if (!state.streamPlayer || state.streamUserPaused) return;
     try {
@@ -3891,12 +3907,49 @@ function startStreamWatchdog() {
     } catch {
       // player not ready yet, ignore until the next tick
     }
+    checkStreamStuck();
   }, 4000);
 }
 
 function stopStreamWatchdog() {
   if (state.streamWatchdog) clearInterval(state.streamWatchdog);
   state.streamWatchdog = null;
+}
+
+// The Twitch embed's JS API has no way to detect "stuck on an ad/commercial
+// break" directly — there's no event or flag for it. As a fallback, treat the
+// live-edge latency reading as a heartbeat: if it hasn't moved at all for a
+// while during what should be live, uninterrupted playback, the embed is
+// most likely frozen, so reload it once automatically.
+function checkStreamStuck() {
+  if (!state.streamPlayer) return;
+  let latency;
+  try {
+    latency = Number(state.streamPlayer.getPlaybackStats?.()?.hlsLatencyBroadcaster);
+  } catch {
+    return;
+  }
+  if (!Number.isFinite(latency)) return;
+
+  if (state.streamLastLatency === null || Math.abs(latency - state.streamLastLatency) > 0.3) {
+    state.streamLastLatency = latency;
+    state.streamLastLatencyChangeAt = Date.now();
+    state.streamAutoReloaded = false;
+    return;
+  }
+
+  if (!state.streamAutoReloaded && Date.now() - state.streamLastLatencyChangeAt > STREAM_STUCK_THRESHOLD_MS) {
+    state.streamAutoReloaded = true;
+    appendStatus('Stream looked stuck, reloading it automatically.', 'info');
+    reloadStreamPlayer();
+  }
+}
+
+function reloadStreamPlayer() {
+  const channel = state.streamPlayerChannel || streamChannelFromActiveChannel();
+  if (!channel) return;
+  appendStatus(`Reloading the stream for ${channel}.`, 'info');
+  createStreamPlayer(channel);
 }
 
 function startStreamLatencyPolling() {

@@ -405,6 +405,7 @@
                 <li>Switch to the Twitch Style layout in Settings to put the stream inline in the middle of the chat view with chat on the right, instead of in the sidebar.</li>
                 <li>The toolbar shows an estimated delay (e.g. "4.2s behind") while a live stream plays.</li>
                 <li>Click Catch Up to nudge the player closer to the live edge and reduce delay if it's grown large.</li>
+                <li>If the stream looks frozen (a common symptom after a Twitch ad break), click Reload, or wait — ClovaChat reloads it automatically if it detects no progress for too long.</li>
               </ol>
             </section>
 
@@ -731,6 +732,7 @@
           <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
           <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
           <button id="streamCatchUpButton" type="button" title="Jump closer to the live edge to reduce delay">⏩ Catch Up</button>
+          <button id="streamReloadButton" type="button" title="Reload the stream if it looks stuck (e.g. after an ad)">🔄 Reload</button>
           <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
         </div>
         <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>

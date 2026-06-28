@@ -1827,25 +1827,60 @@ textarea:focus {
   flex: 1 1 auto;
   flex-direction: column;
   min-height: 0;
-  padding: 0;
+  padding: 2px 2px 2px 0;
   border-bottom: none;
   background: transparent;
   overflow-y: auto;
   overflow-x: hidden;
-  gap: var(--space-1);
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--card-border, var(--line)) transparent;
+}
+
+.sidebar-channels::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-channels::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-channels::-webkit-scrollbar-thumb {
+  background: var(--card-border, var(--line));
+  border-radius: 999px;
+}
+
+.sidebar-channels::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
 }
 
 .sidebar-channels .channel-tab {
   width: 100%;
   min-width: 0;
   max-width: none;
-  height: 38px;
+  height: 40px;
   padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
+  border-color: transparent;
+  font-weight: 600;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.sidebar-channels .channel-tab:hover:not(.is-active) {
+  background: var(--button-bg, rgba(255, 255, 255, 0.06));
+}
+
+.sidebar-channels .channel-tab.is-active {
+  box-shadow: none;
 }
 
 .sidebar-channels .channel-tab-server {
-  margin-bottom: var(--space-1);
+  margin-bottom: var(--space-3);
+  background: var(--button-bg, var(--card-bg));
+}
+
+.sidebar-channels .channel-tab-server::before {
+  opacity: 0.8;
 }
 
 .channel-tab:hover:not(.is-active) {
