@@ -81,11 +81,7 @@ const DEFAULT_SETTINGS = {
     ],
     botRules: [],
     timedMessages: [],
-    popups: [
-      { label: 'Wave', command: '👋' },
-      { label: 'Say hello', command: 'Hello' },
-      { label: 'Leave channel', command: '/part $channel' }
-    ],
+    popups: [],
     preferences: {
       chatHistoryEnabled: true,
       channelLogging: false,
@@ -228,15 +224,47 @@ ipcMain.handle('settings:reset', async (_event, options = {}) => {
   }
 });
 
+ipcMain.handle('twitch:openLogin', () => {
+  // Opens a real Twitch login page in a window that shares the app's default
+  // session, so the cookies it sets are also sent by the embedded stream
+  // player (which loads player.twitch.tv in the same session/partition) —
+  // letting it pick up subscriber/follower state like the real Twitch site.
+  const loginWindow = new BrowserWindow({
+    width: 480,
+    height: 720,
+    title: 'Log in to Twitch',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  loginWindow.setMenuBarVisibility(false);
+  loginWindow.loadURL('https://www.twitch.tv/login');
+  return { ok: true };
+});
+
 ipcMain.handle('external:open', (_event, url) => {
-  const allowedUrls = new Set([
+  const allowedExactUrls = new Set([
     'https://twitchtokengenerator.com/',
     'https://dev.twitch.tv/docs/chat/irc/'
   ]);
 
-  if (!allowedUrls.has(url)) {
-    return { ok: false };
+  let isAllowed = allowedExactUrls.has(url);
+  if (!isAllowed) {
+    try {
+      const parsed = new URL(url);
+      // Allow any individual Twitch channel page (https://www.twitch.tv/<username>)
+      // so "Open Stream in Browser" works for whichever channel is selected,
+      // without opening up shell.openExternal to arbitrary URLs/protocols.
+      isAllowed = parsed.protocol === 'https:'
+        && parsed.hostname === 'www.twitch.tv'
+        && /^\/[a-zA-Z0-9_]{1,25}\/?$/.test(parsed.pathname);
+    } catch {
+      isAllowed = false;
+    }
   }
+
+  if (!isAllowed) return { ok: false };
 
   shell.openExternal(url);
   return { ok: true };

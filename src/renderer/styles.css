@@ -122,10 +122,57 @@ button:disabled {
 
 /* Primary — main, high-emphasis actions (Connect, Send, Create...). */
 button.primary,
-.popup-bar button {
+.popup-button {
+  height: 30px;
+  padding: 0 var(--space-3);
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.popup-button:hover {
   background: var(--accent);
-  border-color: var(--accent);
   color: #fff;
+}
+
+.popup-settings-gear {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  border-color: var(--card-border, var(--line));
+  color: var(--muted);
+}
+
+.popup-settings-gear:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+}
+
+.popup-bar-size-medium .popup-button {
+  height: 34px;
+  padding: 0 var(--space-4);
+  font-size: 13px;
+}
+
+.popup-bar-size-large .popup-button {
+  height: 38px;
+  padding: 0 var(--space-5);
+  font-size: 14px;
+}
+
+.popup-bar-layout-scroll {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.popup-bar-layout-wrap {
+  flex-wrap: wrap;
 }
 
 button.primary:hover {
@@ -1332,6 +1379,12 @@ textarea:focus {
   color: var(--muted);
 }
 
+.channel-search-input {
+  min-height: 32px;
+  margin-bottom: var(--space-2);
+  font-size: 12px;
+}
+
 .disconnected-backdrop {
   position: fixed;
   inset: 0;
@@ -1858,12 +1911,20 @@ textarea:focus {
   width: 100%;
   min-width: 0;
   max-width: none;
-  height: 40px;
-  padding: 0 var(--space-3);
+  height: 44px;
+  padding: 0 var(--space-5) 0 var(--space-3);
   border-radius: var(--radius-sm);
   border-color: transparent;
   font-weight: 600;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 0.1s ease;
+}
+
+.sidebar-channels .channel-tab:active {
+  transform: scale(0.98);
+}
+
+.sidebar-channels .channel-tab.is-active {
+  transform: none;
 }
 
 .sidebar-channels .channel-tab:hover:not(.is-active) {
@@ -1887,16 +1948,23 @@ textarea:focus {
   background: var(--button-bg, var(--card-bg));
 }
 
-.channel-tab.is-live::before {
+.channel-tab.has-status-dot::before {
   content: "";
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 50%;
+  right: 10px;
   width: 7px;
   height: 7px;
+  margin-top: -3.5px;
   border-radius: 50%;
+  background: #68707a;
+  opacity: 0.6;
+}
+
+.channel-tab.has-status-dot.is-live::before {
   background: var(--green);
-  box-shadow: 0 0 0 2px var(--card-bg, #fff);
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(130, 212, 155, 0.18);
 }
 
 .channel-tab.is-live.is-active::before {
@@ -1911,9 +1979,8 @@ textarea:focus {
 }
 
 .channel-tab.has-unread:not(.is-active) {
-  color: var(--red);
-  background: var(--mention-bg, rgba(155, 53, 49, 0.14));
-  border-color: var(--red);
+  color: var(--ink);
+  font-weight: 700;
 }
 
 .channel-tab.has-mention::after {
@@ -2042,6 +2109,17 @@ textarea:focus {
   letter-spacing: 0.01em;
 }
 
+.status-pill-button {
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.status-pill-button:hover {
+  background: var(--button-bg, rgba(255, 255, 255, 0.08));
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
 .status-pill.is-good {
   color: var(--green);
   border-color: var(--green);
@@ -2081,7 +2159,7 @@ textarea:focus {
   padding: 18px;
   font-family: "SF Mono", Menlo, Consolas, monospace;
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.65;
 }
 
 .messages[data-density="compact"] {
@@ -2175,6 +2253,39 @@ textarea:focus {
   grid-area: streamactions;
   display: flex;
   flex-direction: column;
+}
+
+.primary-channel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.primary-channel-actions button {
+  height: 34px;
+  padding: 0 var(--space-3);
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.primary-channel-actions button:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.primary-channel-actions button.danger {
+  background: transparent;
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.primary-channel-actions button.danger:hover {
+  background: var(--red);
+  color: #fff;
 }
 
 .channel-tools-row {
@@ -2634,6 +2745,29 @@ body[data-layout="twitch"] .message:hover {
   user-select: none;
 }
 
+.toolbar-spacer {
+  flex: 1 1 auto;
+  min-width: 8px;
+}
+
+#streamTitle {
+  flex: 0 1 auto;
+  max-width: 140px;
+}
+
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.toolbar-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 20px;
+  background: var(--card-border, var(--line));
+}
+
 .stream-panel.is-inline .stream-toolbar {
   cursor: default;
 }
@@ -2897,10 +3031,10 @@ body[data-layout="twitch"] .message:hover {
 .message {
   position: relative;
   display: grid;
-  grid-template-columns: 64px 116px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 70px 120px minmax(0, 1fr);
+  gap: 14px;
   align-items: start;
-  padding: 6px 8px 6px 10px;
+  padding: 8px 10px 8px 12px;
   border-left: 3px solid transparent;
   border-bottom: 1px solid var(--message-line, rgba(216, 208, 192, 0.4));
 }

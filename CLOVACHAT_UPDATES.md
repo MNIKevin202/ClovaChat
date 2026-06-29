@@ -67,6 +67,17 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Popups (Wave/Say hello/etc.) moved to sit directly above the message input. Channel Settings and Mentions moved to a small action row under the video, alongside a new Open Stream in Browser button.
 - Renamed the "Chat" tab to "Streams/Chat" in the top navigation.
 
+## Usability Pass: Dashboard Default, Channel List, Popups, Twitch Login
+
+- App now opens on Dashboard at startup; Chat still restores the last active channel/stream/chat within the session.
+- Fixed Open Stream in Browser: the `external:open` IPC handler had a hardcoded allowlist of exactly two URLs and silently rejected everything else, including per-channel Twitch URLs. It now validates `https://www.twitch.tv/<channel>` properly instead of only matching two fixed strings.
+- Channel list: removed the heavy red/orange unread border, added a live/offline status dot to every channel (not just live ones), taller rows (44px), a subtle click-down animation, and a "Search channels..." filter box.
+- Removed the redundant Connection badge from the chat header pills (status already shown in the sidebar connection card); the Logs badge is now a button that toggles per-channel logging on click.
+- Chat message rows: slightly more padding, line-height, and column gap.
+- Split fixed channel actions (Wave/Say Hello/Leave Channel) from user-configurable popups: the former are now a permanent row under the stream; the latter moved to their own outlined/ghost-styled toolbar above the message box, with a gear icon opening Popup Settings (enable/disable, button size, layout, and an opt-in to auto-show game-specific quick commands for a small built-in table of supported games).
+- Stream toolbar reorganized into Navigation / Playback / Other groups with dividers, plus a new Reload button.
+- Added "Log in to Twitch" in Settings, which opens a real Twitch login window using the app's shared session so the embedded player can inherit your authenticated Twitch state (subscriber view, etc.) the same way the official site would.
+
 ## Stream Reload & Sidebar Channel List Polish
 
 - Added a Reload button next to Catch Up, and automatic stuck-stream detection: if the embed's live-edge latency reading hasn't changed in 45 seconds (the embed JS API has no direct way to detect "frozen on an ad," so this heartbeat-style check is the fallback), the player reloads itself.

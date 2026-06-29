@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('macIRC', {
   runPythonCommand: (payload) => ipcRenderer.invoke('python:command', payload),
   getTwitchChatters: (payload) => ipcRenderer.invoke('twitch:getChatters', payload),
   getTwitchEmotes: (payload) => ipcRenderer.invoke('twitch:getEmotes', payload),
+  openTwitchLogin: () => ipcRenderer.invoke('twitch:openLogin'),
   chooseLogFile: (suggestedName) => ipcRenderer.invoke('log:chooseFile', suggestedName),
   chooseLogFolder: () => ipcRenderer.invoke('log:chooseFolder'),
   openLogFolder: (folderPath) => ipcRenderer.invoke('log:openFolder', folderPath),

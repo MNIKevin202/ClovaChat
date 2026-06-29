@@ -62,12 +62,23 @@ const el = {
   openLogFolderButton: document.querySelector('#openLogFolderButton'),
   serverConnectionButton: document.querySelector('#serverConnectionButton'),
   serverConnectionBackdrop: document.querySelector('#serverConnectionBackdrop'),
+  popupSettingsBackdrop: document.querySelector('#popupSettingsBackdrop'),
+  popupSettingsCloseX: document.querySelector('#popupSettingsCloseX'),
+  popupSettingsCloseButton: document.querySelector('#popupSettingsCloseButton'),
+  popupSettingsEnabledToggle: document.querySelector('#popupSettingsEnabledToggle'),
+  popupSettingsSizeSelect: document.querySelector('#popupSettingsSizeSelect'),
+  popupSettingsLayoutSelect: document.querySelector('#popupSettingsLayoutSelect'),
+  popupSettingsAutoGameToggle: document.querySelector('#popupSettingsAutoGameToggle'),
+  waveActionButton: document.querySelector('#waveActionButton'),
+  sayHelloActionButton: document.querySelector('#sayHelloActionButton'),
+  leaveChannelActionButton: document.querySelector('#leaveChannelActionButton'),
   serverConnectionSaveButton: document.querySelector('#serverConnectionSaveButton'),
   serverConnectionCloseButton: document.querySelector('#serverConnectionCloseButton'),
   serverConnectionCloseX: document.querySelector('#serverConnectionCloseX'),
   connectionToggleButton: document.querySelector('#connectionToggleButton'),
   joinChannelForm: document.querySelector('#joinChannelForm'),
   joinChannelInput: document.querySelector('#joinChannelInput'),
+  channelSearchInput: document.querySelector('#channelSearchInput'),
   host: document.querySelector('#host'),
   port: document.querySelector('#port'),
   tls: document.querySelector('#tls'),
@@ -76,6 +87,7 @@ const el = {
   channel: document.querySelector('#channel'),
   darkModeToggle: document.querySelector('#darkModeToggle'),
   sevenTvToggle: document.querySelector('#sevenTvToggle'),
+  twitchLoginButton: document.querySelector('#twitchLoginButton'),
   connectOnOpenToggle: document.querySelector('#connectOnOpenToggle'),
   streamSidebarButton: document.querySelector('#streamSidebarButton'),
   streamPanel: document.querySelector('#streamPanel'),
@@ -506,6 +518,10 @@ function ensureSettingsShape() {
   state.settings.preferences.notifyOnMention ??= false;
   state.settings.preferences.notifyOnLive ??= false;
   state.settings.preferences.moveLiveTabsToFront ??= true;
+  state.settings.preferences.popupsGloballyEnabled ??= true;
+  state.settings.preferences.popupButtonSize ||= 'small';
+  state.settings.preferences.popupButtonLayout ||= 'wrap';
+  state.settings.preferences.autoDetectGamePopups ??= false;
   state.settings.preferences.dashboardSort ||= 'live';
   state.settings.preferences.dashboardFilter ||= 'all';
   state.settings.preferences.dashboardStreamStatus ??= true;
@@ -1183,6 +1199,37 @@ function bindEvents() {
   el.serverConnectionBackdrop?.addEventListener('click', (event) => {
     if (event.target === el.serverConnectionBackdrop) setServerConnectionModalOpen(false);
   });
+  el.popupSettingsCloseButton?.addEventListener('click', () => setPopupSettingsOpen(false));
+  el.popupSettingsCloseX?.addEventListener('click', () => setPopupSettingsOpen(false));
+  el.popupSettingsBackdrop?.addEventListener('click', (event) => {
+    if (event.target === el.popupSettingsBackdrop) setPopupSettingsOpen(false);
+  });
+  el.popupSettingsEnabledToggle?.addEventListener('change', async () => {
+    state.settings.preferences.popupsGloballyEnabled = el.popupSettingsEnabledToggle.checked;
+    await saveSettings();
+    renderPopups();
+  });
+  el.popupSettingsSizeSelect?.addEventListener('change', async () => {
+    state.settings.preferences.popupButtonSize = el.popupSettingsSizeSelect.value;
+    await saveSettings();
+    renderPopups();
+  });
+  el.popupSettingsLayoutSelect?.addEventListener('change', async () => {
+    state.settings.preferences.popupButtonLayout = el.popupSettingsLayoutSelect.value;
+    await saveSettings();
+    renderPopups();
+  });
+  el.popupSettingsAutoGameToggle?.addEventListener('change', async () => {
+    state.settings.preferences.autoDetectGamePopups = el.popupSettingsAutoGameToggle.checked;
+    await saveSettings();
+    renderPopups();
+  });
+  el.waveActionButton?.addEventListener('click', () => runInput('👋'));
+  el.sayHelloActionButton?.addEventListener('click', () => runInput('Hello'));
+  el.leaveChannelActionButton?.addEventListener('click', () => {
+    if (isServerTarget(state.activeChannel)) return;
+    if (window.confirm(`Leave ${state.activeChannel}?`)) leaveChannel(state.activeChannel);
+  });
   el.serverConnectionSaveButton?.addEventListener('click', async () => {
     await persistConnectionFields();
     appendStatus('Server connection settings saved.', 'success');
@@ -1193,6 +1240,7 @@ function bindEvents() {
     event.preventDefault();
     await joinAndSaveChannel(el.joinChannelInput.value);
   });
+  el.channelSearchInput?.addEventListener('input', applyChannelSearchFilter);
   el.twitchPresetButton.addEventListener('click', applyTwitchPreset);
   el.twitchTokenButton.addEventListener('click', openTwitchTokenPage);
   el.darkModeToggle.addEventListener('change', async () => {
@@ -1218,6 +1266,7 @@ function bindEvents() {
     }
     renderMessages();
   });
+  el.twitchLoginButton?.addEventListener('click', () => window.macIRC.openTwitchLogin());
   el.connectOnOpenToggle.addEventListener('change', async () => {
     state.settings.connection.connectOnOpen = el.connectOnOpenToggle.checked;
     await saveSettings();
@@ -1987,6 +2036,21 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.44',
+    date: '2026-06-28',
+    title: 'Usability Pass: Dashboard Default, Channel List, Popups, Twitch Login',
+    bullets: [
+      'ClovaChat now opens on the Dashboard at startup; switching to Chat still restores whatever channel/stream/chat you had active.',
+      'Fixed "Open Stream in Browser" — it was silently blocked by an IPC allowlist that only permitted two hardcoded URLs.',
+      'Polished the sidebar channel list: removed the heavy unread border outline, added a live/offline status dot to every channel, taller rows, a click animation, and a search box to filter the list.',
+      'Removed the redundant "Connection: Online" chat-header badge (connection status already lives in the sidebar); the Logs badge is now clickable and toggles per-channel logging immediately.',
+      'Slightly increased chat message spacing and line height for readability.',
+      'Wave, Say Hello, and Leave Channel are now fixed primary actions under the stream, separate from your customizable popup buttons (which moved to their own row above the message box, restyled as lightweight outline buttons with a gear icon for Popup Settings — size, layout, and optional game-specific quick commands for supported titles like Marbles on Stream).',
+      'Grouped the stream toolbar into Navigation / Playback / Other sections with dividers, and added a Reload button.',
+      'Added a "Log in to Twitch" option in Settings that opens a real Twitch login window sharing the app\'s session, so the embedded player can pick up your subscriber/follow state like the real Twitch site.',
+    ],
+  },
   {
     version: 'v1.2.43',
     date: '2026-06-28',
@@ -3483,13 +3547,14 @@ function renderChannels() {
     const isLive = channel !== 'server' && state.liveChannels.has(channel.replace(/^#/, '').toLowerCase());
     button.className = [
       'channel-tab',
-      channel === 'server' ? 'channel-tab-server' : '',
+      channel === 'server' ? 'channel-tab-server' : 'has-status-dot',
       channel === state.activeChannel ? 'is-active' : '',
       state.unreadChannels.has(channel) ? 'has-unread' : '',
       state.mentionedChannels.has(channel) ? 'has-mention' : '',
       isLive ? 'is-live' : '',
     ].filter(Boolean).join(' ');
     button.textContent = channel === 'server' ? 'Server' : channelDisplayName(channel);
+    button.dataset.channelName = channel;
     button.draggable = channel !== 'server';
     button.addEventListener('dragstart', (event) => {
       if (channel === 'server') return;
@@ -3528,6 +3593,7 @@ function renderChannels() {
     el.channels.append(empty);
   }
 
+  applyChannelSearchFilter();
   renderTopic();
   renderTimerChannelOptions();
   renderChannelChrome();
@@ -3722,9 +3788,8 @@ function renderChannelStatusStrip() {
     statusPill('Live', liveLabel, liveClass),
     statusPill('Users', String(userCount)),
     statusPill('Messages', String(messageCount)),
-    statusPill('Connection', state.connected ? 'Online' : 'Offline', state.connected ? 'is-good' : 'is-bad'),
     statusPill('Bot', botOn ? 'On' : 'Off', botOn ? 'is-good' : ''),
-    statusPill('Logs', logsOn ? 'On' : 'Off', logsOn ? 'is-good' : '')
+    statusPillButton('Logs', logsOn ? 'On' : 'Off', logsOn ? 'is-good' : '', () => toggleChannelLogs(channel))
   );
 }
 
@@ -3740,6 +3805,22 @@ function renderChannelToolsRow() {
       ? () => window.macIRC.openExternal(`https://www.twitch.tv/${channel.replace(/^#/, '')}`)
       : null;
   }
+  [el.waveActionButton, el.sayHelloActionButton, el.leaveChannelActionButton].forEach((button) => {
+    if (button) button.disabled = !channel;
+  });
+}
+
+function applyChannelSearchFilter() {
+  if (!el.channelSearchInput) return;
+  const query = el.channelSearchInput.value.trim().toLowerCase();
+  el.channels.querySelectorAll('.channel-tab').forEach((button) => {
+    if (button.classList.contains('channel-tab-server') || !query) {
+      button.hidden = false;
+      return;
+    }
+    const name = (button.dataset.channelName || button.textContent).toLowerCase();
+    button.hidden = !name.includes(query);
+  });
 }
 
 function statusPill(label, value, extraClass = '') {
@@ -3747,6 +3828,28 @@ function statusPill(label, value, extraClass = '') {
   pill.className = `status-pill${extraClass ? ` ${extraClass}` : ''}`;
   pill.textContent = `${label}: ${value}`;
   return pill;
+}
+
+function statusPillButton(label, value, extraClass, onClick) {
+  const pill = document.createElement('button');
+  pill.type = 'button';
+  pill.className = `status-pill status-pill-button${extraClass ? ` ${extraClass}` : ''}`;
+  pill.textContent = `${label}: ${value}`;
+  pill.title = `Click to turn logging ${value === 'On' ? 'off' : 'on'} for this channel`;
+  pill.addEventListener('click', onClick);
+  return pill;
+}
+
+async function toggleChannelLogs(channel) {
+  const next = !channelSettingValue(channel, 'logs.enabled', true);
+  setChannelSetting(channel, 'logs.enabled', next);
+  await saveSettings();
+  if (next && !(state.settings.preferences.channelLogging && state.settings.preferences.channelLogFolder)) {
+    appendStatus('Channel logging is enabled for this channel, but you still need to turn on Channel Logs and pick a folder in Settings.', 'info');
+  } else {
+    appendStatus(`Logging ${next ? 'enabled' : 'disabled'} for ${channel}.`, 'info');
+  }
+  renderChannelStatusStrip();
 }
 
 function renderChannelChrome() {
@@ -4576,21 +4679,60 @@ function nickCompletionCandidates() {
   return uniqueNicks([...state.recentChatters, ...activeRoster]);
 }
 
+// Small, extensible lookup of supported games to their quick-command popup
+// buttons. Adding a new game just means adding another entry here — the
+// match is against the streamer's current Twitch category name.
+const GAME_POPUP_COMMANDS = {
+  'marbles on stream': [
+    { label: '!play', command: '!play' },
+    { label: '!bloop', command: '!bloop' },
+    { label: '!boost', command: '!boost' },
+    { label: '!skin', command: '!skin' },
+  ],
+  'words on stream': [
+    { label: '!join', command: '!join' },
+  ],
+  'stream raiders': [
+    { label: '!raid', command: '!raid' },
+  ],
+};
+
+function gamePopupsForActiveChannel() {
+  if (!state.settings.preferences.autoDetectGamePopups) return [];
+  const login = state.activeChannel.replace(/^#/, '').toLowerCase();
+  const game = state.streamDetails.get(login)?.game_name;
+  if (!game) return [];
+  return GAME_POPUP_COMMANDS[game.toLowerCase()] || [];
+}
+
 function renderPopups() {
   el.popupBar.innerHTML = '';
+  el.popupBar.className = `popup-bar popup-bar-size-${state.settings.preferences.popupButtonSize} popup-bar-layout-${state.settings.preferences.popupButtonLayout}`;
   if (isServerTarget(state.activeChannel)) {
     el.popupBar.hidden = true;
     renderPopupEditor();
     return;
   }
-  if (!channelSettingValue(state.activeChannel, 'popupsEnabled', true) || !channelSettingValue(state.activeChannel, 'popups.enabled', true)) {
-    el.popupBar.hidden = true;
+
+  const gear = document.createElement('button');
+  gear.type = 'button';
+  gear.className = 'popup-settings-gear';
+  gear.title = 'Popup Settings';
+  gear.textContent = '⚙';
+  gear.addEventListener('click', () => setPopupSettingsOpen(true));
+  el.popupBar.append(gear);
+
+  if (!state.settings.preferences.popupsGloballyEnabled
+    || !channelSettingValue(state.activeChannel, 'popupsEnabled', true)
+    || !channelSettingValue(state.activeChannel, 'popups.enabled', true)) {
+    el.popupBar.hidden = false;
     renderPopupEditor();
     return;
   }
   el.popupBar.hidden = false;
-  channelPopups(state.activeChannel).forEach((popup) => {
+  [...channelPopups(state.activeChannel), ...gamePopupsForActiveChannel()].forEach((popup) => {
     const button = document.createElement('button');
+    button.className = 'popup-button';
     button.textContent = popup.label;
     button.addEventListener('click', () => {
       const command = popup.command.replaceAll('$channel', state.activeChannel || '');
@@ -4599,6 +4741,16 @@ function renderPopups() {
     el.popupBar.append(button);
   });
   renderPopupEditor();
+}
+
+function setPopupSettingsOpen(open) {
+  if (!el.popupSettingsBackdrop) return;
+  el.popupSettingsBackdrop.hidden = !open;
+  if (!open) return;
+  el.popupSettingsEnabledToggle.checked = state.settings.preferences.popupsGloballyEnabled;
+  el.popupSettingsSizeSelect.value = state.settings.preferences.popupButtonSize;
+  el.popupSettingsLayoutSelect.value = state.settings.preferences.popupButtonLayout;
+  el.popupSettingsAutoGameToggle.checked = state.settings.preferences.autoDetectGamePopups;
 }
 
 function channelPopups(channel) {

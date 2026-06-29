@@ -14,8 +14,8 @@
           <img class="brand-mark" src="../../images/logo.png" alt="ClovaChat" />
         </div>
         <nav class="tabs top-nav-tabs" aria-label="Workspace">
-          <button class="tab" data-tab="dashboard" title="Dashboard"><span class="tab-icon">▦</span>Dashboard</button>
-          <button class="tab is-active" data-tab="chat" title="Streams/Chat"><span class="tab-icon">💬</span>Streams/Chat</button>
+          <button class="tab is-active" data-tab="dashboard" title="Dashboard"><span class="tab-icon">▦</span>Dashboard</button>
+          <button class="tab" data-tab="chat" title="Streams/Chat"><span class="tab-icon">💬</span>Streams/Chat</button>
           <button class="tab" data-tab="bot" title="Bot Builder"><span class="tab-icon">🤖</span>Bot</button>
           <button class="tab" data-tab="commands" title="Command Scripts"><span class="tab-icon">/</span>Commands</button>
           <button class="tab" data-tab="popups" title="Popup Actions"><span class="tab-icon">⚡</span>Popups</button>
@@ -67,6 +67,7 @@
               <button type="submit" title="Join channel">Join</button>
             </form>
             <span class="join-channel-hint">Joined channels are saved automatically.</span>
+            <input id="channelSearchInput" class="channel-search-input" type="search" placeholder="Search channels..." autocomplete="off" />
             <div id="channels" class="channel-tabs sidebar-channels" aria-label="Open channels"></div>
           </section>
         </div>
@@ -77,7 +78,7 @@
       </aside>
 
       <main class="main">
-        <section id="dashboardTab" class="view dashboard-view">
+        <section id="dashboardTab" class="view dashboard-view is-active">
           <header class="dashboard-header">
             <div>
               <h2>Multi-Channel Dashboard</h2>
@@ -106,7 +107,7 @@
           <div id="dashboardGrid" class="dashboard-grid"></div>
         </section>
 
-        <section id="chatTab" class="view is-active">
+        <section id="chatTab" class="view">
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="chatBody" class="chat-body">
             <div id="streamCard" class="stream-card">
@@ -120,6 +121,11 @@
               <div id="streamActionRow" class="stream-action-row">
                 <div class="chat-action-bar">
                   <button id="addAutoJoinCurrentButton" class="secondary-action" type="button" hidden>Add Channel to Auto Join</button>
+                </div>
+                <div id="primaryChannelActions" class="primary-channel-actions">
+                  <button id="waveActionButton" type="button" title="Wave">👋 Wave</button>
+                  <button id="sayHelloActionButton" type="button" title="Say hello">Say Hello</button>
+                  <button id="leaveChannelActionButton" class="danger" type="button" title="Leave this channel">Leave Channel</button>
                 </div>
                 <div class="channel-tools-row">
                   <button id="channelToolsSettingsButton" type="button" title="Channel Settings">⚙ Channel Settings</button>
@@ -565,6 +571,8 @@
                 <span>7TV Emotes</span>
                 <input id="sevenTvToggle" type="checkbox" />
               </label>
+              <button id="twitchLoginButton" type="button">Log in to Twitch (for stream subscriber view)</button>
+              <p class="settings-hint">Opens a real Twitch login window. Once you're logged in there, the embedded stream player picks up your Twitch session — subscriber perks, ad-free viewing if applicable, and follows should behave like twitch.tv.</p>
             </section>
 
             <section class="settings-group">
@@ -725,15 +733,24 @@
 
       <section id="streamPanel" class="stream-panel" hidden>
         <div id="streamToolbar" class="stream-toolbar">
-          <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
           <span id="streamTitle">Stream</span>
           <span id="streamLatency" class="stream-latency" hidden title="Estimated delay behind the broadcaster"></span>
-          <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
-          <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
-          <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
-          <button id="streamCatchUpButton" type="button" title="Jump closer to the live edge to reduce delay">⏩ Catch Up</button>
-          <button id="streamReloadButton" type="button" title="Reload the stream if it looks stuck (e.g. after an ad)">🔄 Reload</button>
-          <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
+          <span class="toolbar-spacer"></span>
+          <div class="toolbar-group" title="Navigation">
+            <button id="streamPreviousButton" class="stream-nav-button" type="button" title="Previous stream">Prev</button>
+            <button id="streamNextButton" class="stream-nav-button" type="button" title="Next stream">Next</button>
+          </div>
+          <span class="toolbar-divider"></span>
+          <div class="toolbar-group" title="Playback">
+            <button id="streamPlayButton" type="button" title="Pause/resume preview">Pause</button>
+            <button id="streamCatchUpButton" type="button" title="Jump closer to the live edge to reduce delay">⏩ Catch Up</button>
+          </div>
+          <span class="toolbar-divider"></span>
+          <div class="toolbar-group" title="Other">
+            <button id="streamReloadButton" type="button" title="Reload the stream if it looks stuck (e.g. after an ad)">🔄 Reload</button>
+            <button id="streamMuteButton" type="button" title="Mute/unmute preview">Mute</button>
+            <button id="streamToggleButton" type="button" title="Hide stream preview">Hide</button>
+          </div>
         </div>
         <div id="streamPlayer" class="stream-player" title="Twitch stream"></div>
         <div id="streamResizeGrip" class="stream-resize-grip" title="Drag to resize"></div>
@@ -785,6 +802,36 @@
         </section>
       </div>
     </aside>
+
+    <div id="popupSettingsBackdrop" class="server-connection-backdrop" hidden>
+      <section class="server-connection-modal popup-settings-modal" role="dialog" aria-modal="true" aria-labelledby="popupSettingsTitle">
+        <header>
+          <h2 id="popupSettingsTitle">Popup Settings</h2>
+          <button id="popupSettingsCloseX" class="icon-button" type="button" title="Close">✕</button>
+        </header>
+        <div class="connection-fields">
+          <label class="switch-row"><span>Enable popup buttons</span><input id="popupSettingsEnabledToggle" type="checkbox" /></label>
+          <label>Button size
+            <select id="popupSettingsSizeSelect">
+              <option value="small">Small</option>
+              <option value="medium">Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </label>
+          <label>Button layout
+            <select id="popupSettingsLayoutSelect">
+              <option value="wrap">Wrap to fit</option>
+              <option value="scroll">Single row, scroll</option>
+            </select>
+          </label>
+          <label class="switch-row"><span>Show game-specific commands automatically</span><input id="popupSettingsAutoGameToggle" type="checkbox" /></label>
+          <p class="settings-hint">When the streamer's category matches a supported game (like Marbles on Stream or Words on Stream), ClovaChat adds that game's quick commands to the popup bar automatically.</p>
+        </div>
+        <div class="button-row server-connection-modal-actions">
+          <button id="popupSettingsCloseButton" type="button">Close</button>
+        </div>
+      </section>
+    </div>
 
     <div id="serverConnectionBackdrop" class="server-connection-backdrop" hidden>
       <section class="server-connection-modal" role="dialog" aria-modal="true" aria-labelledby="serverConnectionTitle">
