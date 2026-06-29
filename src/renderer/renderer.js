@@ -55,6 +55,8 @@ const state = {
   pendingNewMessages: 0,
 };
 
+const TWITCH_LOGIN_URL = 'https://www.twitch.tv/login';
+
 const el = {
   connectionStatus: document.querySelector('#connectionStatus'),
   connectionState: document.querySelector('#connectionState'),
@@ -501,6 +503,7 @@ function ensureSettingsShape() {
   state.settings.appearance.theme ||= 'light';
   state.settings.appearance.sevenTvEmotes ??= true;
   state.settings.appearance.twitchPlayer ??= false;
+  state.settings.appearance.twitchPlayerHidden ??= false;
   state.settings.appearance.twitchPlayerDocked ??= true;
   state.settings.appearance.layout ||= 'standard';
   state.settings.appearance.twitchPlayerBounds ||= null;
@@ -1372,24 +1375,20 @@ function bindEvents() {
   el.checkUpdatesButton.addEventListener('click', async () => {
     await checkForUpdates({ silent: false });
   });
-  el.streamToggleButton.addEventListener('click', async () => {
-    saveCurrentStreamPlayerState();
-    state.settings.appearance.twitchPlayer = false;
-    state.settings.appearance.twitchPlayerChannel = '';
-    await saveSettings();
-    renderStreamPlayer();
-  });
+  el.streamToggleButton.addEventListener('click', () => setStreamVideoHidden(true));
   el.streamSidebarButton.addEventListener('click', async () => {
-    if (state.settings.appearance.twitchPlayer) saveCurrentStreamPlayerState();
-    const nextEnabled = !state.settings.appearance.twitchPlayer;
+    if (state.settings.appearance.twitchPlayer) {
+      await setStreamVideoHidden(!state.settings.appearance.twitchPlayerHidden);
+      return;
+    }
     const nextChannel = streamChannelFromActiveChannel();
-    if (nextEnabled && !nextChannel) {
+    if (!nextChannel) {
       appendStatus('Switch to a channel tab before opening the stream player.', 'error');
       return;
     }
-    state.settings.appearance.twitchPlayer = nextEnabled;
-    if (nextEnabled) state.settings.appearance.twitchPlayerChannel = nextChannel;
-    else state.settings.appearance.twitchPlayerChannel = '';
+    state.settings.appearance.twitchPlayer = true;
+    state.settings.appearance.twitchPlayerHidden = false;
+    state.settings.appearance.twitchPlayerChannel = nextChannel;
     await saveSettings();
     renderStreamPlayer();
   });
@@ -3559,12 +3558,20 @@ async function setStreamPreviewVisible(visible) {
     const channel = streamChannelFromActiveChannel();
     if (!channel) return;
     state.settings.appearance.twitchPlayer = true;
+    state.settings.appearance.twitchPlayerHidden = false;
     state.settings.appearance.twitchPlayerChannel = channel;
   } else {
-    saveCurrentStreamPlayerState();
-    state.settings.appearance.twitchPlayer = false;
-    state.settings.appearance.twitchPlayerChannel = '';
+    await setStreamVideoHidden(true);
+    return;
   }
+  await saveSettings();
+  renderStreamPlayer();
+}
+
+async function setStreamVideoHidden(hidden) {
+  if (!state.settings.appearance.twitchPlayer) return;
+  if (hidden) saveCurrentStreamPlayerState();
+  state.settings.appearance.twitchPlayerHidden = hidden;
   await saveSettings();
   renderStreamPlayer();
 }
@@ -3578,6 +3585,7 @@ async function openStreamForChannel(channel) {
   }
   saveCurrentStreamPlayerState();
   state.settings.appearance.twitchPlayer = true;
+  state.settings.appearance.twitchPlayerHidden = false;
   state.settings.appearance.twitchPlayerChannel = normalized.replace(/^#/, '').toLowerCase();
   await saveSettings();
   renderStreamPlayer();
@@ -4006,6 +4014,7 @@ async function refreshAfterTwitchLogin() {
   await refreshTwitchLoginStatus({ renderStream: false });
   if (state.twitchLogin.loggedIn) {
     appendStatus('Twitch login detected. Reloading the stream player.', 'success');
+    setTwitchLoginWebviewActive(false);
   }
   clearStreamPlayer();
   renderStreamPlayer();
@@ -4016,20 +4025,41 @@ async function handleTwitchLoginWebviewNavigation(event) {
   await refreshTwitchLoginStatus({ renderStream: false });
   if (state.twitchLogin.loggedIn) {
     appendStatus('Twitch login complete. Reloading the stream player.', 'success');
+    setTwitchLoginWebviewActive(false);
     clearStreamPlayer();
     renderStreamPlayer();
     return;
   }
   renderStreamPlayer();
   if (el.twitchLoginWebview && event.url && !event.url.includes('/login')) {
-    el.twitchLoginWebview.src = 'https://www.twitch.tv/login';
+    el.twitchLoginWebview.src = TWITCH_LOGIN_URL;
   }
+}
+
+function setTwitchLoginWebviewActive(active) {
+  if (!el.twitchLoginWebview) return;
+  if (active) {
+    const currentUrl = typeof el.twitchLoginWebview.getURL === 'function'
+      ? el.twitchLoginWebview.getURL()
+      : el.twitchLoginWebview.getAttribute('src');
+    if (!currentUrl || currentUrl === 'about:blank' || !currentUrl.includes('/login')) {
+      el.twitchLoginWebview.src = TWITCH_LOGIN_URL;
+    }
+    return;
+  }
+  try {
+    el.twitchLoginWebview.stop();
+  } catch {
+    // The webview may not be fully initialized yet.
+  }
+  el.twitchLoginWebview.src = 'about:blank';
 }
 
 function renderStreamPlayer() {
   const configuredChannel = state.settings.appearance.twitchPlayerChannel || streamChannelFromActiveChannel();
   const wantsStream = state.settings.appearance.twitchPlayer && Boolean(configuredChannel);
-  const enabled = wantsStream && state.connected;
+  const videoHidden = wantsStream && state.settings.appearance.twitchPlayerHidden;
+  const enabled = wantsStream && state.connected && !videoHidden;
   // Only gate the inline Twitch-Style stream card behind login — the small
   // sidebar-docked player (Standard layout) has no room for an embedded
   // login page, so it keeps working anonymously like before.
@@ -4038,11 +4068,16 @@ function renderStreamPlayer() {
   const showPlayer = enabled && !needsLogin;
   const showPlayerArea = (showPlayer || needsLogin) && isTwitchStyleLayout();
 
-  el.streamSidebarButton.textContent = wantsStream ? 'Hide Stream' : 'Watch Active Stream';
+  el.streamSidebarButton.textContent = wantsStream
+    ? (videoHidden ? 'Reveal Stream' : 'Hide Stream')
+    : 'Watch Active Stream';
+  el.streamToggleButton.textContent = 'Hide';
+  el.streamToggleButton.title = 'Hide the video area';
   el.streamPanel.hidden = !(showPlayer || needsLogin);
   if (el.chatStreamSlot) el.chatStreamSlot.hidden = !showPlayerArea;
   if (el.twitchLoginPrompt) el.twitchLoginPrompt.hidden = !needsLogin;
-  if (el.streamEmptyState) el.streamEmptyState.hidden = showPlayer || needsLogin || !isTwitchStyleLayout();
+  setTwitchLoginWebviewActive(needsLogin);
+  if (el.streamEmptyState) el.streamEmptyState.hidden = videoHidden || showPlayer || needsLogin || !isTwitchStyleLayout();
   renderStreamEmptyState(wantsStream);
   renderStreamInfoHeader();
   if (needsLogin) {

@@ -2371,7 +2371,83 @@ body[data-layout="twitch"] .connection-info-under-video:not(:empty) {
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-card {
-  max-width: 360px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
+  grid-template-areas:
+    "status disconnect"
+    "details settings"
+    "details logs";
+  align-items: center;
+  gap: var(--space-3);
+  max-width: none;
+  padding: var(--space-3);
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card-header {
+  grid-area: status;
+  min-width: 0;
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card-grid {
+  grid-area: details;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-md);
+  background: var(--button-bg, rgba(255, 255, 255, 0.04));
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 10px;
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card-row + .connection-card-row {
+  border-left: 1px solid var(--card-border, var(--line));
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card-row > span:last-child {
+  max-width: 100%;
+}
+
+body[data-layout="twitch"] .connection-info-under-video #connectionToggleButton {
+  grid-area: disconnect;
+}
+
+body[data-layout="twitch"] .connection-info-under-video #serverConnectionButton {
+  grid-area: settings;
+}
+
+body[data-layout="twitch"] .connection-info-under-video #openLogFolderButton {
+  grid-area: logs;
+  justify-self: stretch;
+  min-height: 34px;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-md);
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-toggle-button {
+  height: 36px;
+}
+
+@media (max-width: 1120px) {
+  body[data-layout="twitch"] .connection-info-under-video .connection-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "status"
+      "details"
+      "disconnect"
+      "settings"
+      "logs";
+  }
 }
 
 body[data-layout="twitch"] .channel-tools-row .stream-sidebar-button {
