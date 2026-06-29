@@ -140,6 +140,7 @@ const el = {
   streamInfoTitle: document.querySelector('#streamInfoTitle'),
   streamInfoViewers: document.querySelector('#streamInfoViewers'),
   streamInfoUptime: document.querySelector('#streamInfoUptime'),
+  streamControlsRow: document.querySelector('#streamControlsRow'),
   topicBar: document.querySelector('#topicBar'),
   channelStatusStrip: document.querySelector('#channelStatusStrip'),
   messages: document.querySelector('#messages'),
@@ -3949,6 +3950,7 @@ function renderStreamInfoHeader() {
   const channel = streamChannelFromActiveChannel();
   const showHeader = isTwitchStyleLayout() && state.settings.appearance.twitchPlayer && Boolean(channel);
   el.streamInfoHeader.hidden = !showHeader;
+  if (el.streamControlsRow) el.streamControlsRow.hidden = !showHeader;
   if (!showHeader) return;
 
   const details = state.streamDetails.get(channel.toLowerCase()) || {};

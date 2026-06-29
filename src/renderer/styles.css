@@ -2820,6 +2820,25 @@ body[data-layout="twitch"] .stream-info-header:not([hidden]) {
   font-family: "SF Mono", Menlo, Consolas, monospace;
 }
 
+.stream-controls-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--card-border, var(--line));
+}
+
+body[data-layout="twitch"] .stream-controls-row:not([hidden]) {
+  display: flex;
+}
+
+.stream-controls-row button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  height: auto;
+}
+
 /* More compact, less noisy chat rows in Twitch Style. */
 /* Real Twitch chat flows "time username: message" as one wrapping line
    instead of a boxy multi-column row. */
