@@ -53,6 +53,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Channel List Viewer Counts & Stream Stability
+
+- Live channels in the sidebar list now show a viewer-count badge, refreshed every 60s alongside the existing live/offline status dot (moved the dot to the left of the name to make room).
+- The stream auto-resume watchdog now requires two consecutive paused checks (~8s) before calling `.play()`, instead of acting on every single tick — reduces visible pause/resume blips caused by reacting to Twitch's own brief, self-correcting pauses (quality switches, ad transitions).
+- Opening the Settings tab now triggers a fresh silent update check, as a safety net alongside the 30-minute periodic check.
+
 ## Mute the Inline Twitch Login Page
 
 - The embedded Twitch login `<webview>` could play audio from autoplaying video previews on twitch.tv. It's now always muted via `webview.setAudioMuted(true)`, applied when it first activates and again on every `dom-ready` (covers Twitch's internal page navigations during the login flow).

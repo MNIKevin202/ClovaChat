@@ -2120,6 +2120,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.2',
+    date: '2026-06-29',
+    title: 'Channel List Viewer Counts & Stream Stability',
+    bullets: [
+      'Live channels in the sidebar now show their current viewer count, updating every 60 seconds along with the live/offline dot.',
+      'Reduced unnecessary stream pause/resume blips: the auto-resume watchdog now waits for two consecutive checks (about 8 seconds) before stepping in, instead of reacting to every single brief, self-correcting pause the Twitch embed has on its own (quality switches, ad transitions).',
+      'Opening Settings now triggers a fresh, silent update check, in case the periodic 30-minute check hasn\'t run yet.',
+    ],
+  },
+  {
     version: 'v1.3.1',
     date: '2026-06-29',
     title: 'Mute the Inline Twitch Login Page',
@@ -3734,7 +3744,19 @@ function renderChannels() {
       state.mentionedChannels.has(channel) ? 'has-mention' : '',
       isLive ? 'is-live' : '',
     ].filter(Boolean).join(' ');
-    button.textContent = channel === 'server' ? 'Server' : channelDisplayName(channel);
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'channel-tab-name';
+    nameSpan.textContent = channel === 'server' ? 'Server' : channelDisplayName(channel);
+    button.append(nameSpan);
+    if (isLive) {
+      const details = state.streamDetails.get(channel.replace(/^#/, '').toLowerCase());
+      if (typeof details?.viewer_count === 'number') {
+        const viewerSpan = document.createElement('span');
+        viewerSpan.className = 'channel-tab-viewers';
+        viewerSpan.textContent = details.viewer_count.toLocaleString();
+        button.append(viewerSpan);
+      }
+    }
     button.dataset.channelName = channel;
     button.draggable = channel !== 'server';
     button.addEventListener('dragstart', (event) => {
@@ -4311,10 +4333,24 @@ function startStreamWatchdog() {
   state.streamLastLatency = null;
   state.streamLastLatencyChangeAt = Date.now();
   state.streamAutoReloaded = false;
+  state.streamPausedTickStreak = 0;
   state.streamWatchdog = setInterval(() => {
-    if (!state.streamPlayer || state.streamUserPaused) return;
+    if (!state.streamPlayer || state.streamUserPaused) {
+      state.streamPausedTickStreak = 0;
+      return;
+    }
     try {
-      if (state.streamPlayer.isPaused()) state.streamPlayer.play();
+      if (state.streamPlayer.isPaused()) {
+        // Twitch's embed can pause itself very briefly on its own (quality
+        // switches, ad transitions) and usually recovers within a tick or
+        // two — only step in once it's stayed paused across two consecutive
+        // checks, instead of fighting every momentary self-correcting pause
+        // (which looked like the stream randomly pausing/playing).
+        state.streamPausedTickStreak += 1;
+        if (state.streamPausedTickStreak >= 2) state.streamPlayer.play();
+      } else {
+        state.streamPausedTickStreak = 0;
+      }
     } catch {
       // player not ready yet, ignore until the next tick
     }
@@ -6892,6 +6928,7 @@ function activateTab(name) {
   });
   document.querySelectorAll('.view').forEach((view) => view.classList.remove('is-active'));
   document.querySelector(`#${name}Tab`).classList.add('is-active');
+  if (name === 'settings') checkForUpdates({ silent: true });
 }
 
 function normalizeChannel(channel) {
