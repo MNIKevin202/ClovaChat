@@ -153,6 +153,9 @@ const el = {
   emoteButton: document.querySelector('#emoteButton'),
   mentionsButton: document.querySelector('#mentionsButton'),
   channelToolsSettingsButton: document.querySelector('#channelToolsSettingsButton'),
+  channelToolsRow: document.querySelector('#channelToolsRow'),
+  connectionCardSlot: document.querySelector('#connectionCardSlot'),
+  connectionInfoUnderVideo: document.querySelector('#connectionInfoUnderVideo'),
   openStreamInBrowserButton: document.querySelector('#openStreamInBrowserButton'),
   mentionsBackdrop: document.querySelector('#mentionsBackdrop'),
   mentionsModal: document.querySelector('#mentionsModal'),
@@ -1705,7 +1708,32 @@ function applyLayout(layout) {
     option.classList.toggle('is-active', option.dataset.layout === (isTwitchStyle ? 'twitchStyle' : 'standard'));
   });
   if (!isTwitchStyle) setRosterDrawerOpen(false);
+  relocateTwitchStyleSidebarPieces(isTwitchStyle);
   renderStreamPlayer();
+}
+
+// In Twitch Style, the sidebar should hold only the channel list — the
+// connection card and the stream show/hide toggle physically move under the
+// video instead (next to Open Stream in Browser), and move back into the
+// sidebar when switching back to Standard.
+function relocateTwitchStyleSidebarPieces(isTwitchStyle) {
+  if (isTwitchStyle) {
+    if (el.connectionInfoUnderVideo && el.connectionStatus
+      && el.connectionInfoUnderVideo.parentElement && !el.connectionInfoUnderVideo.contains(el.connectionStatus)) {
+      el.connectionInfoUnderVideo.append(el.connectionStatus);
+    }
+    if (el.channelToolsRow && el.streamSidebarButton && el.openStreamInBrowserButton
+      && el.streamSidebarButton.parentElement !== el.channelToolsRow) {
+      el.channelToolsRow.insertBefore(el.streamSidebarButton, el.openStreamInBrowserButton);
+    }
+  } else {
+    if (el.connectionCardSlot && el.connectionStatus && el.connectionStatus.parentElement !== el.connectionCardSlot) {
+      el.connectionCardSlot.append(el.connectionStatus);
+    }
+    if (el.streamSidebarButton && el.streamDockSlot) {
+      el.streamDockSlot.parentElement.insertBefore(el.streamSidebarButton, el.streamDockSlot);
+    }
+  }
 }
 
 function setRosterDrawerOpen(open) {
@@ -2054,6 +2082,16 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.46',
+    date: '2026-06-28',
+    title: 'Twitch Style: Sidebar is Channels-Only',
+    bullets: [
+      'In Twitch Style layout, the left sidebar now shows only the channel list. The connection card (server, nick, joined count, Connect/Disconnect, Server Connection, Open Logs Folder) moved to a new container under the video, alongside Channel Settings and Mentions.',
+      'The Hide Stream/Watch Active Stream toggle moved next to Open Stream in Browser under the video.',
+      'Standard layout is unaffected — these pieces stay in the sidebar there.',
+    ],
+  },
   {
     version: 'v1.2.45',
     date: '2026-06-28',

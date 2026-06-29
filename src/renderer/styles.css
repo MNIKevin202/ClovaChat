@@ -2344,6 +2344,34 @@ textarea:focus {
   padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
+.connection-info-under-video {
+  display: none;
+}
+
+/* Twitch Style: the sidebar holds only the channel list — connection info
+   and the stream toggle relocate to live under the video instead. */
+body[data-layout="twitch"] #connectionCardSlot,
+body[data-layout="twitch"] #streamSidebarSection {
+  display: none;
+}
+
+body[data-layout="twitch"] .connection-info-under-video:not(:empty) {
+  display: block;
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card {
+  max-width: 360px;
+}
+
+body[data-layout="twitch"] .channel-tools-row .stream-sidebar-button {
+  width: auto;
+  height: 36px;
+  padding: 0 var(--space-3);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .channel-tools-row button {
   height: 36px;
   padding: 0 var(--space-3);

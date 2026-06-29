@@ -30,31 +30,33 @@
       <aside class="sidebar">
         <div class="sidebar-scroll">
 
-          <section class="card connection-card" id="connectionStatus">
-            <div class="connection-card-header">
-              <span class="status-dot"></span>
-              <span id="connectionState">Offline</span>
-            </div>
-            <div class="connection-card-grid">
-              <div class="connection-card-row">
-                <span class="connection-card-label">Server</span>
-                <span id="connectionServer">—</span>
+          <section class="sidebar-section" id="connectionCardSlot">
+            <section class="card connection-card" id="connectionStatus">
+              <div class="connection-card-header">
+                <span class="status-dot"></span>
+                <span id="connectionState">Offline</span>
               </div>
-              <div class="connection-card-row">
-                <span class="connection-card-label">Nick</span>
-                <span id="connectionNick">—</span>
+              <div class="connection-card-grid">
+                <div class="connection-card-row">
+                  <span class="connection-card-label">Server</span>
+                  <span id="connectionServer">—</span>
+                </div>
+                <div class="connection-card-row">
+                  <span class="connection-card-label">Nick</span>
+                  <span id="connectionNick">—</span>
+                </div>
+                <div class="connection-card-row">
+                  <span class="connection-card-label">Channels</span>
+                  <span id="connectionChannelCount">0 joined</span>
+                </div>
               </div>
-              <div class="connection-card-row">
-                <span class="connection-card-label">Channels</span>
-                <span id="connectionChannelCount">0 joined</span>
-              </div>
-            </div>
-            <button id="connectionToggleButton" class="primary connection-toggle-button" type="button">Connect</button>
-            <button id="serverConnectionButton" class="secondary connection-toggle-button" type="button">⚙ Server Connection</button>
-            <button id="openLogFolderButton" class="link-button" type="button" hidden>📁 Open Logs Folder</button>
+              <button id="connectionToggleButton" class="primary connection-toggle-button" type="button">Connect</button>
+              <button id="serverConnectionButton" class="secondary connection-toggle-button" type="button">⚙ Server Connection</button>
+              <button id="openLogFolderButton" class="link-button" type="button" hidden>📁 Open Logs Folder</button>
+            </section>
           </section>
 
-          <section class="sidebar-section">
+          <section class="sidebar-section" id="streamSidebarSection">
             <h2 class="section-label">Stream</h2>
             <button id="streamSidebarButton" class="stream-sidebar-button" type="button">Watch Active Stream</button>
             <div id="streamDockSlot" class="stream-dock-slot"></div>
@@ -134,11 +136,12 @@
                   <button id="sayHelloActionButton" type="button" title="Say hello">Say Hello</button>
                   <button id="leaveChannelActionButton" class="danger" type="button" title="Leave this channel">Leave Channel</button>
                 </div>
-                <div class="channel-tools-row">
+                <div id="channelToolsRow" class="channel-tools-row">
                   <button id="channelToolsSettingsButton" type="button" title="Channel Settings">⚙ Channel Settings</button>
                   <button id="mentionsButton" class="mentions-button" type="button" title="Mentions" hidden>@ Mentions</button>
                   <button id="openStreamInBrowserButton" type="button" title="Open Stream in Browser" disabled>↗ Open Stream in Browser</button>
                 </div>
+                <div id="connectionInfoUnderVideo" class="connection-info-under-video"></div>
               </div>
             </div>
             <div id="channelStatusStrip" class="channel-status-strip"></div>
