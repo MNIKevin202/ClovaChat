@@ -38,6 +38,7 @@ const state = {
   twitchLoginSkipped: false,
   twitchLoginWebviewActive: false,
   twitchLoginNavigationDebounce: null,
+  autoSelectedActiveChannel: true,
   twitchUserId: '',
   twitchRoster: {
     loadingChannels: new Set(),
@@ -1747,6 +1748,7 @@ function setRosterDrawerOpen(open) {
 function handleIrcEvent(event) {
   if (event.type === 'connected') {
     state.connected = true;
+    state.autoSelectedActiveChannel = true;
     el.connectionState.textContent = `Connected to ${event.server}`;
     el.connectionStatus.classList.add('connected');
     el.connectionStatus.classList.remove('disconnected');
@@ -2085,6 +2087,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.52',
+    date: '2026-06-29',
+    title: 'Default to the First Live Channel',
+    bullets: [
+      'The active channel now defaults to the first joined channel that\'s live, falling back to the first channel in the list if no one is live yet.',
+      'This only applies until you manually pick a channel yourself — once you do, ClovaChat stops moving the selection around automatically for that connection.',
+    ],
+  },
   {
     version: 'v1.2.51',
     date: '2026-06-29',
@@ -3091,9 +3102,10 @@ function truncateText(value, maxLength) {
   return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
 }
 
-function switchToChannel(channel) {
+function switchToChannel(channel, { auto = false } = {}) {
   const normalized = channel === 'server' ? 'server' : normalizeChannel(channel);
   if (!normalized) return;
+  if (!auto) state.autoSelectedActiveChannel = false;
   if (state.settings.appearance.twitchPlayer && normalized !== 'server' && normalized !== state.activeChannel) {
     saveCurrentStreamPlayerState();
     state.settings.appearance.twitchPlayerChannel = normalized.replace(/^#/, '').toLowerCase();
@@ -5627,6 +5639,7 @@ function scheduleLivePolling() {
   if (!shouldPollLiveChannels()) {
     state.liveChannels.clear();
     state.streamDetails.clear();
+    applyDefaultActiveChannel();
     renderChannels();
     renderDashboard();
     return;
@@ -5684,11 +5697,24 @@ async function pollLiveChannels() {
       }
     }
     state.liveChannels = nowLive;
+    applyDefaultActiveChannel();
     renderChannels();
     renderDashboard();
     renderStreamPlayer();
   } catch {
     // Network hiccup; try again on the next poll.
+  }
+}
+
+// Once we know which joined channels are live, prefer the first live one as
+// the default active channel instead of whichever happened to join first —
+// but only while the user hasn't manually picked a channel themselves.
+function applyDefaultActiveChannel() {
+  if (!state.autoSelectedActiveChannel || state.channels.length === 0) return;
+  const liveChannel = state.channels.find((channel) => state.liveChannels.has(channel.replace(/^#/, '').toLowerCase()));
+  const preferred = liveChannel || state.channels[0];
+  if (preferred && preferred !== state.activeChannel) {
+    switchToChannel(preferred, { auto: true });
   }
 }
 

@@ -53,6 +53,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Default to the First Live Channel
+
+- The active channel now defaults to the first joined channel that's live (checked once live status is known after connecting), falling back to the first channel in the list if no one is live.
+- Tracked via an `autoSelectedActiveChannel` flag that gets cleared the moment you manually pick a channel yourself, so ClovaChat stops auto-moving the selection after that for the rest of the connection.
+
 ## Clicking a Channel Jumps to Streams/Chat
 
 - Clicking a channel in the sidebar now also activates the Streams/Chat top-nav tab, instead of only updating the active channel while you stayed on whatever page you were viewing (Dashboard, Settings, etc.) with no visible change.
