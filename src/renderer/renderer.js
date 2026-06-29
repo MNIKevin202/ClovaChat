@@ -36,6 +36,8 @@ const state = {
   twitchClientId: '',
   twitchLogin: { loggedIn: false, username: '', checked: false },
   twitchLoginSkipped: false,
+  twitchLoginWebviewActive: false,
+  twitchLoginNavigationDebounce: null,
   twitchUserId: '',
   twitchRoster: {
     loadingChannels: new Set(),
@@ -2084,6 +2086,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.50',
+    date: '2026-06-29',
+    title: 'Fix Twitch Login Refresh Loop',
+    bullets: [
+      'Fixed the embedded Twitch login getting stuck in a refresh loop after entering credentials. The app was resetting the login page back to the start every time it re-rendered (which happens constantly — channel switches, live polling, etc.) as long as the page wasn\'t showing /login, which kept interrupting 2FA/verification steps mid-login.',
+      'The login webview now only loads once when the prompt appears, and login completion is detected via a debounced check instead of reacting to every single navigation event Twitch fires during the login flow.',
+    ],
+  },
+  {
     version: 'v1.2.47',
     date: '2026-06-28',
     title: 'Twitch Login Flow Fixes',
@@ -4020,32 +4031,43 @@ async function refreshAfterTwitchLogin() {
   renderStreamPlayer();
 }
 
-async function handleTwitchLoginWebviewNavigation(event) {
-  if (event.url && event.url.includes('/login')) return;
-  await refreshTwitchLoginStatus({ renderStream: false });
-  if (state.twitchLogin.loggedIn) {
-    appendStatus('Twitch login complete. Reloading the stream player.', 'success');
-    setTwitchLoginWebviewActive(false);
-    clearStreamPlayer();
-    renderStreamPlayer();
-    return;
-  }
-  renderStreamPlayer();
-  if (el.twitchLoginWebview && event.url && !event.url.includes('/login')) {
-    el.twitchLoginWebview.src = TWITCH_LOGIN_URL;
-  }
+function handleTwitchLoginWebviewNavigation() {
+  // Twitch's own login flow redirects through several non-"/login" URLs
+  // (2FA, "verify it's you", consent screens) before it's actually done, and
+  // can fire many navigation events in quick succession — debounce instead
+  // of reacting (and possibly yanking the webview back to /login) on every
+  // single one, which is what was causing the refresh loop. Only react when
+  // we have real evidence of login (the auth cookie).
+  if (state.twitchLoginNavigationDebounce) return;
+  state.twitchLoginNavigationDebounce = setTimeout(async () => {
+    state.twitchLoginNavigationDebounce = null;
+    await refreshTwitchLoginStatus({ renderStream: false });
+    if (state.twitchLogin.loggedIn) {
+      appendStatus('Twitch login complete.', 'success');
+      setTwitchLoginWebviewActive(false);
+      clearStreamPlayer();
+      renderStreamPlayer();
+    }
+  }, 800);
 }
 
 function setTwitchLoginWebviewActive(active) {
   if (!el.twitchLoginWebview) return;
   if (active) {
-    const currentUrl = typeof el.twitchLoginWebview.getURL === 'function'
-      ? el.twitchLoginWebview.getURL()
-      : el.twitchLoginWebview.getAttribute('src');
-    if (!currentUrl || currentUrl === 'about:blank' || !currentUrl.includes('/login')) {
-      el.twitchLoginWebview.src = TWITCH_LOGIN_URL;
-    }
+    // Only point the webview at the login page when the prompt first turns
+    // on — renderStreamPlayer() runs constantly (channel switches, live
+    // polling, etc.) while this stays true, and resetting .src on every one
+    // of those re-renders was what interrupted the user mid-login.
+    if (state.twitchLoginWebviewActive) return;
+    state.twitchLoginWebviewActive = true;
+    el.twitchLoginWebview.src = TWITCH_LOGIN_URL;
     return;
+  }
+  if (!state.twitchLoginWebviewActive) return;
+  state.twitchLoginWebviewActive = false;
+  if (state.twitchLoginNavigationDebounce) {
+    clearTimeout(state.twitchLoginNavigationDebounce);
+    state.twitchLoginNavigationDebounce = null;
   }
   try {
     el.twitchLoginWebview.stop();

@@ -53,6 +53,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Fix Twitch Login Refresh Loop
+
+- Fixed the embedded Twitch login getting stuck in a refresh loop after entering credentials: `renderStreamPlayer()` runs constantly (channel switches, live polling, etc.), and every time it ran while the login prompt was showing, it reset the webview's URL back to `/login` if the current page didn't contain `/login` — which kept yanking the user back to the start during 2FA/verification steps that legitimately happen on non-`/login` URLs.
+- The login webview now only navigates to the login page once when the prompt first appears (idempotent via a `twitchLoginWebviewActive` flag), and login completion is detected via a debounced check (800ms) instead of reacting to every single navigation event Twitch's SPA fires during the login flow.
+
 ## Layout Choice in Onboarding
 
 - The onboarding wizard's "Choose Your Chat Layout" step now lets new users pick Standard or Twitch Style via the same visual frame previews used in Settings, instead of only toggle checkboxes.
