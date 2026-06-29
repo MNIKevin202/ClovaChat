@@ -2127,6 +2127,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.7',
+    date: '2026-06-29',
+    title: 'Stream UI Reorganization',
+    bullets: [
+      'Moved stream latency display and catch-up button below the stream title for better visual hierarchy in Twitch Style layout.',
+      'Stream metadata (title, viewers, uptime) now grouped together with latency and controls.',
+    ],
+  },
+  {
     version: 'v1.3.6',
     date: '2026-06-29',
     title: 'Known Bugs Tracker',
