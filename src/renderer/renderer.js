@@ -2119,6 +2119,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.0',
+    date: '2026-06-29',
+    title: 'ClovaChat 1.3',
+    bullets: [
+      'Version milestone — no functional changes beyond the previous release. ClovaChat has grown a lot since 1.0: Dashboard, Twitch Style layout, mentions, the emote picker, popups/game commands, in-app Twitch login, and continuous update checking, among many other improvements along the way.',
+    ],
+  },
+  {
     version: 'v1.2.54',
     date: '2026-06-29',
     title: 'Version Number & Update Now Button in Top Nav',

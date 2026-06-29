@@ -53,6 +53,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## ClovaChat 1.3
+
+Version milestone bump (1.2.54 → 1.3.0). No functional changes beyond the previous release.
+
 ## Version Number & Update Now Button in Top Nav
 
 - Added the current version number to the top nav, next to Settings.
