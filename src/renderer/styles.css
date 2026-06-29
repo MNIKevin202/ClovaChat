@@ -3891,6 +3891,80 @@ body[data-layout="twitch"] .message:hover {
   line-height: 1.45;
 }
 
+.known-bugs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 720px;
+}
+
+.bug-item {
+  padding: 14px;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: 6px;
+  background: var(--card-bg);
+}
+
+.bug-item h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.bug-item h4 {
+  margin: 12px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.bug-item p {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.bug-item ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.bug-item li {
+  margin-bottom: 6px;
+}
+
+.discord-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #5865F2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.discord-link:hover {
+  background: #4752C4;
+}
+
+.discord-logo {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 .settings-group .switch-row:last-child {
   margin-bottom: 0;
 }

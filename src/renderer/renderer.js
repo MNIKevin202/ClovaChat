@@ -2126,6 +2126,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.6',
+    date: '2026-06-29',
+    title: 'Known Bugs Tracker',
+    bullets: [
+      'Added a new "Known Bugs" tab in the navigation to track known issues and their workarounds.',
+      'Currently documented: auto-updater detection issue with workarounds and how to report bugs.',
+      'Discord link included for bug reporting with the ClovaChat maintainer.',
+    ],
+  },
+  {
     version: 'v1.3.5',
     date: '2026-06-29',
     title: 'Updater Test',

@@ -23,6 +23,7 @@
           <button class="tab" data-tab="raw" title="Raw IRC"><span class="tab-icon">&lt;/&gt;</span>Raw</button>
           <button class="tab" data-tab="docs" title="Documentation"><span class="tab-icon">?</span>Docs</button>
           <button class="tab" data-tab="whatsnew" title="What's New"><span class="tab-icon">🆕</span>What's New</button>
+          <button class="tab" data-tab="knownbugs" title="Known Issues"><span class="tab-icon">🐛</span>Known Bugs</button>
           <button class="tab" data-tab="settings" title="Settings"><span class="tab-icon">⚙</span>Settings</button>
         </nav>
         <div class="top-nav-update">
@@ -582,6 +583,43 @@
             <p>Every ClovaChat release and what changed in it, newest first.</p>
           </header>
           <div id="whatsnewList" class="whatsnew-list"></div>
+        </section>
+
+        <section id="knownbugsTab" class="view settings-view">
+          <header>
+            <h2>Known Bugs</h2>
+            <p>Issues we're aware of and how to work around them.</p>
+          </header>
+          <div class="known-bugs-content">
+            <div class="bug-item">
+              <h3>Auto-Updater Not Auto-Detecting Updates</h3>
+              <p>The app's automatic update detection isn't currently notifying you when new versions are available. This is being worked on.</p>
+              <h4>Workarounds:</h4>
+              <ul>
+                <li>Click the <strong>⟳ Check for Updates</strong> button in the top right next to the version number</li>
+                <li>Open Settings and click <strong>Check for Updates</strong></li>
+                <li>Restart the app — it automatically checks for updates on startup</li>
+              </ul>
+            </div>
+
+            <div class="bug-item">
+              <h3>Found a Bug?</h3>
+              <p>Help improve ClovaChat by reporting issues! Here's what helps us the most:</p>
+              <ul>
+                <li><strong>Screenshots</strong> showing the issue</li>
+                <li><strong>Video recordings</strong> of the problem occurring</li>
+                <li><strong>Step-by-step reproduction steps</strong> so we can recreate it</li>
+                <li><strong>Any relevant details</strong> about your setup or what you were doing</li>
+              </ul>
+              <p>Reach out to <strong>MNIKevin202</strong> on Discord with what you found. The more information you can provide, the faster we can fix it.</p>
+              <a href="https://discord.gg/jQdAPrZ5Rk" class="discord-link" target="_blank" rel="noopener noreferrer">
+                <svg class="discord-logo" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                  <path d="M20.317 4.371c-1.578-.779-3.465-1.348-5.477-1.348-.52 0-1.04.055-1.556.164a.06.06 0 00-.052.03l-.244.585a15.9 15.9 0 014.979 1.525.06.06 0 01.064.021c.748.945 1.476 1.926 2.177 2.924a.06.06 0 00.066.028 20.04 20.04 0 014.936 2.407.06.06 0 01.023.066c-.341 1.411-.682 2.796-2.076 3.852a.06.06 0 01-.066 0c-.627-.472-1.226-.978-1.8-1.502a.06.06 0 00-.066.01 13.83 13.83 0 01-2.127 1.384.06.06 0 00-.028.086c.145.344.291.703.428 1.063a.06.06 0 00.066.045 13.995 13.995 0 003.863-1.955.06.06 0 01.063.012c1.294-1.055 2.434-2.441 2.773-3.852a.06.06 0 00-.026-.067 19.897 19.897 0 00-4.936-2.407.06.06 0 00-.066.028 141.48 141.48 0 00-2.177-2.924.06.06 0 01-.01-.066 15.9 15.9 0 01-4.979-1.525.06.06 0 00-.064-.021l-.244-.585a.06.06 0 01.052-.03c.516.109 1.036.164 1.556.164 2.012 0 3.899-.569 5.477-1.348a.06.06 0 00.028-.088 141.98 141.98 0 00-2.177-2.924.06.06 0 01-.01-.066 19.897 19.897 0 014.936-2.407.06.06 0 01.066.028c.731.984 1.454 1.968 2.177 2.924a.06.06 0 00.066.01 15.9 15.9 0 014.979-1.525.06.06 0 00.052-.03l.244-.585a.06.06 0 00-.028-.088z"/>
+                </svg>
+                Join the Discord Server
+              </a>
+            </div>
+          </div>
         </section>
 
         <section id="settingsTab" class="view settings-view">
