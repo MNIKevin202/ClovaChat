@@ -2086,6 +2086,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.2.51',
+    date: '2026-06-29',
+    title: 'Clicking a Channel Jumps to Streams/Chat',
+    bullets: [
+      'Clicking a channel in the sidebar now switches you to the Streams/Chat tab automatically, instead of just changing the active channel underneath whatever page you were already on (like Dashboard or Settings).',
+    ],
+  },
+  {
     version: 'v1.2.50',
     date: '2026-06-29',
     title: 'Fix Twitch Login Refresh Loop',
@@ -3677,7 +3685,10 @@ function renderChannels() {
       if (channel === 'server') return;
       showChannelContextMenu(event, channel);
     });
-    button.addEventListener('click', () => switchToChannel(channel));
+    button.addEventListener('click', () => {
+      activateTab('chat');
+      switchToChannel(channel);
+    });
     el.channels.append(button);
   });
 

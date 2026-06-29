@@ -53,6 +53,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Clicking a Channel Jumps to Streams/Chat
+
+- Clicking a channel in the sidebar now also activates the Streams/Chat top-nav tab, instead of only updating the active channel while you stayed on whatever page you were viewing (Dashboard, Settings, etc.) with no visible change.
+
 ## Fix Twitch Login Refresh Loop
 
 - Fixed the embedded Twitch login getting stuck in a refresh loop after entering credentials: `renderStreamPlayer()` runs constantly (channel switches, live polling, etc.), and every time it ran while the login prompt was showing, it reset the webview's URL back to `/login` if the current page didn't contain `/login` — which kept yanking the user back to the start during 2FA/verification steps that legitimately happen on non-`/login` URLs.
