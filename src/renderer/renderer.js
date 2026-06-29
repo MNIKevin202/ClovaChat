@@ -242,6 +242,7 @@ const el = {
   checkUpdatesButton: document.querySelector('#checkUpdatesButton'),
   topNavVersion: document.querySelector('#topNavVersion'),
   topNavUpdateButton: document.querySelector('#topNavUpdateButton'),
+  topNavCheckButton: document.querySelector('#topNavCheckButton'),
   userDrawer: document.querySelector('#userDrawer'),
   userDrawerClose: document.querySelector('#userDrawerClose'),
   userDrawerName: document.querySelector('#userDrawerName'),
@@ -1409,6 +1410,11 @@ function bindEvents() {
     el.topNavUpdateButton.disabled = true;
     await downloadAndInstallUpdate(state.pendingUpdate.asset);
     el.topNavUpdateButton.disabled = false;
+  });
+  el.topNavCheckButton?.addEventListener('click', async () => {
+    el.topNavCheckButton.disabled = true;
+    await checkForUpdates({ silent: false });
+    el.topNavCheckButton.disabled = false;
   });
   el.streamToggleButton.addEventListener('click', () => setStreamVideoHidden(true));
   el.streamSidebarButton.addEventListener('click', async () => {
@@ -4334,7 +4340,7 @@ function createStreamPlayer(channel) {
   startStreamLatencyPolling();
 }
 
-const STREAM_STUCK_THRESHOLD_MS = 45000;
+const STREAM_STUCK_THRESHOLD_MS = 90000;
 
 function startStreamWatchdog() {
   stopStreamWatchdog();
@@ -4351,11 +4357,11 @@ function startStreamWatchdog() {
       if (state.streamPlayer.isPaused()) {
         // Twitch's embed can pause itself very briefly on its own (quality
         // switches, ad transitions) and usually recovers within a tick or
-        // two — only step in once it's stayed paused across two consecutive
-        // checks, instead of fighting every momentary self-correcting pause
-        // (which looked like the stream randomly pausing/playing).
+        // two — only step in once it's stayed paused across three consecutive
+        // checks (about 12 seconds) instead of two (8 seconds), to be more
+        // conservative and avoid triggering on brief, self-correcting pauses.
         state.streamPausedTickStreak += 1;
-        if (state.streamPausedTickStreak >= 2) state.streamPlayer.play();
+        if (state.streamPausedTickStreak >= 3) state.streamPlayer.play();
       } else {
         state.streamPausedTickStreak = 0;
       }

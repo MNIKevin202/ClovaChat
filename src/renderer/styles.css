@@ -886,6 +886,32 @@ nav.tabs.top-nav-tabs {
   animation: top-nav-update-pulse 2.2s ease-in-out infinite;
 }
 
+.top-nav-check-button {
+  height: 30px;
+  width: 30px;
+  padding: 0;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted);
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: 4px;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.top-nav-check-button:hover {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+.top-nav-check-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @keyframes top-nav-update-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(23, 109, 115, 0.45); }
   50% { box-shadow: 0 0 0 5px rgba(23, 109, 115, 0); }
