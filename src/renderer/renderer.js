@@ -3966,7 +3966,8 @@ function isTwitchStyleLayout() {
   return state.settings.appearance.layout === 'twitchStyle';
 }
 
-async function refreshTwitchLoginStatus() {
+async function refreshTwitchLoginStatus(options = {}) {
+  const { renderStream = true } = options;
   try {
     const result = await window.macIRC.checkTwitchLoginStatus();
     state.twitchLogin = {
@@ -3978,7 +3979,7 @@ async function refreshTwitchLoginStatus() {
     state.twitchLogin = { loggedIn: false, username: '', checked: true };
   }
   renderTwitchAccountStatus();
-  renderStreamPlayer();
+  if (renderStream) renderStreamPlayer();
 }
 
 function renderTwitchAccountStatus() {
@@ -4002,17 +4003,24 @@ function renderTwitchAccountStatus() {
 
 async function refreshAfterTwitchLogin() {
   state.twitchLoginSkipped = false;
-  await refreshTwitchLoginStatus();
-  window.location.reload();
+  await refreshTwitchLoginStatus({ renderStream: false });
+  if (state.twitchLogin.loggedIn) {
+    appendStatus('Twitch login detected. Reloading the stream player.', 'success');
+  }
+  clearStreamPlayer();
+  renderStreamPlayer();
 }
 
 async function handleTwitchLoginWebviewNavigation(event) {
   if (event.url && event.url.includes('/login')) return;
-  await refreshTwitchLoginStatus();
+  await refreshTwitchLoginStatus({ renderStream: false });
   if (state.twitchLogin.loggedIn) {
-    window.location.reload();
+    appendStatus('Twitch login complete. Reloading the stream player.', 'success');
+    clearStreamPlayer();
+    renderStreamPlayer();
     return;
   }
+  renderStreamPlayer();
   if (el.twitchLoginWebview && event.url && !event.url.includes('/login')) {
     el.twitchLoginWebview.src = 'https://www.twitch.tv/login';
   }
