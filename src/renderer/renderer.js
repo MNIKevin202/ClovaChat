@@ -2120,6 +2120,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.3',
+    date: '2026-06-29',
+    title: 'Updater Test Release',
+    bullets: [
+      'Minor update for testing the auto-updater mechanism.',
+    ],
+  },
+  {
     version: 'v1.3.2',
     date: '2026-06-29',
     title: 'Channel List Viewer Counts & Stream Stability',
