@@ -53,6 +53,13 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Version Number & Update Now Button in Top Nav
+
+- Added the current version number to the top nav, next to Settings.
+- ClovaChat now checks GitHub for updates every 30 minutes in addition to the existing startup check, so it's continuously watching for new releases instead of only checking once.
+- When an update is found, a pulsing "Update Now" button appears in the top nav for one-click download/install.
+- Background/automatic checks no longer trigger a confirmation popup on their own — that's reserved for explicitly clicking Check for Updates (Settings) or the new top-nav button, so the app doesn't interrupt you every 30 minutes.
+
 ## Stream Info Below the Video, Twitch-Style
 
 - Moved the channel info block from above the video to below it, matching real Twitch's layout: streamer name and stream title stacked on the left, viewer count (emphasized, accent-colored) and a live-ticking HH:MM:SS stream uptime on the right.

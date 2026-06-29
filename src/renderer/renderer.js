@@ -39,6 +39,7 @@ const state = {
   twitchLoginWebviewActive: false,
   twitchLoginNavigationDebounce: null,
   autoSelectedActiveChannel: true,
+  pendingUpdate: null,
   twitchUserId: '',
   twitchRoster: {
     loadingChannels: new Set(),
@@ -239,6 +240,8 @@ const el = {
   appVersion: document.querySelector('#appVersion'),
   updateStatus: document.querySelector('#updateStatus'),
   checkUpdatesButton: document.querySelector('#checkUpdatesButton'),
+  topNavVersion: document.querySelector('#topNavVersion'),
+  topNavUpdateButton: document.querySelector('#topNavUpdateButton'),
   userDrawer: document.querySelector('#userDrawer'),
   userDrawerClose: document.querySelector('#userDrawerClose'),
   userDrawerName: document.querySelector('#userDrawerName'),
@@ -405,6 +408,7 @@ async function init() {
     setTimeout(() => openOnboarding(), 450);
   }
   setTimeout(() => checkForUpdates({ silent: true }), 1800);
+  setInterval(() => checkForUpdates({ silent: true }), 30 * 60 * 1000);
   setInterval(renderStreamInfoHeader, 1000);
 }
 
@@ -453,9 +457,10 @@ async function loadAppVersion() {
   const label = `ClovaChat v${version}`;
   el.sidebarVersion.textContent = label;
   el.appVersion.textContent = label;
+  if (el.topNavVersion) el.topNavVersion.textContent = `v${version}`;
 }
 
-async function checkForUpdates({ silent = false } = {}) {
+async function checkForUpdates({ silent = false, promptUser = !silent } = {}) {
   el.checkUpdatesButton.disabled = true;
   if (!silent) el.updateStatus.textContent = 'Checking GitHub for updates...';
 
@@ -464,11 +469,13 @@ async function checkForUpdates({ silent = false } = {}) {
 
   if (!result.ok) {
     if (!silent) el.updateStatus.textContent = `Could not check updates: ${result.error}`;
+    setTopNavUpdateAvailable(null);
     return;
   }
 
   if (!result.updateAvailable) {
     if (!silent) el.updateStatus.textContent = `You're up to date on ClovaChat v${result.currentVersion}.`;
+    setTopNavUpdateAvailable(null);
     return;
   }
 
@@ -476,16 +483,29 @@ async function checkForUpdates({ silent = false } = {}) {
     const message = `ClovaChat v${result.latestVersion} is available, but no installer was attached for this computer.`;
     el.updateStatus.textContent = message;
     if (!silent) appendStatus(message, 'error');
+    setTopNavUpdateAvailable(null);
     return;
   }
 
   el.updateStatus.textContent = `ClovaChat v${result.latestVersion} is available.`;
+  setTopNavUpdateAvailable(result);
+
+  if (!promptUser) return;
   const wantsUpdate = window.confirm(
     `ClovaChat v${result.latestVersion} is available.\n\nDownload and open the installer now? ClovaChat will close after the installer opens.`
   );
   if (!wantsUpdate) return;
 
   await downloadAndInstallUpdate(result.asset);
+}
+
+function setTopNavUpdateAvailable(result) {
+  state.pendingUpdate = result?.asset?.url ? result : null;
+  if (!el.topNavUpdateButton) return;
+  el.topNavUpdateButton.hidden = !state.pendingUpdate;
+  if (state.pendingUpdate) {
+    el.topNavUpdateButton.title = `ClovaChat v${state.pendingUpdate.latestVersion} is available — click to install`;
+  }
 }
 
 async function downloadAndInstallUpdate(asset) {
@@ -1383,6 +1403,12 @@ function bindEvents() {
   el.checkUpdatesButton.addEventListener('click', async () => {
     await checkForUpdates({ silent: false });
   });
+  el.topNavUpdateButton?.addEventListener('click', async () => {
+    if (!state.pendingUpdate?.asset) return;
+    el.topNavUpdateButton.disabled = true;
+    await downloadAndInstallUpdate(state.pendingUpdate.asset);
+    el.topNavUpdateButton.disabled = false;
+  });
   el.streamToggleButton.addEventListener('click', () => setStreamVideoHidden(true));
   el.streamSidebarButton.addEventListener('click', async () => {
     if (state.settings.appearance.twitchPlayer) {
@@ -2092,6 +2118,16 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.54',
+    date: '2026-06-29',
+    title: 'Version Number & Update Now Button in Top Nav',
+    bullets: [
+      'The top nav now shows the current version next to Settings, and ClovaChat checks GitHub for updates every 30 minutes (in addition to the existing startup check).',
+      'When an update is found, a pulsing "Update Now" button appears in the top nav — click it to download and install immediately, no need to dig through Settings.',
+      'Background/automatic update checks no longer pop up a confirmation dialog on their own; that\'s reserved for manually clicking Check for Updates in Settings or the new top-nav button.',
+    ],
+  },
   {
     version: 'v1.2.53',
     date: '2026-06-29',
