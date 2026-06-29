@@ -113,6 +113,13 @@
             <div id="streamCard" class="stream-card">
               <div id="streamInfoHeader" class="stream-info-header" hidden></div>
               <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
+              <div id="twitchLoginPrompt" class="twitch-login-prompt" hidden>
+                <div class="twitch-login-prompt-header">
+                  <span>Log in to Twitch to watch with your account (subscriber view, follows, etc.)</span>
+                  <button id="twitchLoginSkipButton" type="button" class="link-button">Continue without logging in</button>
+                </div>
+                <webview id="twitchLoginWebview" src="https://www.twitch.tv/login"></webview>
+              </div>
               <div id="streamEmptyState" class="stream-empty-state">
                 <p id="streamEmptyStateTitle">No stream selected.</p>
                 <span id="streamEmptyStateHint">Pick a channel on the left, or click Watch Active Stream in the sidebar.</span>
@@ -412,6 +419,8 @@
                 <li>The toolbar shows an estimated delay (e.g. "4.2s behind") while a live stream plays.</li>
                 <li>Click Catch Up to nudge the player closer to the live edge and reduce delay if it's grown large.</li>
                 <li>If the stream looks frozen (a common symptom after a Twitch ad break), click Reload, or wait — ClovaChat reloads it automatically if it detects no progress for too long.</li>
+                <li>In Twitch Style layout, if you're not logged in to Twitch, the stream card shows a real Twitch login page instead of the video. Log in there once and it switches to the video automatically; you can also choose "Continue without logging in" to watch anonymously.</li>
+                <li>Check or change your Twitch login from Settings, including logging out.</li>
               </ol>
             </section>
 
@@ -571,8 +580,11 @@
                 <span>7TV Emotes</span>
                 <input id="sevenTvToggle" type="checkbox" />
               </label>
-              <button id="twitchLoginButton" type="button">Log in to Twitch (for stream subscriber view)</button>
-              <p class="settings-hint">Opens a real Twitch login window. Once you're logged in there, the embedded stream player picks up your Twitch session — subscriber perks, ad-free viewing if applicable, and follows should behave like twitch.tv.</p>
+              <div id="twitchAccountRow" class="twitch-account-row">
+                <span id="twitchAccountStatus" class="twitch-account-status">Checking Twitch login...</span>
+                <button id="twitchLogoutButton" type="button" class="danger" hidden>Log out of Twitch</button>
+              </div>
+              <p class="settings-hint">When you're not logged in, the stream area shows a Twitch login page directly — log in there once and the embedded player will behave like the real Twitch site (subscriber view, follows, etc.).</p>
             </section>
 
             <section class="settings-group">

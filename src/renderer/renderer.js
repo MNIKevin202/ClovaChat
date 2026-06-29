@@ -34,6 +34,8 @@ const state = {
   monitored: new Map(),
   hiddenNicks: new Map(),
   twitchClientId: '',
+  twitchLogin: { loggedIn: false, username: '', checked: false },
+  twitchLoginSkipped: false,
   twitchUserId: '',
   twitchRoster: {
     loadingChannels: new Set(),
@@ -87,7 +89,11 @@ const el = {
   channel: document.querySelector('#channel'),
   darkModeToggle: document.querySelector('#darkModeToggle'),
   sevenTvToggle: document.querySelector('#sevenTvToggle'),
-  twitchLoginButton: document.querySelector('#twitchLoginButton'),
+  twitchAccountStatus: document.querySelector('#twitchAccountStatus'),
+  twitchLogoutButton: document.querySelector('#twitchLogoutButton'),
+  twitchLoginPrompt: document.querySelector('#twitchLoginPrompt'),
+  twitchLoginWebview: document.querySelector('#twitchLoginWebview'),
+  twitchLoginSkipButton: document.querySelector('#twitchLoginSkipButton'),
   connectOnOpenToggle: document.querySelector('#connectOnOpenToggle'),
   streamSidebarButton: document.querySelector('#streamSidebarButton'),
   streamPanel: document.querySelector('#streamPanel'),
@@ -1266,7 +1272,18 @@ function bindEvents() {
     }
     renderMessages();
   });
-  el.twitchLoginButton?.addEventListener('click', () => window.macIRC.openTwitchLogin());
+  el.twitchLogoutButton?.addEventListener('click', async () => {
+    await window.macIRC.twitchLogout();
+    state.twitchLoginSkipped = false;
+    appendStatus('Logged out of Twitch.', 'info');
+    await refreshTwitchLoginStatus();
+  });
+  el.twitchLoginSkipButton?.addEventListener('click', () => {
+    state.twitchLoginSkipped = true;
+    renderStreamPlayer();
+  });
+  el.twitchLoginWebview?.addEventListener('did-navigate', handleTwitchLoginWebviewNavigation);
+  el.twitchLoginWebview?.addEventListener('did-navigate-in-page', handleTwitchLoginWebviewNavigation);
   el.connectOnOpenToggle.addEventListener('change', async () => {
     state.settings.connection.connectOnOpen = el.connectOnOpenToggle.checked;
     await saveSettings();
@@ -2027,6 +2044,7 @@ function renderAll() {
   renderStreamPlayer();
   renderMentionsButton();
   renderChangelog();
+  refreshTwitchLoginStatus();
   scheduleAllTimers();
 
   if (state.settings.connection.connectOnOpen && !state.autoConnectStarted) {
@@ -2036,6 +2054,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.45',
+    date: '2026-06-28',
+    title: 'Inline Twitch Login for the Stream',
+    bullets: [
+      'In Twitch Style layout, the stream card now shows a real Twitch login page right where the video would be if you\'re not logged in. Log in there and it switches to the video automatically — no separate window, no manual refresh.',
+      'Added "Continue without logging in" for anonymous viewing, and a "Log out of Twitch" button in Settings with your current login status shown.',
+    ],
+  },
   {
     version: 'v1.2.44',
     date: '2026-06-28',
@@ -3890,17 +3917,64 @@ function isTwitchStyleLayout() {
   return state.settings.appearance.layout === 'twitchStyle';
 }
 
+async function refreshTwitchLoginStatus() {
+  try {
+    const result = await window.macIRC.checkTwitchLoginStatus();
+    state.twitchLogin = {
+      loggedIn: Boolean(result?.loggedIn),
+      username: result?.username || '',
+      checked: true,
+    };
+  } catch {
+    state.twitchLogin = { loggedIn: false, username: '', checked: true };
+  }
+  renderTwitchAccountStatus();
+  renderStreamPlayer();
+}
+
+function renderTwitchAccountStatus() {
+  if (!el.twitchAccountStatus) return;
+  if (!state.twitchLogin.checked) {
+    el.twitchAccountStatus.textContent = 'Checking Twitch login...';
+    el.twitchAccountStatus.classList.remove('is-logged-in');
+    el.twitchLogoutButton.hidden = true;
+    return;
+  }
+  if (state.twitchLogin.loggedIn) {
+    el.twitchAccountStatus.textContent = `Logged in to Twitch${state.twitchLogin.username ? ` as ${state.twitchLogin.username}` : ''}`;
+    el.twitchAccountStatus.classList.add('is-logged-in');
+    el.twitchLogoutButton.hidden = false;
+  } else {
+    el.twitchAccountStatus.textContent = 'Not logged in to Twitch';
+    el.twitchAccountStatus.classList.remove('is-logged-in');
+    el.twitchLogoutButton.hidden = true;
+  }
+}
+
+function handleTwitchLoginWebviewNavigation(event) {
+  if (event.url && event.url.includes('/login')) return;
+  refreshTwitchLoginStatus();
+}
+
 function renderStreamPlayer() {
   const configuredChannel = state.settings.appearance.twitchPlayerChannel || streamChannelFromActiveChannel();
   const wantsStream = state.settings.appearance.twitchPlayer && Boolean(configuredChannel);
   const enabled = wantsStream && state.connected;
+  // Only gate the inline Twitch-Style stream card behind login — the small
+  // sidebar-docked player (Standard layout) has no room for an embedded
+  // login page, so it keeps working anonymously like before.
+  const needsLogin = enabled && isTwitchStyleLayout()
+    && state.twitchLogin.checked && !state.twitchLogin.loggedIn && !state.twitchLoginSkipped;
+  const showPlayer = enabled && !needsLogin;
+
   el.streamSidebarButton.textContent = wantsStream ? 'Hide Stream' : 'Watch Active Stream';
-  el.streamPanel.hidden = !enabled;
-  if (el.chatStreamSlot) el.chatStreamSlot.hidden = !enabled || !isTwitchStyleLayout();
-  if (el.streamEmptyState) el.streamEmptyState.hidden = enabled || !isTwitchStyleLayout();
+  el.streamPanel.hidden = !showPlayer;
+  if (el.chatStreamSlot) el.chatStreamSlot.hidden = !showPlayer || !isTwitchStyleLayout();
+  if (el.twitchLoginPrompt) el.twitchLoginPrompt.hidden = !needsLogin;
+  if (el.streamEmptyState) el.streamEmptyState.hidden = showPlayer || needsLogin || !isTwitchStyleLayout();
   renderStreamEmptyState(wantsStream);
   renderStreamInfoHeader();
-  if (!enabled) {
+  if (!showPlayer) {
     clearStreamPlayer();
     return;
   }

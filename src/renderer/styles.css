@@ -2235,8 +2235,57 @@ textarea:focus {
 
 .stream-info-header,
 .chat-stream-slot,
-.stream-empty-state {
+.stream-empty-state,
+.twitch-login-prompt {
   display: none;
+}
+
+.twitch-login-prompt:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #0e0e10;
+}
+
+.twitch-login-prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: #18181b;
+  color: #efeff1;
+  font-size: 12px;
+}
+
+.twitch-login-prompt-header .link-button {
+  color: #a970ff;
+  flex: 0 0 auto;
+}
+
+#twitchLoginWebview {
+  display: flex;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+}
+
+.twitch-account-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.twitch-account-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.twitch-account-status.is-logged-in {
+  color: var(--green);
 }
 
 /* Standard layout: the card wrapper disappears so its children act like
@@ -2391,6 +2440,10 @@ body[data-layout="twitch"] .chat-stream-slot {
   aspect-ratio: 16 / 9;
   min-height: 0;
   background: #000;
+}
+
+body[data-layout="twitch"] .twitch-login-prompt:not([hidden]) {
+  flex: 0 0 auto;
 }
 
 body[data-layout="twitch"] .stream-action-row {

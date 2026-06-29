@@ -67,6 +67,14 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Popups (Wave/Say hello/etc.) moved to sit directly above the message input. Channel Settings and Mentions moved to a small action row under the video, alongside a new Open Stream in Browser button.
 - Renamed the "Chat" tab to "Streams/Chat" in the top navigation.
 
+## Inline Twitch Login for the Stream
+
+- Replaced the separate Twitch login popup window with a real Twitch login page embedded directly in the Twitch Style stream card (via an Electron `<webview>` sharing the app's default session/cookies) when you're not logged in.
+- Detects navigation away from the login page (via the webview's `did-navigate` events) and automatically re-checks login status and switches to the actual video — no manual refresh needed.
+- Added "Continue without logging in" to skip the prompt for the session, and a Settings status row showing "Logged in as X" / "Not logged in" with a Log out button that clears Twitch's session cookies.
+- Login status is checked by reading the `auth-token` cookie via Electron's session cookie API (main process), since that's the same cookie/session the embedded `player.twitch.tv` widget uses.
+- Scope note: this only applies to the Twitch Style layout's stream card — the small sidebar-docked player in Standard layout doesn't have room for an embedded login page and still loads anonymously.
+
 ## Usability Pass: Dashboard Default, Channel List, Popups, Twitch Login
 
 - App now opens on Dashboard at startup; Chat still restores the last active channel/stream/chat within the session.

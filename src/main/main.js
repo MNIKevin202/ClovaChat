@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, shell, dialog, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const http = require('http');
@@ -119,6 +119,11 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       backgroundThrottling: false,
+      // Lets the renderer embed a real <webview> pointed at Twitch's own
+      // login page inline (in the stream area) instead of a separate popup
+      // window, sharing this window's session so the embedded stream
+      // player picks up the resulting login cookies too.
+      webviewTag: true,
     }
   });
 
@@ -224,23 +229,37 @@ ipcMain.handle('settings:reset', async (_event, options = {}) => {
   }
 });
 
-ipcMain.handle('twitch:openLogin', () => {
-  // Opens a real Twitch login page in a window that shares the app's default
-  // session, so the cookies it sets are also sent by the embedded stream
-  // player (which loads player.twitch.tv in the same session/partition) —
-  // letting it pick up subscriber/follower state like the real Twitch site.
-  const loginWindow = new BrowserWindow({
-    width: 480,
-    height: 720,
-    title: 'Log in to Twitch',
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  loginWindow.setMenuBarVisibility(false);
-  loginWindow.loadURL('https://www.twitch.tv/login');
-  return { ok: true };
+ipcMain.handle('twitch:checkLoginStatus', async () => {
+  // Twitch's web client sets an "auth-token" cookie (scoped to .twitch.tv)
+  // once you're logged in; since the in-app <webview> login and the
+  // player.twitch.tv embed both use this window's default session, reading
+  // the cookie here is a reliable signal of whether the embed will also see
+  // you as logged in.
+  try {
+    const cookies = await session.defaultSession.cookies.get({ domain: 'twitch.tv' });
+    const authToken = cookies.find((cookie) => cookie.name === 'auth-token');
+    const loginCookie = cookies.find((cookie) => cookie.name === 'login' || cookie.name === 'name');
+    return {
+      ok: true,
+      loggedIn: Boolean(authToken),
+      username: loginCookie ? decodeURIComponent(loginCookie.value) : '',
+    };
+  } catch (error) {
+    return { ok: false, loggedIn: false, username: '', error: error.message };
+  }
+});
+
+ipcMain.handle('twitch:logout', async () => {
+  try {
+    const cookies = await session.defaultSession.cookies.get({ domain: 'twitch.tv' });
+    await Promise.all(cookies.map((cookie) => {
+      const url = `${cookie.secure ? 'https' : 'http'}://${cookie.domain.replace(/^\./, '')}${cookie.path}`;
+      return session.defaultSession.cookies.remove(url, cookie.name).catch(() => {});
+    }));
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
 });
 
 ipcMain.handle('external:open', (_event, url) => {
