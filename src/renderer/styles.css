@@ -2243,8 +2243,10 @@ textarea:focus {
 .twitch-login-prompt:not([hidden]) {
   display: flex;
   flex-direction: column;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
   width: 100%;
-  aspect-ratio: 16 / 9;
   background: #0e0e10;
 }
 
@@ -2257,6 +2259,14 @@ textarea:focus {
   background: #18181b;
   color: #efeff1;
   font-size: 12px;
+}
+
+.twitch-login-prompt-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  flex: 0 0 auto;
 }
 
 .twitch-login-prompt-header .link-button {
@@ -2463,6 +2473,7 @@ body[data-layout="twitch"] .stream-info-header {
 
 body[data-layout="twitch"] .chat-stream-slot {
   display: flex;
+  position: relative;
   flex: 0 0 auto;
   width: 100%;
   aspect-ratio: 16 / 9;
@@ -2471,7 +2482,7 @@ body[data-layout="twitch"] .chat-stream-slot {
 }
 
 body[data-layout="twitch"] .twitch-login-prompt:not([hidden]) {
-  flex: 0 0 auto;
+  display: flex;
 }
 
 body[data-layout="twitch"] .stream-action-row {

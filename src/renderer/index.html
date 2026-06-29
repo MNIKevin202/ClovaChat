@@ -114,13 +114,17 @@
           <div id="chatBody" class="chat-body">
             <div id="streamCard" class="stream-card">
               <div id="streamInfoHeader" class="stream-info-header" hidden></div>
-              <div id="chatStreamSlot" class="chat-stream-slot" hidden></div>
-              <div id="twitchLoginPrompt" class="twitch-login-prompt" hidden>
-                <div class="twitch-login-prompt-header">
-                  <span>Log in to Twitch to watch with your account (subscriber view, follows, etc.)</span>
-                  <button id="twitchLoginSkipButton" type="button" class="link-button">Continue without logging in</button>
+              <div id="chatStreamSlot" class="chat-stream-slot" hidden>
+                <div id="twitchLoginPrompt" class="twitch-login-prompt" hidden>
+                  <div class="twitch-login-prompt-header">
+                    <span>Log in to Twitch to watch with your account</span>
+                    <div class="twitch-login-prompt-actions">
+                      <button id="twitchLoginRefreshButton" type="button" class="secondary">Already logged in</button>
+                      <button id="twitchLoginSkipButton" type="button" class="link-button">Continue without logging in</button>
+                    </div>
+                  </div>
+                  <webview id="twitchLoginWebview" src="https://www.twitch.tv/login"></webview>
                 </div>
-                <webview id="twitchLoginWebview" src="https://www.twitch.tv/login"></webview>
               </div>
               <div id="streamEmptyState" class="stream-empty-state">
                 <p id="streamEmptyStateTitle">No stream selected.</p>

@@ -94,6 +94,7 @@ const el = {
   twitchLoginPrompt: document.querySelector('#twitchLoginPrompt'),
   twitchLoginWebview: document.querySelector('#twitchLoginWebview'),
   twitchLoginSkipButton: document.querySelector('#twitchLoginSkipButton'),
+  twitchLoginRefreshButton: document.querySelector('#twitchLoginRefreshButton'),
   connectOnOpenToggle: document.querySelector('#connectOnOpenToggle'),
   streamSidebarButton: document.querySelector('#streamSidebarButton'),
   streamPanel: document.querySelector('#streamPanel'),
@@ -1285,6 +1286,7 @@ function bindEvents() {
     state.twitchLoginSkipped = true;
     renderStreamPlayer();
   });
+  el.twitchLoginRefreshButton?.addEventListener('click', refreshAfterTwitchLogin);
   el.twitchLoginWebview?.addEventListener('did-navigate', handleTwitchLoginWebviewNavigation);
   el.twitchLoginWebview?.addEventListener('did-navigate-in-page', handleTwitchLoginWebviewNavigation);
   el.connectOnOpenToggle.addEventListener('change', async () => {
@@ -2082,6 +2084,15 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.47',
+    date: '2026-06-28',
+    title: 'Twitch Login Flow Fixes',
+    bullets: [
+      'Fixed a bug where the login prompt could be hidden along with the stream area it lived inside, making it invisible in some states.',
+      'Added an "Already logged in" button to manually recheck login status if the automatic detection doesn\'t catch it, and the app now reloads automatically once login is confirmed.',
+    ],
+  },
   {
     version: 'v1.2.46',
     date: '2026-06-28',
@@ -3989,9 +4000,22 @@ function renderTwitchAccountStatus() {
   }
 }
 
-function handleTwitchLoginWebviewNavigation(event) {
+async function refreshAfterTwitchLogin() {
+  state.twitchLoginSkipped = false;
+  await refreshTwitchLoginStatus();
+  window.location.reload();
+}
+
+async function handleTwitchLoginWebviewNavigation(event) {
   if (event.url && event.url.includes('/login')) return;
-  refreshTwitchLoginStatus();
+  await refreshTwitchLoginStatus();
+  if (state.twitchLogin.loggedIn) {
+    window.location.reload();
+    return;
+  }
+  if (el.twitchLoginWebview && event.url && !event.url.includes('/login')) {
+    el.twitchLoginWebview.src = 'https://www.twitch.tv/login';
+  }
 }
 
 function renderStreamPlayer() {
@@ -4004,14 +4028,18 @@ function renderStreamPlayer() {
   const needsLogin = enabled && isTwitchStyleLayout()
     && state.twitchLogin.checked && !state.twitchLogin.loggedIn && !state.twitchLoginSkipped;
   const showPlayer = enabled && !needsLogin;
+  const showPlayerArea = (showPlayer || needsLogin) && isTwitchStyleLayout();
 
   el.streamSidebarButton.textContent = wantsStream ? 'Hide Stream' : 'Watch Active Stream';
-  el.streamPanel.hidden = !showPlayer;
-  if (el.chatStreamSlot) el.chatStreamSlot.hidden = !showPlayer || !isTwitchStyleLayout();
+  el.streamPanel.hidden = !(showPlayer || needsLogin);
+  if (el.chatStreamSlot) el.chatStreamSlot.hidden = !showPlayerArea;
   if (el.twitchLoginPrompt) el.twitchLoginPrompt.hidden = !needsLogin;
   if (el.streamEmptyState) el.streamEmptyState.hidden = showPlayer || needsLogin || !isTwitchStyleLayout();
   renderStreamEmptyState(wantsStream);
   renderStreamInfoHeader();
+  if (needsLogin) {
+    applyStreamPanelPlacement();
+  }
   if (!showPlayer) {
     clearStreamPlayer();
     return;

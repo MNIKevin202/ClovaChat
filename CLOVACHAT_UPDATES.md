@@ -67,6 +67,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Popups (Wave/Say hello/etc.) moved to sit directly above the message input. Channel Settings and Mentions moved to a small action row under the video, alongside a new Open Stream in Browser button.
 - Renamed the "Chat" tab to "Streams/Chat" in the top navigation.
 
+## Twitch Login Flow Fixes
+
+- Fixed the login prompt being nested inside the same container it shared a visibility flag with, which could hide it along with the rest of the stream area in some states.
+- Added an "Already logged in" manual recheck button next to "Continue without logging in", and the app now reloads automatically once login is confirmed instead of relying solely on webview navigation detection.
+
 ## Twitch Style: Sidebar is Channels-Only
 
 - In Twitch Style layout, the sidebar now shows only the channel list (search + channels), nothing else.
