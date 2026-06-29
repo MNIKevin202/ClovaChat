@@ -2126,6 +2126,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.4',
+    date: '2026-06-29',
+    title: 'Stability Improvements',
+    bullets: [
+      'Added a check-for-updates button (⟳) next to the version number for quick manual update checks.',
+      'Made the stream auto-resume watchdog less aggressive: now waits for 12 seconds of pausing (instead of 8) before auto-resuming, reducing false triggers on brief Twitch embed pauses.',
+      'Increased the stuck-stream detection threshold from 45 to 90 seconds, allowing more time for streams to recover from ads or quality switches before attempting to reload.',
+    ],
+  },
+  {
     version: 'v1.3.3',
     date: '2026-06-29',
     title: 'Updater Test Release',
