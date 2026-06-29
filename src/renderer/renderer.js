@@ -2126,6 +2126,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.5',
+    date: '2026-06-29',
+    title: 'Updater Test',
+    bullets: [
+      'Test release for updater validation.',
+    ],
+  },
+  {
     version: 'v1.3.4',
     date: '2026-06-29',
     title: 'Stability Improvements',
