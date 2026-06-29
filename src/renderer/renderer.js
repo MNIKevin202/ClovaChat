@@ -135,6 +135,10 @@ const el = {
   chatTab: document.querySelector('#chatTab'),
   channels: document.querySelector('#channels'),
   streamInfoHeader: document.querySelector('#streamInfoHeader'),
+  streamInfoName: document.querySelector('#streamInfoName'),
+  streamInfoTitle: document.querySelector('#streamInfoTitle'),
+  streamInfoViewers: document.querySelector('#streamInfoViewers'),
+  streamInfoUptime: document.querySelector('#streamInfoUptime'),
   topicBar: document.querySelector('#topicBar'),
   channelStatusStrip: document.querySelector('#channelStatusStrip'),
   messages: document.querySelector('#messages'),
@@ -401,6 +405,7 @@ async function init() {
     setTimeout(() => openOnboarding(), 450);
   }
   setTimeout(() => checkForUpdates({ silent: true }), 1800);
+  setInterval(renderStreamInfoHeader, 1000);
 }
 
 async function loadChatHistory() {
@@ -2087,6 +2092,14 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.2.53',
+    date: '2026-06-29',
+    title: 'Stream Info Below the Video, Twitch-Style',
+    bullets: [
+      'Moved the channel name/title info from above the video to below it, matching real Twitch: streamer name and stream title on the left, viewer count (emphasized) and a live-ticking stream uptime on the right.',
+    ],
+  },
   {
     version: 'v1.2.52',
     date: '2026-06-29',
@@ -3823,29 +3836,29 @@ function renderStreamInfoHeader() {
 
   const details = state.streamDetails.get(channel.toLowerCase()) || {};
   const isLive = state.liveChannels.has(channel.toLowerCase());
-  el.streamInfoHeader.innerHTML = '';
 
-  if (isLive) {
-    const live = document.createElement('span');
-    live.className = 'stream-info-live';
-    live.textContent = 'Live';
-    el.streamInfoHeader.append(live);
+  el.streamInfoName.textContent = channelDisplayName(`#${channel}`).replace(/^#/, '');
+  el.streamInfoTitle.textContent = details.title || (isLive ? '' : 'Offline');
+
+  el.streamInfoViewers.hidden = !isLive || typeof details.viewer_count !== 'number';
+  if (!el.streamInfoViewers.hidden) {
+    el.streamInfoViewers.textContent = `👤 ${details.viewer_count.toLocaleString()}`;
   }
 
-  const name = document.createElement('span');
-  name.className = 'stream-info-name';
-  name.textContent = `#${channel}`;
-  el.streamInfoHeader.append(name);
-
-  const metaParts = [];
-  if (details.game_name) metaParts.push(details.game_name);
-  if (typeof details.viewer_count === 'number') metaParts.push(`${details.viewer_count.toLocaleString()} viewers`);
-  if (metaParts.length > 0) {
-    const meta = document.createElement('span');
-    meta.className = 'stream-info-meta';
-    meta.textContent = metaParts.join(' • ');
-    el.streamInfoHeader.append(meta);
+  el.streamInfoUptime.hidden = !isLive || !details.started_at;
+  if (!el.streamInfoUptime.hidden) {
+    el.streamInfoUptime.textContent = formatStreamUptime(details.started_at);
   }
+}
+
+function formatStreamUptime(startedAt) {
+  const startMs = new Date(startedAt).getTime();
+  if (!Number.isFinite(startMs)) return '';
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startMs) / 1000));
+  const hours = Math.floor(elapsedSeconds / 3600);
+  const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+  const seconds = elapsedSeconds % 60;
+  return [hours, minutes, seconds].map((unit) => String(unit).padStart(2, '0')).join(':');
 }
 
 function renderTopic() {

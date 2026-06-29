@@ -2681,46 +2681,64 @@ body[data-layout="twitch"] .roster-panel.is-open {
 /* Stream info header above the inline player: live badge, channel, category,
    viewer count. */
 .stream-info-header {
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-1);
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-2);
 }
 
 body[data-layout="twitch"] .stream-info-header:not([hidden]) {
   display: flex;
 }
 
-.stream-info-live {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: 999px;
-  background: rgba(130, 212, 155, 0.16);
-  color: var(--green);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.stream-info-live::before {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--green);
+.stream-info-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .stream-info-name {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 800;
   color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.stream-info-meta {
+.stream-info-title {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-info-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.stream-info-viewers {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-strong);
+}
+
+.stream-info-viewers[hidden],
+.stream-info-uptime[hidden] {
+  display: none;
+}
+
+.stream-info-uptime {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  font-family: "SF Mono", Menlo, Consolas, monospace;
 }
 
 /* More compact, less noisy chat rows in Twitch Style. */

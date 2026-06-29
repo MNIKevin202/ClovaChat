@@ -113,7 +113,6 @@
           <div id="topicBar" class="topic-bar">No active channel</div>
           <div id="chatBody" class="chat-body">
             <div id="streamCard" class="stream-card">
-              <div id="streamInfoHeader" class="stream-info-header" hidden></div>
               <div id="chatStreamSlot" class="chat-stream-slot" hidden>
                 <div id="twitchLoginPrompt" class="twitch-login-prompt" hidden>
                   <div class="twitch-login-prompt-header">
@@ -124,6 +123,16 @@
                     </div>
                   </div>
                   <webview id="twitchLoginWebview" src="https://www.twitch.tv/login"></webview>
+                </div>
+              </div>
+              <div id="streamInfoHeader" class="stream-info-header" hidden>
+                <div class="stream-info-main">
+                  <span id="streamInfoName" class="stream-info-name"></span>
+                  <span id="streamInfoTitle" class="stream-info-title"></span>
+                </div>
+                <div class="stream-info-side">
+                  <span id="streamInfoViewers" class="stream-info-viewers"></span>
+                  <span id="streamInfoUptime" class="stream-info-uptime"></span>
                 </div>
               </div>
               <div id="streamEmptyState" class="stream-empty-state">

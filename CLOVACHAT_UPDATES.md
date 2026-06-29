@@ -53,6 +53,11 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Stream Info Below the Video, Twitch-Style
+
+- Moved the channel info block from above the video to below it, matching real Twitch's layout: streamer name and stream title stacked on the left, viewer count (emphasized, accent-colored) and a live-ticking HH:MM:SS stream uptime on the right.
+- Uptime ticks every second via a lightweight global interval; viewer count and title come from the same Helix stream data already used elsewhere (Dashboard, live polling).
+
 ## Default to the First Live Channel
 
 - The active channel now defaults to the first joined channel that's live (checked once live status is known after connecting), falling back to the first channel in the list if no one is live.
