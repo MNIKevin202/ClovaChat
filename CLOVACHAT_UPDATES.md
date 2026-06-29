@@ -53,6 +53,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Mute the Inline Twitch Login Page
+
+- The embedded Twitch login `<webview>` could play audio from autoplaying video previews on twitch.tv. It's now always muted via `webview.setAudioMuted(true)`, applied when it first activates and again on every `dom-ready` (covers Twitch's internal page navigations during the login flow).
+
 ## ClovaChat 1.3
 
 Version milestone bump (1.2.54 → 1.3.0). No functional changes beyond the previous release.

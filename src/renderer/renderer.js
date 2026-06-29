@@ -1320,6 +1320,7 @@ function bindEvents() {
   el.twitchLoginRefreshButton?.addEventListener('click', refreshAfterTwitchLogin);
   el.twitchLoginWebview?.addEventListener('did-navigate', handleTwitchLoginWebviewNavigation);
   el.twitchLoginWebview?.addEventListener('did-navigate-in-page', handleTwitchLoginWebviewNavigation);
+  el.twitchLoginWebview?.addEventListener('dom-ready', muteTwitchLoginWebview);
   el.connectOnOpenToggle.addEventListener('change', async () => {
     state.settings.connection.connectOnOpen = el.connectOnOpenToggle.checked;
     await saveSettings();
@@ -2118,6 +2119,14 @@ function renderAll() {
 }
 
 const CHANGELOG = [
+  {
+    version: 'v1.3.1',
+    date: '2026-06-29',
+    title: 'Mute the Inline Twitch Login Page',
+    bullets: [
+      'The embedded Twitch login page could play audio from autoplaying video previews on twitch.tv — it\'s now always muted, since it\'s only there for logging in, not for listening to.',
+    ],
+  },
   {
     version: 'v1.3.0',
     date: '2026-06-29',
@@ -4131,6 +4140,19 @@ function handleTwitchLoginWebviewNavigation() {
   }, 800);
 }
 
+function muteTwitchLoginWebview() {
+  // The inline Twitch login page can autoplay video/audio previews (e.g. on
+  // twitch.tv's own homepage during redirects) — it's just there to let the
+  // user log in, not to be heard, so always keep it muted regardless of
+  // whatever page it's currently showing.
+  if (!el.twitchLoginWebview) return;
+  try {
+    el.twitchLoginWebview.setAudioMuted(true);
+  } catch {
+    // Webview may not be attached/ready yet; dom-ready will retry.
+  }
+}
+
 function setTwitchLoginWebviewActive(active) {
   if (!el.twitchLoginWebview) return;
   if (active) {
@@ -4141,6 +4163,7 @@ function setTwitchLoginWebviewActive(active) {
     if (state.twitchLoginWebviewActive) return;
     state.twitchLoginWebviewActive = true;
     el.twitchLoginWebview.src = TWITCH_LOGIN_URL;
+    muteTwitchLoginWebview();
     return;
   }
   if (!state.twitchLoginWebviewActive) return;
