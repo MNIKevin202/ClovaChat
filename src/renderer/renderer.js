@@ -2149,6 +2149,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.13',
+    date: '2026-06-30',
+    title: 'Onboarding Modal Scrolling Fix',
+    bullets: [
+      'Fixed scrolling in onboarding wizard to allow access to Next button when content overflows.',
+    ],
+  },
+  {
     version: 'v1.3.12',
     date: '2026-06-30',
     title: 'Bug Fix',
