@@ -2149,6 +2149,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.14',
+    date: '2026-06-30',
+    title: 'Immediate Update Checks',
+    bullets: [
+      'App now checks for updates immediately on startup, even if onboarding wizard is open.',
+      'Previously updates were checked after a 30-second delay.',
+    ],
+  },
+  {
     version: 'v1.3.13',
     date: '2026-06-30',
     title: 'Onboarding Modal Scrolling Fix',
