@@ -2149,6 +2149,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.11',
+    date: '2026-06-30',
+    title: 'Mandatory Onboarding Setup',
+    bullets: [
+      'Onboarding wizard is now mandatory on first launch—cannot be skipped without configuring a connection.',
+      'Skip button hidden until connection credentials are entered.',
+      'Wizard cannot be closed via backdrop click unless manually re-opened from Settings.',
+    ],
+  },
+  {
     version: 'v1.3.10',
     date: '2026-06-30',
     title: 'UX Improvements',
