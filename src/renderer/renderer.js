@@ -406,10 +406,10 @@ async function init() {
   window.macIRC.onIrcEvent(handleIrcEvent);
   await loadChatHistory();
   loadAppVersion();
+  checkForUpdates({ silent: true });
   if (!state.settings.onboarding.completed && !state.settings.onboarding.skipped) {
     setTimeout(() => openOnboarding(), 450);
   }
-  setTimeout(() => checkForUpdates({ silent: true }), 1800);
   setInterval(() => checkForUpdates({ silent: true }), 30 * 60 * 1000);
   setInterval(renderStreamInfoHeader, 1000);
 }
