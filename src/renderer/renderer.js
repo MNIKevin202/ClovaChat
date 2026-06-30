@@ -2127,6 +2127,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.8',
+    date: '2026-06-29',
+    title: 'Twitch Style Default Layout',
+    bullets: [
+      'Changed default layout to Twitch Style for new installations and onboarding flow.',
+      'Users can still switch to Standard layout anytime from the Layout settings.',
+    ],
+  },
+  {
     version: 'v1.3.7',
     date: '2026-06-29',
     title: 'Stream UI Reorganization',
