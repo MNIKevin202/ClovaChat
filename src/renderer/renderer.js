@@ -535,7 +535,7 @@ function ensureSettingsShape() {
   state.settings.appearance.twitchPlayer ??= false;
   state.settings.appearance.twitchPlayerHidden ??= false;
   state.settings.appearance.twitchPlayerDocked ??= true;
-  state.settings.appearance.layout ||= 'standard';
+  state.settings.appearance.layout ||= 'twitchStyle';
   state.settings.appearance.twitchPlayerBounds ||= null;
   state.settings.appearance.twitchPlayerChannel ||= '';
   state.settings.appearance.twitchPlayerStates ||= {};
@@ -758,7 +758,7 @@ function onboardingDraftFromSettings() {
     timestamps: state.settings.preferences.chatDisplay.showTimestamps,
     badges: state.settings.preferences.chatDisplay.showBadges,
     sevenTv: state.settings.appearance.sevenTvEmotes,
-    layoutStyle: state.settings.appearance.layout || 'standard',
+    layoutStyle: state.settings.appearance.layout || 'twitchStyle',
     starterDiscord: false,
     starterLurk: false,
     starterTimer: false,
