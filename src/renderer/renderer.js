@@ -2141,6 +2141,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.10',
+    date: '2026-06-30',
+    title: 'UX Improvements',
+    bullets: [
+      'Added "Get OAuth Token" button in onboarding wizard linking to token generator.',
+      'Dark mode is now the default theme; light mode available in Settings.',
+      'Reset functionality now completely clears all data and shows onboarding wizard on next launch.',
+    ],
+  },
+  {
     version: 'v1.3.9',
     date: '2026-06-30',
     title: 'OAuth Token Auto-Prefix',
