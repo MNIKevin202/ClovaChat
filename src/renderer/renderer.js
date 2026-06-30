@@ -2149,6 +2149,14 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.12',
+    date: '2026-06-30',
+    title: 'Bug Fix',
+    bullets: [
+      'Fixed "Get OAuth Token" button in onboarding wizard to open in default browser.',
+    ],
+  },
+  {
     version: 'v1.3.11',
     date: '2026-06-30',
     title: 'Mandatory Onboarding Setup',
