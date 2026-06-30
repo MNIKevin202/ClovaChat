@@ -2131,6 +2131,15 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.3.9',
+    date: '2026-06-30',
+    title: 'OAuth Token Auto-Prefix',
+    bullets: [
+      'Automatically prepends "oauth:" prefix to Twitch tokens if not already present.',
+      'Users can now paste their token directly without worrying about the prefix.',
+    ],
+  },
+  {
     version: 'v1.3.8',
     date: '2026-06-29',
     title: 'Twitch Style Default Layout',
