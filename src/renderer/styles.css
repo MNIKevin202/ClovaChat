@@ -469,8 +469,9 @@ button.danger:hover {
 .onboarding-modal,
 .reset-modal {
   width: min(720px, calc(100vw - 40px));
-  max-height: min(760px, calc(100vh - 48px));
+  max-height: min(80vh, calc(100vh - 48px));
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: 0;
   overflow: hidden;
   border: 1px solid rgba(143, 215, 221, 0.22);
@@ -519,7 +520,9 @@ button.danger:hover {
 .onboarding-body {
   display: grid;
   gap: 14px;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .onboarding-body label,
