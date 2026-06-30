@@ -1700,6 +1700,10 @@ function hideDisconnectedOverlay() {
 
 function formConfig() {
   const nick = el.nick.value.trim() || 'ClovaChatUser';
+  let password = el.password.value.trim();
+  if (password && !password.startsWith('oauth:')) {
+    password = `oauth:${password}`;
+  }
   return {
     host: el.host.value.trim() || 'irc.libera.chat',
     port: Number(el.port.value || (el.tls.checked ? 6697 : 6667)),
@@ -1707,7 +1711,7 @@ function formConfig() {
     nick,
     username: nick,
     realName: `${nick} via ClovaChat`,
-    password: el.password.value.trim(),
+    password,
     channel: normalizeChannel(el.channel.value),
     channels: uniqueChannels(state.settings.connection.autoJoinChannels),
   };
