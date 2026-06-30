@@ -2149,6 +2149,16 @@ function renderAll() {
 
 const CHANGELOG = [
   {
+    version: 'v1.4.0',
+    date: '2026-06-30',
+    title: 'Stable Release',
+    bullets: [
+      'Improved onboarding experience with mandatory setup flow.',
+      'Enhanced UI with stream controls reorganization and dark mode default.',
+      'Better accessibility with OAuth token auto-prefix and immediate update checks.',
+    ],
+  },
+  {
     version: 'v1.3.14',
     date: '2026-06-30',
     title: 'Immediate Update Checks',
