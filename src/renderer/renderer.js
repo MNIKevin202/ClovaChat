@@ -780,7 +780,8 @@ function renderOnboarding() {
   ];
   el.onboardingProgress.textContent = `Step ${state.onboarding.step + 1} of ${steps.length}`;
   el.onboardingBackButton.disabled = state.onboarding.step === 0;
-  el.onboardingSkipButton.hidden = state.onboarding.step === steps.length - 1;
+  const hasConnection = Boolean(state.settings.profile.password && state.settings.profile.nick);
+  el.onboardingSkipButton.hidden = state.onboarding.step === steps.length - 1 || !hasConnection || !state.onboarding.rerun;
   el.onboardingNextButton.textContent = state.onboarding.step === steps.length - 1 ? 'Open ClovaChat' : (state.onboarding.step === 0 ? 'Get Started' : 'Next');
   el.onboardingBody.innerHTML = '';
   steps[state.onboarding.step]();
@@ -1059,6 +1060,10 @@ function addStarterTools(draft, channel) {
 }
 
 async function skipOnboarding() {
+  const hasConnection = Boolean(state.settings.profile.password && state.settings.profile.nick);
+  if (!hasConnection && !state.onboarding.rerun) {
+    return;
+  }
   state.settings.onboarding = { completed: false, skipped: true, completedAt: null };
   await saveSettings();
   closeOnboarding();
@@ -1156,6 +1161,9 @@ function bindEvents() {
   el.channelSettingsResetButton.addEventListener('click', resetActiveChannelSettings);
   el.channelSettingsCopyButton.addEventListener('click', copyChannelSettingsFromSelection);
   el.channelSettingsApplyAllButton.addEventListener('click', applyActiveChannelSettingsToAll);
+  el.onboardingBackdrop.addEventListener('pointerdown', (event) => {
+    if (event.target === el.onboardingBackdrop && state.onboarding.rerun) closeOnboarding();
+  });
   el.onboardingSkipButton.addEventListener('click', skipOnboarding);
   el.onboardingBackButton.addEventListener('click', () => moveOnboarding(-1));
   el.onboardingNextButton.addEventListener('click', () => moveOnboarding(1));
