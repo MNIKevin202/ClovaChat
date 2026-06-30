@@ -831,7 +831,7 @@ function renderOnboardingConnection() {
   getTokenBtn.type = 'button';
   getTokenBtn.textContent = 'Get OAuth Token';
   getTokenBtn.addEventListener('click', () => {
-    window.macIRC.openExternalUrl('https://twitchtokengenerator.com/');
+    window.macIRC.openExternal('https://twitchtokengenerator.com/');
   });
   tokenRow.append(getTokenBtn);
   el.onboardingBody.append(tokenRow);
