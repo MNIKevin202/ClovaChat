@@ -824,6 +824,16 @@ function renderOnboardingConnection() {
     onboardingField('onboardingNick', 'Twitch username / nickname', state.onboarding.draft.nick),
     onboardingField('onboardingPassword', 'OAuth token', state.onboarding.draft.password, 'password')
   );
+  const tokenRow = document.createElement('div');
+  tokenRow.className = 'button-row';
+  const getTokenBtn = document.createElement('button');
+  getTokenBtn.type = 'button';
+  getTokenBtn.textContent = 'Get OAuth Token';
+  getTokenBtn.addEventListener('click', () => {
+    window.macIRC.openExternalUrl('https://twitchtokengenerator.com/');
+  });
+  tokenRow.append(getTokenBtn);
+  el.onboardingBody.append(tokenRow);
   const row = document.createElement('div');
   row.className = 'button-row';
   const test = document.createElement('button');

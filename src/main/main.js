@@ -64,7 +64,7 @@ const DEFAULT_SETTINGS = {
       channel: '#twitch',
     },
     appearance: {
-      theme: 'light',
+      theme: 'dark',
       sevenTvEmotes: true,
       twitchPlayer: false,
       twitchPlayerDocked: true,
