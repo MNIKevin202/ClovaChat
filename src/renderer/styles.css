@@ -2449,87 +2449,87 @@ body[data-layout="twitch"] #streamSidebarSection {
 
 body[data-layout="twitch"] .connection-info-under-video:not(:empty) {
   display: block;
-  padding: 0 var(--space-3) var(--space-3);
+  padding: 0 var(--space-3) var(--space-2);
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
-  grid-template-areas:
-    "status disconnect"
-    "details settings"
-    "details logs";
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   max-width: none;
-  padding: var(--space-3);
+  min-height: 58px;
+  padding: 10px 12px;
+  border-color: var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-card-header {
-  grid-area: status;
+  flex: 1 1 190px;
   min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.025);
+  font-size: 12px;
+}
+
+body[data-layout="twitch"] .connection-info-under-video .connection-card.connected .connection-card-header {
+  border-color: rgba(130, 212, 155, 0.28);
+  background: rgba(130, 212, 155, 0.08);
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-card-grid {
-  grid-area: details;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0;
-  overflow: hidden;
-  border: 1px solid var(--card-border, var(--line));
-  border-radius: var(--radius-md);
-  background: var(--button-bg, rgba(255, 255, 255, 0.04));
+  flex: 999 1 320px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 220px;
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-card-row {
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
+  flex: 1 1 96px;
   align-items: flex-start;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   min-width: 0;
-  min-height: 52px;
-  padding: 8px 10px;
-}
-
-body[data-layout="twitch"] .connection-info-under-video .connection-card-row + .connection-card-row {
-  border-left: 1px solid var(--card-border, var(--line));
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-card-row > span:last-child {
   max-width: 100%;
+  font-size: 12px;
 }
 
 body[data-layout="twitch"] .connection-info-under-video #connectionToggleButton {
-  grid-area: disconnect;
+  flex: 1 1 132px;
 }
 
-body[data-layout="twitch"] .connection-info-under-video #serverConnectionButton {
-  grid-area: settings;
-}
-
+body[data-layout="twitch"] .connection-info-under-video #serverConnectionButton,
 body[data-layout="twitch"] .connection-info-under-video #openLogFolderButton {
-  grid-area: logs;
-  justify-self: stretch;
-  min-height: 34px;
-  border: 1px solid var(--card-border, var(--line));
-  border-radius: var(--radius-md);
+  flex: 1 1 150px;
 }
 
 body[data-layout="twitch"] .connection-info-under-video .connection-toggle-button {
-  height: 36px;
+  width: auto;
+  height: 38px;
+  padding: 0 var(--space-3);
+  font-size: 12px;
 }
 
-@media (max-width: 1120px) {
-  body[data-layout="twitch"] .connection-info-under-video .connection-card {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "status"
-      "details"
-      "disconnect"
-      "settings"
-      "logs";
-  }
+body[data-layout="twitch"] .connection-info-under-video #openLogFolderButton {
+  min-height: 38px;
+  border: 1px solid var(--card-border, var(--line));
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 body[data-layout="twitch"] .channel-tools-row .stream-sidebar-button {
