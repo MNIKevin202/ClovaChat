@@ -2440,8 +2440,8 @@ textarea:focus {
   display: none;
 }
 
-/* Twitch Style: the sidebar holds only the channel list — connection info
-   and the stream toggle relocate to live under the video instead. */
+/* Twitch Style: the sidebar holds only the channel list. Stream controls and
+   the dedicated connection dock live under the video instead. */
 body[data-layout="twitch"] #connectionCardSlot,
 body[data-layout="twitch"] #streamSidebarSection {
   display: none;
@@ -2449,87 +2449,390 @@ body[data-layout="twitch"] #streamSidebarSection {
 
 body[data-layout="twitch"] .connection-info-under-video:not(:empty) {
   display: block;
-  padding: 0 var(--space-3) var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
 }
 
-body[data-layout="twitch"] .connection-info-under-video .connection-card {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
+.stream-connection-dock {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(190px, 0.75fr) minmax(320px, 1.6fr) auto;
+  gap: 10px;
   align-items: center;
-  gap: var(--space-2);
-  max-width: none;
-  min-height: 58px;
-  padding: 10px 12px;
-  border-color: var(--line);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.015));
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(110, 232, 239, 0.14);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(169, 112, 255, 0.16), transparent 34%),
+    radial-gradient(circle at 92% 100%, rgba(50, 177, 189, 0.13), transparent 32%),
+    linear-gradient(180deg, rgba(28, 35, 43, 0.94), rgba(17, 22, 28, 0.96));
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.26), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 
-body[data-layout="twitch"] .connection-info-under-video .connection-card-header {
-  flex: 1 1 190px;
-  min-width: 0;
-  min-height: 38px;
-  padding: 0 10px;
-  border: 1px solid var(--card-border, var(--line));
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.025);
-  font-size: 12px;
+.stream-connection-dock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(50, 177, 189, 0.18), transparent 30%, rgba(169, 112, 255, 0.16));
+  opacity: 0.38;
 }
 
-body[data-layout="twitch"] .connection-info-under-video .connection-card.connected .connection-card-header {
-  border-color: rgba(130, 212, 155, 0.28);
-  background: rgba(130, 212, 155, 0.08);
+.stream-connection-dock > * {
+  position: relative;
+  z-index: 1;
 }
 
-body[data-layout="twitch"] .connection-info-under-video .connection-card-grid {
-  flex: 999 1 320px;
+.stream-connection-status,
+.stream-connection-tile,
+.stream-connection-icon-button,
+.stream-connection-primary,
+.stream-connection-secondary {
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.stream-connection-status {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  min-width: 220px;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid rgba(130, 212, 155, 0.24);
+  border-radius: 12px;
+  background: rgba(130, 212, 155, 0.07);
 }
 
-body[data-layout="twitch"] .connection-info-under-video .connection-card-row {
-  display: inline-flex;
-  flex: 1 1 96px;
+.stream-connection-dock.disconnected .stream-connection-status {
+  border-color: rgba(255, 132, 128, 0.24);
+  background: rgba(255, 132, 128, 0.06);
+}
+
+.stream-connection-status-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--green);
+  background: rgba(130, 212, 155, 0.12);
+  box-shadow: 0 0 0 4px rgba(130, 212, 155, 0.08);
+  font-size: 14px;
+}
+
+.stream-connection-dock.disconnected .stream-connection-status-icon {
+  color: var(--red);
+  background: rgba(255, 132, 128, 0.12);
+  box-shadow: 0 0 0 4px rgba(255, 132, 128, 0.07);
+}
+
+.stream-connection-status-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.stream-connection-status-copy strong {
+  color: var(--green);
+  font-size: 14px;
+}
+
+.stream-connection-dock.disconnected .stream-connection-status-copy strong {
+  color: var(--red);
+}
+
+.stream-connection-status-copy span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.stream-connection-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.stream-connection-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
-  min-height: 38px;
-  padding: 6px 10px;
-  border: 1px solid var(--card-border, var(--line));
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.025);
+  min-height: 52px;
+  padding: 8px 32px 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 12px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
-body[data-layout="twitch"] .connection-info-under-video .connection-card-row > span:last-child {
+button.stream-connection-tile {
+  width: 100%;
+  text-align: left;
+}
+
+.stream-connection-tile:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.stream-connection-tile.is-editable:hover,
+.stream-connection-tile.is-editing {
+  transform: translateY(-1px);
+  border-color: rgba(50, 177, 189, 0.45);
+  background: rgba(50, 177, 189, 0.08);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.stream-connection-tile-label {
+  color: var(--green);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stream-connection-tile strong,
+.stream-connection-tile-input {
   max-width: 100%;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stream-connection-tile strong.is-placeholder {
+  color: var(--muted);
+}
+
+.stream-connection-edit-mark {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  color: var(--accent);
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 160ms ease;
+}
+
+.stream-connection-tile:hover .stream-connection-edit-mark {
+  opacity: 1;
+}
+
+.stream-connection-tile.is-editing {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  grid-template-areas:
+    "label label label"
+    "input save cancel";
+  align-items: center;
+  padding-right: 10px;
+}
+
+.stream-connection-tile.is-editing .stream-connection-tile-label {
+  grid-area: label;
+}
+
+.stream-connection-tile-input {
+  grid-area: input;
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+}
+
+.stream-connection-mini-action {
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.stream-connection-mini-action.is-muted {
+  color: var(--muted);
+  background: transparent;
+}
+
+.stream-connection-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 0;
+}
+
+.stream-connection-primary {
+  min-width: 118px;
+  height: 42px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.stream-connection-primary.is-connect {
+  border-color: rgba(50, 177, 189, 0.58);
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), #7a5cff);
+  box-shadow: 0 10px 24px rgba(50, 177, 189, 0.2);
+}
+
+.stream-connection-primary.is-disconnect {
+  border-color: rgba(255, 132, 128, 0.48);
+  color: #ffb1ad;
+  background: rgba(255, 132, 128, 0.075);
+}
+
+.stream-connection-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.stream-connection-primary:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.stream-connection-icon-button {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 12px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.stream-connection-icon-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(169, 112, 255, 0.42);
+  color: var(--ink);
+  background: rgba(169, 112, 255, 0.11);
+}
+
+.stream-connection-expand {
+  color: var(--accent);
+}
+
+.stream-connection-dock.is-expanded .stream-connection-expand {
+  transform: rotate(180deg);
+}
+
+.stream-connection-advanced {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) repeat(2, minmax(120px, auto)) auto;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.065);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.14);
+  animation: connectionDockReveal 180ms ease both;
+}
+
+.stream-connection-advanced[hidden] {
+  display: none;
+}
+
+.stream-connection-advanced label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.stream-connection-advanced input {
+  height: 34px;
+  min-width: 0;
+  border-radius: 10px;
   font-size: 12px;
 }
 
-body[data-layout="twitch"] .connection-info-under-video #connectionToggleButton {
-  flex: 1 1 132px;
+.stream-connection-switch {
+  align-items: center;
+  justify-content: center;
+  flex-direction: row !important;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.075);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
 }
 
-body[data-layout="twitch"] .connection-info-under-video #serverConnectionButton,
-body[data-layout="twitch"] .connection-info-under-video #openLogFolderButton {
-  flex: 1 1 150px;
-}
-
-body[data-layout="twitch"] .connection-info-under-video .connection-toggle-button {
+.stream-connection-switch input {
   width: auto;
-  height: 38px;
-  padding: 0 var(--space-3);
-  font-size: 12px;
+  height: auto;
 }
 
-body[data-layout="twitch"] .connection-info-under-video #openLogFolderButton {
-  min-height: 38px;
-  border: 1px solid var(--card-border, var(--line));
-  border-radius: var(--radius-md);
+.stream-connection-secondary {
+  height: 34px;
+  align-self: end;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--ink);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
+  background: rgba(50, 177, 189, 0.13);
+}
+
+@keyframes connectionDockReveal {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 860px) {
+  .stream-connection-dock {
+    grid-template-columns: minmax(180px, 0.9fr) minmax(280px, 1.4fr);
+  }
+
+  .stream-connection-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 720px) {
+  .stream-connection-dock,
+  .stream-connection-advanced {
+    grid-template-columns: 1fr;
+  }
+
+  .stream-connection-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .stream-connection-actions {
+    justify-content: stretch;
+  }
+
+  .stream-connection-primary {
+    flex: 1 1 auto;
+  }
 }
 
 body[data-layout="twitch"] .channel-tools-row .stream-sidebar-button {

@@ -54,6 +54,7 @@ const state = {
   commandPalette: { open: false, query: '', selectedIndex: 0, results: [] },
   channelSettings: { open: false, channel: '' },
   onboarding: { open: false, step: 0, draft: {} },
+  connectionDock: { advancedOpen: false, editing: '' },
   sentMessages: [],
   sentMessageIndex: -1,
   pendingNewMessages: 0,
@@ -1254,6 +1255,8 @@ function bindEvents() {
   el.disconnectedReconnectButton?.addEventListener('click', connect);
   el.disconnectedDismissButton?.addEventListener('click', hideDisconnectedOverlay);
   el.connectionToggleButton?.addEventListener('click', toggleConnection);
+  el.connectionInfoUnderVideo?.addEventListener('click', handleStreamConnectionDockClick);
+  el.connectionInfoUnderVideo?.addEventListener('submit', handleStreamConnectionDockSubmit);
   el.serverConnectionButton?.addEventListener('click', () => setServerConnectionModalOpen(true));
   el.serverConnectionCloseButton?.addEventListener('click', () => setServerConnectionModalOpen(false));
   el.serverConnectionCloseX?.addEventListener('click', () => setServerConnectionModalOpen(false));
@@ -1694,6 +1697,7 @@ async function toggleConnection() {
     button.disabled = true;
     button.textContent = goingOffline ? 'Disconnecting...' : 'Connecting...';
   }
+  renderStreamConnectionDock();
   try {
     if (goingOffline) await disconnect();
     else await connect();
@@ -1760,6 +1764,258 @@ function renderConnectionCard() {
       el.connectionToggleButton.classList.remove('danger');
     }
   }
+
+  renderStreamConnectionDock();
+}
+
+function renderStreamConnectionDock() {
+  if (!el.connectionInfoUnderVideo) return;
+  if (document.body.dataset.layout !== 'twitch') {
+    el.connectionInfoUnderVideo.replaceChildren();
+    return;
+  }
+
+  const dock = document.createElement('section');
+  dock.className = `stream-connection-dock${state.connected ? ' connected' : ' disconnected'}${state.connectionToggleBusy ? ' is-busy' : ''}${state.connectionDock.advancedOpen ? ' is-expanded' : ''}`;
+  dock.setAttribute('aria-label', 'Connection controls');
+
+  const status = document.createElement('div');
+  status.className = 'stream-connection-status';
+  const icon = document.createElement('span');
+  icon.className = 'stream-connection-status-icon';
+  icon.setAttribute('aria-hidden', 'true');
+  icon.textContent = '💬';
+  const statusCopy = document.createElement('span');
+  statusCopy.className = 'stream-connection-status-copy';
+  const statusTitle = document.createElement('strong');
+  statusTitle.textContent = state.connected ? 'Connected' : 'Offline';
+  const statusSubtext = document.createElement('span');
+  statusSubtext.textContent = 'Twitch IRC';
+  statusCopy.append(statusTitle, statusSubtext);
+  status.append(icon, statusCopy);
+
+  const fields = document.createElement('div');
+  fields.className = 'stream-connection-fields';
+  fields.append(
+    streamConnectionFieldTile('host', 'Server', state.settings.quickConnect.host, 'irc.chat.twitch.tv', true),
+    streamConnectionFieldTile('nick', 'Nick', state.settings.profile.nick, 'Twitch username', true),
+    streamConnectionFieldTile('channels', 'Channels', `${state.channels.length} joined`, 'No channels joined', false)
+  );
+
+  const actions = document.createElement('div');
+  actions.className = 'stream-connection-actions';
+  actions.append(
+    streamConnectionActionButton(),
+    streamConnectionIconButton('open-settings', '⚙', 'Server connection settings'),
+    streamConnectionIconButton('open-logs', '📁', 'Open logs folder', !state.settings.preferences.channelLogFolder),
+    streamConnectionIconButton('toggle-advanced', '⌄', state.connectionDock.advancedOpen ? 'Hide advanced connection settings' : 'Show advanced connection settings', false, {
+      className: 'stream-connection-expand',
+      expanded: state.connectionDock.advancedOpen,
+    })
+  );
+
+  dock.append(status, fields, actions, renderStreamConnectionAdvanced());
+  el.connectionInfoUnderVideo.replaceChildren(dock);
+}
+
+function streamConnectionActionButton() {
+  const button = document.createElement('button');
+  button.className = `stream-connection-primary${state.connected ? ' is-disconnect' : ' is-connect'}`;
+  button.type = 'button';
+  button.dataset.dockAction = 'toggle-connection';
+  button.disabled = Boolean(state.connectionToggleBusy);
+  button.textContent = state.connectionToggleBusy
+    ? (state.connected ? 'Disconnecting...' : 'Connecting...')
+    : (state.connected ? 'Disconnect' : 'Connect');
+  return button;
+}
+
+function streamConnectionIconButton(action, icon, label, hidden = false, options = {}) {
+  const button = document.createElement('button');
+  button.className = `stream-connection-icon-button${options.className ? ` ${options.className}` : ''}`;
+  button.type = 'button';
+  button.dataset.dockAction = action;
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  if (typeof options.expanded === 'boolean') button.setAttribute('aria-expanded', String(options.expanded));
+  button.hidden = hidden;
+  button.textContent = icon;
+  return button;
+}
+
+function streamConnectionFieldTile(field, label, value, placeholder, editable) {
+  const isEditing = state.connectionDock.editing === field;
+  const tile = document.createElement(isEditing ? 'form' : 'button');
+  tile.className = `stream-connection-tile${editable ? ' is-editable' : ''}${isEditing ? ' is-editing' : ''}`;
+  if (isEditing) tile.dataset.dockEditForm = field;
+  else tile.type = editable ? 'button' : 'button';
+  if (!editable) tile.disabled = true;
+  if (editable && !isEditing) {
+    tile.dataset.dockAction = 'edit-field';
+    tile.dataset.field = field;
+    tile.title = `Edit ${label.toLowerCase()}`;
+  }
+
+  const labelEl = document.createElement('span');
+  labelEl.className = 'stream-connection-tile-label';
+  labelEl.textContent = label;
+
+  if (isEditing) {
+    const input = document.createElement('input');
+    input.className = 'stream-connection-tile-input';
+    input.name = 'value';
+    input.value = value || '';
+    input.placeholder = placeholder;
+    input.autocomplete = field === 'nick' ? 'username' : 'off';
+
+    const save = document.createElement('button');
+    save.className = 'stream-connection-mini-action';
+    save.type = 'submit';
+    save.textContent = 'Save';
+
+    const cancel = document.createElement('button');
+    cancel.className = 'stream-connection-mini-action is-muted';
+    cancel.type = 'button';
+    cancel.dataset.dockAction = 'cancel-edit';
+    cancel.textContent = 'Cancel';
+
+    tile.append(labelEl, input, save, cancel);
+    requestAnimationFrame(() => input.focus());
+    return tile;
+  }
+
+  const valueEl = document.createElement('strong');
+  valueEl.textContent = value || placeholder;
+  if (!value) valueEl.className = 'is-placeholder';
+  tile.append(labelEl, valueEl);
+
+  if (editable) {
+    const editMark = document.createElement('span');
+    editMark.className = 'stream-connection-edit-mark';
+    editMark.setAttribute('aria-hidden', 'true');
+    editMark.textContent = '✎';
+    tile.append(editMark);
+  }
+
+  return tile;
+}
+
+function renderStreamConnectionAdvanced() {
+  const panel = document.createElement('form');
+  panel.className = 'stream-connection-advanced';
+  panel.dataset.dockAdvanced = 'true';
+  panel.hidden = !state.connectionDock.advancedOpen;
+  panel.append(
+    streamConnectionAdvancedInput('host', 'Server', state.settings.quickConnect.host, 'irc.chat.twitch.tv'),
+    streamConnectionAdvancedInput('port', 'Port', String(state.settings.quickConnect.port || 6697), '', 'number'),
+    streamConnectionAdvancedInput('channel', 'Starting Channel', state.settings.quickConnect.channel, '#channel'),
+    streamConnectionAdvancedToggle('tls', 'SSL / TLS', state.settings.quickConnect.tls),
+    streamConnectionAdvancedToggle('connectOnOpen', 'Connect on open', state.settings.connection.connectOnOpen),
+    streamConnectionAdvancedSave()
+  );
+  return panel;
+}
+
+function streamConnectionAdvancedInput(name, label, value, placeholder, type = 'text') {
+  const wrapper = document.createElement('label');
+  const text = document.createElement('span');
+  text.textContent = label;
+  const input = document.createElement('input');
+  input.name = name;
+  input.type = type;
+  input.value = value || '';
+  input.placeholder = placeholder;
+  input.autocomplete = 'off';
+  if (type === 'number') {
+    input.min = '1';
+    input.max = '65535';
+  }
+  wrapper.append(text, input);
+  return wrapper;
+}
+
+function streamConnectionAdvancedToggle(name, label, checked) {
+  const wrapper = document.createElement('label');
+  wrapper.className = 'stream-connection-switch';
+  const input = document.createElement('input');
+  input.name = name;
+  input.type = 'checkbox';
+  input.checked = Boolean(checked);
+  const text = document.createElement('span');
+  text.textContent = label;
+  wrapper.append(input, text);
+  return wrapper;
+}
+
+function streamConnectionAdvancedSave() {
+  const button = document.createElement('button');
+  button.className = 'stream-connection-secondary';
+  button.type = 'submit';
+  button.textContent = 'Save Advanced';
+  return button;
+}
+
+async function handleStreamConnectionDockClick(event) {
+  const actionEl = event.target.closest('[data-dock-action]');
+  if (!actionEl || !el.connectionInfoUnderVideo?.contains(actionEl)) return;
+  const action = actionEl.dataset.dockAction;
+
+  if (action === 'toggle-connection') {
+    await toggleConnection();
+  } else if (action === 'open-settings') {
+    setServerConnectionModalOpen(true);
+  } else if (action === 'open-logs') {
+    const folder = state.settings.preferences.channelLogFolder;
+    if (folder) window.macIRC.openLogFolder(folder);
+  } else if (action === 'toggle-advanced') {
+    state.connectionDock.advancedOpen = !state.connectionDock.advancedOpen;
+    renderStreamConnectionDock();
+  } else if (action === 'edit-field') {
+    state.connectionDock.editing = actionEl.dataset.field || '';
+    renderStreamConnectionDock();
+  } else if (action === 'cancel-edit') {
+    state.connectionDock.editing = '';
+    renderStreamConnectionDock();
+  }
+}
+
+async function handleStreamConnectionDockSubmit(event) {
+  const editForm = event.target.closest('[data-dock-edit-form]');
+  const advancedForm = event.target.closest('[data-dock-advanced]');
+  if (!editForm && !advancedForm) return;
+  event.preventDefault();
+
+  if (editForm) {
+    const field = editForm.dataset.dockEditForm;
+    const value = editForm.elements.value.value.trim();
+    await saveStreamConnectionField(field, value);
+    state.connectionDock.editing = '';
+    renderConnectionCard();
+    return;
+  }
+
+  const data = new FormData(advancedForm);
+  el.host.value = String(data.get('host') || '').trim();
+  el.port.value = String(data.get('port') || '6697').trim();
+  el.channel.value = normalizeChannel(String(data.get('channel') || '').trim());
+  el.tls.checked = data.has('tls');
+  state.settings.connection.connectOnOpen = data.has('connectOnOpen');
+  if (el.connectOnOpenToggle) el.connectOnOpenToggle.checked = state.settings.connection.connectOnOpen;
+  await persistConnectionFields();
+  appendStatus('Connection dock settings saved.', 'success');
+  renderConnectionCard();
+}
+
+async function saveStreamConnectionField(field, value) {
+  if (field === 'host') {
+    el.host.value = value || 'irc.chat.twitch.tv';
+  } else if (field === 'nick') {
+    el.nick.value = value || state.settings.profile.nick || '';
+  } else {
+    return;
+  }
+  await persistConnectionFields();
+  appendStatus(`${field === 'host' ? 'Server' : 'Nick'} updated. Reconnect to apply it to the active IRC session.`, 'info');
 }
 
 function applyTheme(theme) {
@@ -1777,24 +2033,21 @@ function applyLayout(layout) {
   renderStreamPlayer();
 }
 
-// In Twitch Style, the sidebar should hold only the channel list — the
-// connection card and the stream show/hide toggle physically move under the
-// video instead (next to Open Stream in Browser), and move back into the
-// sidebar when switching back to Standard.
+// In Twitch Style, the sidebar holds only the channel list. The stream
+// show/hide toggle moves under the video, while connection controls render as
+// a dedicated dock instead of reusing the sidebar card.
 function relocateTwitchStyleSidebarPieces(isTwitchStyle) {
   if (isTwitchStyle) {
-    if (el.connectionInfoUnderVideo && el.connectionStatus
-      && el.connectionInfoUnderVideo.parentElement && !el.connectionInfoUnderVideo.contains(el.connectionStatus)) {
-      el.connectionInfoUnderVideo.append(el.connectionStatus);
-    }
     if (el.channelToolsRow && el.streamSidebarButton && el.openStreamInBrowserButton
       && el.streamSidebarButton.parentElement !== el.channelToolsRow) {
       el.channelToolsRow.insertBefore(el.streamSidebarButton, el.openStreamInBrowserButton);
     }
+    renderStreamConnectionDock();
   } else {
     if (el.connectionCardSlot && el.connectionStatus && el.connectionStatus.parentElement !== el.connectionCardSlot) {
       el.connectionCardSlot.append(el.connectionStatus);
     }
+    renderStreamConnectionDock();
     if (el.streamSidebarButton && el.streamDockSlot) {
       el.streamDockSlot.parentElement.insertBefore(el.streamSidebarButton, el.streamDockSlot);
     }
