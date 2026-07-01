@@ -53,6 +53,10 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Friendlier Twitch Connection Status
+
+- The connection indicator now says "Connected to Twitch" instead of showing the raw IRC host name.
+
 ## Channel List Viewer Counts & Stream Stability
 
 - Live channels in the sidebar list now show a viewer-count badge, refreshed every 60s alongside the existing live/offline status dot (moved the dot to the left of the name to make room).

@@ -1810,7 +1810,7 @@ function handleIrcEvent(event) {
   if (event.type === 'connected') {
     state.connected = true;
     state.autoSelectedActiveChannel = true;
-    el.connectionState.textContent = `Connected to ${event.server}`;
+    el.connectionState.textContent = 'Connected to Twitch';
     el.connectionStatus.classList.add('connected');
     el.connectionStatus.classList.remove('disconnected');
     renderConnectionCard();
