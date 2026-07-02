@@ -252,6 +252,7 @@ const el = {
   premiumActivateButton: document.querySelector('#premiumActivateButton'),
   premiumCodeStatus: document.querySelector('#premiumCodeStatus'),
   premiumWebsiteButton: document.querySelector('#premiumWebsiteButton'),
+  premiumLogoBadge: document.querySelector('#premiumLogoBadge'),
   sidebarVersion: document.querySelector('#sidebarVersion'),
   appVersion: document.querySelector('#appVersion'),
   updateStatus: document.querySelector('#updateStatus'),
@@ -797,17 +798,19 @@ function hydrateSettings() {
 }
 
 function renderPremiumStatus() {
+  const premium = hasPremium();
+  if (el.premiumLogoBadge) el.premiumLogoBadge.hidden = !premium;
   if (!el.premiumStatus) return;
   el.premiumStatus.textContent = premiumStatusLabel();
-  el.premiumStatus.classList.toggle('is-premium', hasPremium());
+  el.premiumStatus.classList.toggle('is-premium', premium);
   if (el.premiumCodeInput) {
     el.premiumCodeInput.value = '';
-    el.premiumCodeInput.placeholder = hasPremium() ? 'Premium is active' : 'Enter 62-character license code';
-    el.premiumCodeInput.disabled = hasPremium();
+    el.premiumCodeInput.placeholder = premium ? 'Premium is active' : 'Enter 62-character license code';
+    el.premiumCodeInput.disabled = premium;
   }
   if (el.premiumActivateButton) {
-    el.premiumActivateButton.disabled = hasPremium();
-    el.premiumActivateButton.textContent = hasPremium() ? 'Activated' : 'Activate';
+    el.premiumActivateButton.disabled = premium;
+    el.premiumActivateButton.textContent = premium ? 'Activated' : 'Activate';
   }
   updateFreeLimitControls();
 }

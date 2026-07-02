@@ -844,15 +844,44 @@ button.danger:hover {
 }
 
 .top-nav-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 auto;
+  align-self: stretch;
+  min-width: 148px;
   padding: 0 var(--space-4) 0 0;
   border-right: 1px solid var(--card-border, var(--line));
 }
 
 .top-nav-brand .brand-mark {
   width: auto;
-  height: 42px;
+  height: 34px;
   max-width: none;
+}
+
+.premium-logo-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 16px;
+  margin-top: 2px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 213, 92, 0.62);
+  border-radius: 999px;
+  color: #ffd84d;
+  background: linear-gradient(180deg, rgba(255, 216, 77, 0.16), rgba(128, 86, 16, 0.14));
+  box-shadow: 0 0 14px rgba(255, 216, 77, 0.2);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.premium-logo-badge[hidden] {
+  display: none;
 }
 
 nav.tabs.top-nav-tabs {
