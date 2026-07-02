@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('macIRC', {
   exportSettings: () => ipcRenderer.invoke('settings:export'),
   importSettings: () => ipcRenderer.invoke('settings:import'),
   getVersion: () => ipcRenderer.invoke('app:getVersion'),
+  getDeviceId: () => ipcRenderer.invoke('app:getDeviceId'),
   checkForUpdates: () => ipcRenderer.invoke('updates:check'),
   downloadAndInstallUpdate: (asset) => ipcRenderer.invoke('updates:downloadAndInstall', asset),
   onIrcEvent: (callback) => {

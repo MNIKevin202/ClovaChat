@@ -53,6 +53,12 @@ ClovaChat is a modern Twitch IRC chat client with built-in bot tools, command sc
 - Multi-Channel Dashboard
 - Per-channel settings
 
+## Free/Premium Phase 1, Backup Safety, and Onboarding Restore
+
+- Reset now clearly warns you to back up before erasing everything and includes a Backup Now action in the reset confirmation modal.
+- The first onboarding slide now lets you import a ClovaChat backup and skip the rest of the wizard.
+- Added the first local Free vs Lifetime Premium phase: Free limits auto-join, popups, scripts, timers, dashboard scope, chat logging, and Twitch/7TV emotes; Lifetime Premium can be activated locally with a 62-character code until clovachat.com validation is built.
+
 ## Friendlier Twitch Connection Status
 
 - The connection indicator now says "Connected to Twitch" instead of showing the raw IRC host name.

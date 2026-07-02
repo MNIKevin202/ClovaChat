@@ -4,6 +4,7 @@ const fs = require('fs');
 const http = require('http');
 const https = require('https');
 const os = require('os');
+const crypto = require('crypto');
 const { spawn } = require('child_process');
 const Store = require('electron-store');
 const { IrcManager } = require('./services/irc-manager');
@@ -82,6 +83,12 @@ const DEFAULT_SETTINGS = {
     botRules: [],
     timedMessages: [],
     popups: [],
+    license: {
+      tier: 'free',
+      code: '',
+      activatedAt: null,
+      deviceBinding: ''
+    },
     preferences: {
       chatHistoryEnabled: true,
       channelLogging: false,
@@ -446,6 +453,16 @@ ipcMain.handle('settings:import', async () => {
 });
 
 ipcMain.handle('app:getVersion', () => app.getVersion());
+
+ipcMain.handle('app:getDeviceId', () => crypto
+  .createHash('sha256')
+  .update([
+    os.hostname(),
+    os.userInfo().username,
+    os.homedir(),
+    app.getPath('userData')
+  ].join('|'))
+  .digest('hex'));
 
 ipcMain.handle('updates:check', async () => checkForUpdates());
 

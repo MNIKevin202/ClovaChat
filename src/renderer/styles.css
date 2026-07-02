@@ -616,6 +616,40 @@ button.danger:hover {
   color: #8fd7dd;
 }
 
+.onboarding-import-card,
+.reset-backup-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid rgba(50, 177, 189, 0.28);
+  border-radius: var(--radius-md);
+  background: rgba(50, 177, 189, 0.08);
+}
+
+.onboarding-import-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.onboarding-import-card strong,
+.reset-backup-warning strong {
+  color: var(--ink);
+}
+
+.onboarding-import-card span,
+.reset-backup-warning span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.reset-backup-warning {
+  align-items: flex-start;
+}
+
 .onboarding-footer {
   grid-template-columns: auto 1fr auto auto;
   display: grid;
@@ -4167,6 +4201,34 @@ body[data-layout="twitch"] .message:hover {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   color: var(--muted);
+}
+
+.premium-settings {
+  border-color: rgba(169, 112, 255, 0.28);
+  background:
+    radial-gradient(circle at top right, rgba(169, 112, 255, 0.12), transparent 36%),
+    var(--input-bg, #fffdf8);
+}
+
+.premium-code-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.premium-code-row input {
+  min-width: 0;
+}
+
+#premiumStatus.is-premium {
+  color: var(--green);
+  font-weight: 800;
+}
+
+input:disabled,
+button:disabled {
+  opacity: 0.62;
 }
 
 .whatsnew-list {

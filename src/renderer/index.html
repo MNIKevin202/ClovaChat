@@ -679,6 +679,18 @@
               </label>
             </section>
 
+            <section class="settings-group premium-settings">
+              <h3>Premium</h3>
+              <p id="premiumStatus" class="settings-hint">Free version</p>
+              <p class="settings-hint">Lifetime Premium unlocks all ClovaChat limits for $29.99 + tax. Purchase will be available at clovachat.com.</p>
+              <div class="premium-code-row">
+                <input id="premiumCodeInput" autocomplete="off" maxlength="62" placeholder="Enter 62-character lifetime code" />
+                <button id="premiumActivateButton" type="button">Activate</button>
+              </div>
+              <p id="premiumCodeStatus" class="settings-hint"></p>
+              <button id="premiumWebsiteButton" type="button">Open clovachat.com</button>
+            </section>
+
             <section class="settings-group">
               <h3>Channels</h3>
               <p class="settings-hint">Tune chat display, bot tools, timers, popups, logs, notifications, stream preview, and Auto Join per channel.</p>
@@ -787,7 +799,7 @@
 
             <section class="settings-group danger-zone">
               <h3>Danger Zone</h3>
-              <p class="settings-hint">Reset ClovaChat back to a first-install state. Logs and backups are only deleted if you explicitly choose that in the confirmation step.</p>
+              <p class="settings-hint">Reset ClovaChat back to a first-install state. Back up first if you may want to import your setup later. Logs and backups are only deleted if you explicitly choose that in the confirmation step.</p>
               <div class="button-row">
                 <button id="resetAppButton" class="danger" type="button">Reset ClovaChat to First Install</button>
               </div>
@@ -1014,6 +1026,11 @@
           <h2 id="resetTitle">Reset ClovaChat to First Install?</h2>
           <p>This will remove your saved connection, channels, commands, timers, popups, settings, notes, and local app preferences.</p>
         </header>
+        <div class="reset-backup-warning">
+          <strong>Back up before resetting.</strong>
+          <span>ClovaChat creates an automatic reset backup, but exporting your own backup makes it easier to import later.</span>
+          <button id="resetBackupButton" type="button">Backup Now</button>
+        </div>
         <label class="check-row"><input id="resetDeleteHistory" type="checkbox" /> Delete local chat history</label>
         <label class="check-row"><input id="resetDeleteLogs" type="checkbox" /> Delete channel logs</label>
         <label class="check-row"><input id="resetDeleteBackups" type="checkbox" /> Delete old backups</label>

@@ -1,5 +1,6 @@
 const state = {
   settings: null,
+  deviceId: '',
   activeChannel: '',
   channels: [],
   unreadChannels: new Set(),
@@ -61,6 +62,13 @@ const state = {
 };
 
 const TWITCH_LOGIN_URL = 'https://www.twitch.tv/login';
+const PREMIUM_CODE_LENGTH = 62;
+const FREE_LIMITS = {
+  autoJoinChannels: 2,
+  popups: 2,
+  scripts: 3,
+  timers: 1,
+};
 
 const el = {
   connectionStatus: document.querySelector('#connectionStatus'),
@@ -238,6 +246,11 @@ const el = {
   chatFontSizeInput: document.querySelector('#chatFontSizeInput'),
   runOnboardingButton: document.querySelector('#runOnboardingButton'),
   resetAppButton: document.querySelector('#resetAppButton'),
+  premiumStatus: document.querySelector('#premiumStatus'),
+  premiumCodeInput: document.querySelector('#premiumCodeInput'),
+  premiumActivateButton: document.querySelector('#premiumActivateButton'),
+  premiumCodeStatus: document.querySelector('#premiumCodeStatus'),
+  premiumWebsiteButton: document.querySelector('#premiumWebsiteButton'),
   sidebarVersion: document.querySelector('#sidebarVersion'),
   appVersion: document.querySelector('#appVersion'),
   updateStatus: document.querySelector('#updateStatus'),
@@ -289,6 +302,7 @@ const el = {
   resetConfirmInput: document.querySelector('#resetConfirmInput'),
   resetConfirmButton: document.querySelector('#resetConfirmButton'),
   resetCancelButton: document.querySelector('#resetCancelButton'),
+  resetBackupButton: document.querySelector('#resetBackupButton'),
   resetStatus: document.querySelector('#resetStatus'),
 };
 
@@ -399,8 +413,10 @@ const CHANNEL_SETTING_FIELDS = CHANNEL_SETTING_SECTIONS.flatMap((section) => sec
 init();
 
 async function init() {
+  state.deviceId = await window.macIRC.getDeviceId();
   state.settings = await window.macIRC.getSettings();
   ensureSettingsShape();
+  if (enforceFreeFeatureLimits()) await saveSettings();
   hydrateSettings();
   bindEvents();
   renderAll();
@@ -585,9 +601,91 @@ function ensureSettingsShape() {
   state.settings.preferences.hiddenChats ||= {};
   state.settings.preferences.roleMemory ||= {};
   state.settings.preferences.userNotes ||= {};
+  state.settings.license ||= {};
+  state.settings.license.tier ||= 'free';
+  state.settings.license.code ||= '';
+  state.settings.license.activatedAt ||= null;
+  state.settings.license.deviceBinding ||= '';
   migrateDefaultScripts();
   loadHiddenChats();
   loadRoleMemory();
+}
+
+function hasPremium() {
+  return state.settings?.license?.tier === 'lifetime'
+    && state.settings.license.code?.length === PREMIUM_CODE_LENGTH
+    && state.settings.license.deviceBinding === localPremiumDeviceBinding();
+}
+
+function premiumStatusLabel() {
+  if (state.settings?.license?.tier === 'lifetime' && !hasPremium()) {
+    return 'Premium code saved, but it is not activated for this computer.';
+  }
+  return hasPremium()
+    ? 'Lifetime Premium active'
+    : 'Free version: 1 account, 2 auto-join channels, 2 popups, 3 scripts, 1 timer, no chat logging, no Twitch/7TV emotes, limited dashboard.';
+}
+
+function effectiveAutoJoinChannels() {
+  const channels = uniqueChannels(state.settings.connection.autoJoinChannels);
+  return hasPremium() ? channels : channels.slice(0, FREE_LIMITS.autoJoinChannels);
+}
+
+function freeLimitMessage(feature, limit) {
+  return `${feature} is limited to ${limit} on the free version. Lifetime Premium unlocks everything for $29.99 + tax at clovachat.com.`;
+}
+
+function canAddAutoJoinChannel(channel = '') {
+  if (hasPremium()) return true;
+  const normalized = normalizeChannel(channel);
+  if (normalized && effectiveAutoJoinChannels().includes(normalized)) return true;
+  return effectiveAutoJoinChannels().length < FREE_LIMITS.autoJoinChannels;
+}
+
+function enforceFreeFeatureLimits({ notify = false } = {}) {
+  if (hasPremium()) return false;
+  let changed = false;
+  const notes = [];
+
+  const limitedAutoJoin = effectiveAutoJoinChannels();
+  if (state.settings.connection.autoJoinChannels.length !== limitedAutoJoin.length) {
+    state.settings.connection.autoJoinChannels = limitedAutoJoin;
+    changed = true;
+    notes.push(`Auto Join limited to ${FREE_LIMITS.autoJoinChannels} channels.`);
+  }
+  if (state.settings.preferences.channelLogging) {
+    state.settings.preferences.channelLogging = false;
+    changed = true;
+    notes.push('Chat logging disabled on the free version.');
+  }
+  if (state.settings.appearance.sevenTvEmotes) {
+    state.settings.appearance.sevenTvEmotes = false;
+    changed = true;
+    notes.push('7TV emotes disabled on the free version.');
+  }
+  if (state.settings.preferences.chatDisplay.showEmotes) {
+    state.settings.preferences.chatDisplay.showEmotes = false;
+    changed = true;
+    notes.push('Twitch emotes disabled on the free version.');
+  }
+  if (state.settings.popups.length > FREE_LIMITS.popups) {
+    state.settings.popups = state.settings.popups.slice(0, FREE_LIMITS.popups);
+    changed = true;
+    notes.push(`Popups limited to ${FREE_LIMITS.popups}.`);
+  }
+  if (state.settings.aliases.length > FREE_LIMITS.scripts) {
+    state.settings.aliases = state.settings.aliases.slice(0, FREE_LIMITS.scripts);
+    changed = true;
+    notes.push(`Scripts limited to ${FREE_LIMITS.scripts}.`);
+  }
+  if (state.settings.timedMessages.length > FREE_LIMITS.timers) {
+    state.settings.timedMessages = state.settings.timedMessages.slice(0, FREE_LIMITS.timers);
+    changed = true;
+    notes.push(`Timers limited to ${FREE_LIMITS.timers}.`);
+  }
+
+  if (changed && notify) appendStatus(`Free limits applied: ${notes.join(' ')}`, 'info');
+  return changed;
 }
 
 function loadHiddenChats() {
@@ -679,11 +777,85 @@ function hydrateSettings() {
   el.liveTabSortToggle.checked = state.settings.preferences.moveLiveTabsToFront;
   el.dashboardSort.value = state.settings.preferences.dashboardSort;
   hydrateChatDisplaySettings();
+  renderPremiumStatus();
   setDashboardFilter(state.settings.preferences.dashboardFilter || 'all', { save: false });
   updateChannelLogFolderLabel();
   applyTheme(state.settings.appearance.theme);
   applyLayout(state.settings.appearance.layout);
   state.activeChannel = quick.channel;
+}
+
+function renderPremiumStatus() {
+  if (!el.premiumStatus) return;
+  el.premiumStatus.textContent = premiumStatusLabel();
+  el.premiumStatus.classList.toggle('is-premium', hasPremium());
+  if (el.premiumCodeInput) {
+    el.premiumCodeInput.value = '';
+    el.premiumCodeInput.placeholder = hasPremium() ? 'Lifetime Premium is active' : 'Enter 62-character lifetime code';
+    el.premiumCodeInput.disabled = hasPremium();
+  }
+  if (el.premiumActivateButton) {
+    el.premiumActivateButton.disabled = hasPremium();
+    el.premiumActivateButton.textContent = hasPremium() ? 'Activated' : 'Activate';
+  }
+  updateFreeLimitControls();
+}
+
+function updateFreeLimitControls() {
+  const premium = hasPremium();
+  const emoteMessage = 'Twitch and 7TV emotes require Lifetime Premium.';
+  [
+    [el.sevenTvToggle, emoteMessage],
+    [el.showEmotesToggle, emoteMessage],
+    [el.channelLogToggle, 'Chat logging requires Lifetime Premium.'],
+    [el.emoteButton, emoteMessage],
+  ].forEach(([control, title]) => {
+    if (!control) return;
+    control.disabled = !premium;
+    control.title = premium ? '' : title;
+  });
+}
+
+function localPremiumDeviceBinding() {
+  return state.deviceId || btoa(`${navigator.platform || 'unknown'}|${navigator.hardwareConcurrency || 0}|${location.origin}`)
+    .replace(/=+$/g, '')
+    .slice(0, 24);
+}
+
+async function activatePremiumCode() {
+  const code = (el.premiumCodeInput?.value || '').trim();
+  if (code.length !== PREMIUM_CODE_LENGTH) {
+    el.premiumCodeStatus.textContent = `Premium codes must be exactly ${PREMIUM_CODE_LENGTH} characters.`;
+    return;
+  }
+  state.settings.license = {
+    tier: 'lifetime',
+    code,
+    activatedAt: new Date().toISOString(),
+    deviceBinding: localPremiumDeviceBinding(),
+  };
+  await saveSettings();
+  hydrateSettings();
+  renderAll();
+  el.premiumCodeStatus.textContent = 'Lifetime Premium activated on this computer.';
+  appendStatus('Lifetime Premium activated.', 'success');
+}
+
+async function importSettingsAndApply({ fromOnboarding = false } = {}) {
+  const result = await window.macIRC.importSettings();
+  if (!result.ok) return false;
+  state.settings = result.settings;
+  ensureSettingsShape();
+  if (enforceFreeFeatureLimits({ notify: true })) await saveSettings();
+  hydrateSettings();
+  renderAll();
+  appendStatus('Settings imported. Reconnect to apply server changes.', 'info');
+  if (fromOnboarding) {
+    state.settings.onboarding = { completed: true, skipped: false, completedAt: new Date().toISOString() };
+    await saveSettings();
+    closeOnboarding();
+  }
+  return true;
 }
 
 function updateChannelLogFolderLabel() {
@@ -818,6 +990,16 @@ function onboardingCheck(key, label) {
 function renderOnboardingWelcome() {
   el.onboardingTitle.textContent = 'Welcome to ClovaChat';
   el.onboardingBody.innerHTML = '<p>A modern Twitch chat client with stream preview, bot tools, commands, timers, popups, logs, and multi-channel support.</p>';
+  const restore = document.createElement('div');
+  restore.className = 'onboarding-import-card';
+  const copy = document.createElement('div');
+  copy.innerHTML = '<strong>Already have a backup?</strong><span>Import your ClovaChat backup now and skip the setup wizard.</span>';
+  const importButton = document.createElement('button');
+  importButton.type = 'button';
+  importButton.textContent = 'Import Backup';
+  importButton.addEventListener('click', () => importSettingsAndApply({ fromOnboarding: true }));
+  restore.append(copy, importButton);
+  el.onboardingBody.append(restore);
 }
 
 function renderOnboardingConnection() {
@@ -1011,7 +1193,7 @@ function saveOnboardingConnection() {
 function applyOnboardingLayout() {
   const draft = state.onboarding.draft;
   state.settings.appearance.twitchPlayer = Boolean(draft.streamPreview);
-  state.settings.appearance.sevenTvEmotes = Boolean(draft.sevenTv);
+  state.settings.appearance.sevenTvEmotes = hasPremium() && Boolean(draft.sevenTv);
   state.settings.appearance.layout = draft.layoutStyle === 'twitchStyle' ? 'twitchStyle' : 'standard';
   state.settings.preferences.moveLiveTabsToFront = Boolean(draft.moveLive);
   state.settings.preferences.chatDisplay.density = draft.compact ? 'compact' : 'comfortable';
@@ -1028,11 +1210,15 @@ async function finishOnboarding() {
   const channels = uniqueChannels(draft.channels || []);
   if (channels.length > 0) {
     state.settings.quickConnect.channel = channels[0];
-    if (draft.autoJoin) state.settings.connection.autoJoinChannels = uniqueChannels([...state.settings.connection.autoJoinChannels, ...channels]);
+    if (draft.autoJoin) {
+      const allowedChannels = hasPremium() ? channels : channels.slice(0, FREE_LIMITS.autoJoinChannels);
+      state.settings.connection.autoJoinChannels = uniqueChannels([...state.settings.connection.autoJoinChannels, ...allowedChannels]);
+    }
   }
   addStarterTools(draft, channels[0] || state.settings.quickConnect.channel);
   state.settings.preferences.notifyOnMention = Boolean(draft.notifications);
-  state.settings.preferences.channelLogging = Boolean(draft.logs && state.settings.preferences.channelLogFolder);
+  state.settings.preferences.channelLogging = hasPremium() && Boolean(draft.logs && state.settings.preferences.channelLogFolder);
+  enforceFreeFeatureLimits({ notify: true });
   state.settings.onboarding = { completed: true, skipped: false, completedAt: new Date().toISOString() };
   await saveSettings();
   hydrateSettings();
@@ -1041,9 +1227,15 @@ async function finishOnboarding() {
 }
 
 function addStarterTools(draft, channel) {
-  if (draft.starterDiscord && !findAlias('discord')) state.settings.aliases.push({ name: 'discord', type: 'mirc', output: 'Join the Discord: ' });
-  if (draft.starterLurk && !findAlias('lurk')) state.settings.aliases.push({ name: 'lurk', type: 'mirc', output: 'I am lurking for a bit.' });
-  if (draft.starterTimer && !state.settings.timedMessages.some((timer) => timer.message === 'Enjoying the stream? Don’t forget to follow!')) {
+  if (draft.starterDiscord && !findAlias('discord') && (hasPremium() || state.settings.aliases.length < FREE_LIMITS.scripts)) {
+    state.settings.aliases.push({ name: 'discord', type: 'mirc', output: 'Join the Discord: ' });
+  }
+  if (draft.starterLurk && !findAlias('lurk') && (hasPremium() || state.settings.aliases.length < FREE_LIMITS.scripts)) {
+    state.settings.aliases.push({ name: 'lurk', type: 'mirc', output: 'I am lurking for a bit.' });
+  }
+  if (draft.starterTimer
+    && !state.settings.timedMessages.some((timer) => timer.message === 'Enjoying the stream? Don’t forget to follow!')
+    && (hasPremium() || state.settings.timedMessages.length < FREE_LIMITS.timers)) {
     state.settings.timedMessages.push({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       channel: normalizeChannel(channel),
@@ -1055,7 +1247,9 @@ function addStarterTools(draft, channel) {
       showOnChannel: true,
     });
   }
-  if (draft.starterWave && !state.settings.popups.some((popup) => popup.label.toLowerCase() === 'wave')) {
+  if (draft.starterWave
+    && !state.settings.popups.some((popup) => popup.label.toLowerCase() === 'wave')
+    && (hasPremium() || state.settings.popups.length < FREE_LIMITS.popups)) {
     state.settings.popups.push({ label: 'Wave', command: '👋' });
   }
 }
@@ -1171,10 +1365,19 @@ function bindEvents() {
   el.runOnboardingButton.addEventListener('click', () => openOnboarding({ rerun: true }));
   el.resetAppButton.addEventListener('click', openResetModal);
   el.resetCancelButton.addEventListener('click', closeResetModal);
+  el.resetBackupButton?.addEventListener('click', async () => {
+    const result = await window.macIRC.exportSettings();
+    if (result.ok) {
+      el.resetStatus.textContent = `Backup saved to ${result.path}`;
+      appendStatus(`Settings backed up to ${result.path}`, 'info');
+    }
+  });
   el.resetConfirmInput.addEventListener('input', () => {
     el.resetConfirmButton.disabled = el.resetConfirmInput.value !== 'RESET';
   });
   el.resetConfirmButton.addEventListener('click', resetClovaChat);
+  el.premiumActivateButton?.addEventListener('click', activatePremiumCode);
+  el.premiumWebsiteButton?.addEventListener('click', () => window.macIRC.openExternal('https://clovachat.com'));
 
   bindChatDisplaySetting(el.showTimestampsToggle, 'showTimestamps', 'checked');
   bindChatDisplaySetting(el.showBadgesToggle, 'showBadges', 'checked');
@@ -1416,13 +1619,7 @@ function bindEvents() {
     if (result.ok) appendStatus(`Settings backed up to ${result.path}`, 'info');
   });
   el.importSettingsButton.addEventListener('click', async () => {
-    const result = await window.macIRC.importSettings();
-    if (!result.ok) return;
-    state.settings = result.settings;
-    ensureSettingsShape();
-    hydrateSettings();
-    renderAll();
-    appendStatus('Settings imported. Reconnect to apply server changes.', 'info');
+    await importSettingsAndApply();
   });
   el.checkUpdatesButton.addEventListener('click', async () => {
     await checkForUpdates({ silent: false });
@@ -1494,6 +1691,10 @@ function bindEvents() {
   el.addAutoJoinCurrentButton.addEventListener('click', async () => {
     const channel = normalizeChannel(state.activeChannel);
     if (!channel || isServerTarget(channel) || channelIsAutoJoined(channel)) return;
+    if (!canAddAutoJoinChannel(channel)) {
+      appendStatus(freeLimitMessage('Auto Join', FREE_LIMITS.autoJoinChannels), 'error');
+      return;
+    }
     setChannelSetting(channel, 'autoJoin', true);
     state.settings.connection.autoJoinChannels = uniqueChannels([
       ...state.settings.connection.autoJoinChannels,
@@ -1538,6 +1739,11 @@ function bindEvents() {
     const type = el.aliasMode.value === 'python' ? 'python' : 'mirc';
     const output = el.aliasOutput.value.trim();
     if (!name || !output) return;
+    const isExisting = state.settings.aliases.some((alias) => alias.name === name);
+    if (!hasPremium() && !isExisting && state.settings.aliases.length >= FREE_LIMITS.scripts) {
+      appendStatus(freeLimitMessage('Scripts', FREE_LIMITS.scripts), 'error');
+      return;
+    }
     state.settings.aliases = state.settings.aliases.filter((alias) => alias.name !== name);
     state.settings.aliases.push({ name, type, output });
     el.aliasName.value = '';
@@ -1597,6 +1803,10 @@ function bindEvents() {
     const totalSeconds = (minutes * 60) + seconds;
     const message = el.timerMessage.value.trim();
     if (!channel || !message || totalSeconds < 1) return;
+    if (!hasPremium() && state.settings.timedMessages.length >= FREE_LIMITS.timers) {
+      appendStatus(freeLimitMessage('Timers', FREE_LIMITS.timers), 'error');
+      return;
+    }
 
     const expireDays = Math.max(0, Number(el.timerExpireDays.value || 0));
     const expireHours = Math.max(0, Number(el.timerExpireHours.value || 0));
@@ -1633,6 +1843,10 @@ function bindEvents() {
     const label = el.popupLabel.value.trim();
     const command = el.popupCommand.value.trim();
     if (!label || !command) return;
+    if (!hasPremium() && state.settings.popups.length >= FREE_LIMITS.popups) {
+      appendStatus(freeLimitMessage('Popups', FREE_LIMITS.popups), 'error');
+      return;
+    }
     state.settings.popups.push({ label, command });
     el.popupLabel.value = '';
     el.popupCommand.value = '';
@@ -1668,6 +1882,7 @@ async function persistConnectionFields() {
     channel: config.channel,
   };
   state.settings.connection.autoJoinChannels = uniqueChannels(state.settings.connection.autoJoinChannels);
+  enforceFreeFeatureLimits();
   state.activeChannel = normalizeChannel(config.channel);
   await saveSettings();
   return config;
@@ -1735,11 +1950,12 @@ function formConfig() {
     realName: `${nick} via ClovaChat`,
     password,
     channel: normalizeChannel(el.channel.value),
-    channels: uniqueChannels(state.settings.connection.autoJoinChannels),
+    channels: effectiveAutoJoinChannels(),
   };
 }
 
 async function saveSettings() {
+  enforceFreeFeatureLimits();
   state.settings = await window.macIRC.setSettings(state.settings);
 }
 
@@ -2391,6 +2607,7 @@ function renderAll() {
   renderStreamPlayer();
   renderMentionsButton();
   renderChangelog();
+  renderPremiumStatus();
   refreshTwitchLoginStatus();
   scheduleAllTimers();
 
@@ -3140,6 +3357,11 @@ async function updateChannelSettingFromControl(channel, field, control) {
   const value = field.type === 'boolean'
     ? control.checked
     : (field.type === 'number' ? Number(control.value || field.defaultValue || 0) : control.value);
+  if (field.path === 'autoJoin' && value && !canAddAutoJoinChannel(channel)) {
+    control.checked = false;
+    appendStatus(freeLimitMessage('Auto Join', FREE_LIMITS.autoJoinChannels), 'error');
+    return;
+  }
   setChannelSetting(channel, field.path, value);
   if (field.path === 'autoJoin') syncAutoJoinFromChannelSetting(channel, value);
   await saveSettings();
@@ -3250,6 +3472,7 @@ function renderDashboard() {
 function dashboardChannelCards() {
   const channels = dashboardChannelNames();
   const cards = channels.map(dashboardChannelCard);
+  if (!hasPremium()) return sortDashboardCards(cards, 'viewers').slice(0, 1);
   const filtered = filterDashboardCards(cards, state.settings.preferences.dashboardFilter || 'all');
   return sortDashboardCards(filtered, state.settings.preferences.dashboardSort || 'live');
 }
@@ -3257,7 +3480,7 @@ function dashboardChannelCards() {
 function dashboardChannelNames() {
   return uniqueChannels([
     ...state.channels,
-    ...state.settings.connection.autoJoinChannels,
+    ...effectiveAutoJoinChannels(),
     ...Object.keys(state.settings.channels || {}).map((key) => `#${key}`),
   ]).filter((channel) => !isServerTarget(channel));
 }
@@ -3333,6 +3556,7 @@ function syncAutoJoinFromChannelSetting(channel, enabled) {
   const normalized = normalizeChannel(channel);
   if (!normalized) return;
   if (enabled) {
+    if (!canAddAutoJoinChannel(normalized)) return;
     state.settings.connection.autoJoinChannels = uniqueChannels([...state.settings.connection.autoJoinChannels, normalized]);
   } else {
     state.settings.connection.autoJoinChannels = state.settings.connection.autoJoinChannels
@@ -3988,6 +4212,10 @@ async function joinAndSaveChannel(rawInput) {
     return;
   }
   el.joinChannelInput.value = '';
+  if (!canAddAutoJoinChannel(normalized)) {
+    appendStatus(freeLimitMessage('Auto Join', FREE_LIMITS.autoJoinChannels), 'error');
+    return;
+  }
   setChannelSetting(normalized, 'autoJoin', true);
   state.settings.connection.autoJoinChannels = uniqueChannels([
     ...state.settings.connection.autoJoinChannels,
@@ -4010,6 +4238,10 @@ async function joinAndSaveChannel(rawInput) {
 async function addChannelToAutoJoin(channel) {
   const normalized = normalizeChannel(channel);
   if (!normalized || isServerTarget(normalized) || channelIsAutoJoined(normalized)) return;
+  if (!canAddAutoJoinChannel(normalized)) {
+    appendStatus(freeLimitMessage('Auto Join', FREE_LIMITS.autoJoinChannels), 'error');
+    return;
+  }
   setChannelSetting(normalized, 'autoJoin', true);
   state.settings.connection.autoJoinChannels = uniqueChannels([
     ...state.settings.connection.autoJoinChannels,
@@ -6440,7 +6672,7 @@ function logChannelMessage(target, entry) {
 
 function channelLogsEnabled(channel) {
   const prefs = state.settings.preferences;
-  return Boolean(prefs.channelLogging && prefs.channelLogFolder && channelSettingValue(channel, 'logs.enabled', true));
+  return Boolean(hasPremium() && prefs.channelLogging && prefs.channelLogFolder && channelSettingValue(channel, 'logs.enabled', true));
 }
 
 function notifyOnMention(event) {
@@ -7030,7 +7262,7 @@ function uniqueChannels(channels) {
 
 async function loadSevenTvEmotes(channel, roomId) {
   const normalized = normalizeChannel(channel);
-  if (!state.settings.appearance.sevenTvEmotes || !normalized || !roomId) return;
+  if (!hasPremium() || !state.settings.appearance.sevenTvEmotes || !normalized || !roomId) return;
   if (state.sevenTv.emotesByChannel.has(normalized) || state.sevenTv.loadingChannels.has(normalized)) return;
 
   state.sevenTv.loadingChannels.add(normalized);
@@ -7076,6 +7308,7 @@ function twitchHelixEmoteUrl(emote) {
 }
 
 async function loadGlobalTwitchEmotes() {
+  if (!hasPremium()) return;
   if (state.twitchEmotes.global || !state.twitchClientId) return;
   const token = stripOauthPrefix(state.settings.profile.password);
   if (!token) return;
@@ -7095,6 +7328,7 @@ async function loadGlobalTwitchEmotes() {
 }
 
 async function loadTwitchChannelEmotes(channel, roomId) {
+  if (!hasPremium()) return;
   const normalized = normalizeChannel(channel);
   const token = stripOauthPrefix(state.settings.profile.password);
   if (!normalized || !roomId || !token || !state.twitchClientId) return;
@@ -7201,6 +7435,10 @@ function insertEmoteIntoComposer(name) {
 }
 
 function setEmotePickerOpen(open) {
+  if (open && !hasPremium()) {
+    appendStatus('Twitch and 7TV emotes require Lifetime Premium.', 'error');
+    return;
+  }
   state.emotePicker.open = open;
   el.emotePicker.hidden = !open;
   el.emoteButton.classList.toggle('is-active', open);
@@ -7216,7 +7454,7 @@ function setEmotePickerSource(source) {
 }
 
 function renderMessageText(container, text, channel, twitchEmotes = []) {
-  if (!chatDisplayValue('showEmotes', true) || !channelSettingValue(channel, 'chat.showEmotes', true)) {
+  if (!hasPremium() || !chatDisplayValue('showEmotes', true) || !channelSettingValue(channel, 'chat.showEmotes', true)) {
     appendLinkedText(container, String(text || ''));
     return;
   }
