@@ -63,6 +63,7 @@ const state = {
 
 const TWITCH_LOGIN_URL = 'https://www.twitch.tv/login';
 const PREMIUM_CODE_LENGTH = 62;
+const LICENSE_ACTIVATION_URL = 'https://clovachat.com/api/licenses/activate';
 const FREE_LIMITS = {
   autoJoinChannels: 2,
   popups: 2,
@@ -603,23 +604,33 @@ function ensureSettingsShape() {
   state.settings.preferences.userNotes ||= {};
   state.settings.license ||= {};
   state.settings.license.tier ||= 'free';
+  state.settings.license.type ||= '';
   state.settings.license.code ||= '';
   state.settings.license.activatedAt ||= null;
   state.settings.license.deviceBinding ||= '';
+  state.settings.license.expiresAt ||= null;
+  state.settings.license.validatedAt ||= null;
   migrateDefaultScripts();
   loadHiddenChats();
   loadRoleMemory();
 }
 
 function hasPremium() {
-  return state.settings?.license?.tier === 'lifetime'
-    && state.settings.license.code?.length === PREMIUM_CODE_LENGTH
-    && state.settings.license.deviceBinding === localPremiumDeviceBinding();
+  const license = state.settings?.license;
+  if (license?.tier !== 'premium') return false;
+  if (license.code?.length !== PREMIUM_CODE_LENGTH) return false;
+  if (license.deviceBinding !== localPremiumDeviceBinding()) return false;
+  if (license.type === 'trial' && license.expiresAt && new Date(license.expiresAt).getTime() <= Date.now()) return false;
+  return license.type === 'trial' || license.type === 'lifetime';
 }
 
 function premiumStatusLabel() {
-  if (state.settings?.license?.tier === 'lifetime' && !hasPremium()) {
-    return 'Premium code saved, but it is not activated for this computer.';
+  const license = state.settings?.license;
+  if (license?.tier === 'premium' && !hasPremium()) {
+    return 'Premium license saved, but it is expired or not activated for this computer.';
+  }
+  if (hasPremium() && license.type === 'trial') {
+    return `Premium trial active${license.expiresAt ? ` until ${new Date(license.expiresAt).toLocaleDateString()}` : ''}`;
   }
   return hasPremium()
     ? 'Lifetime Premium active'
@@ -791,7 +802,7 @@ function renderPremiumStatus() {
   el.premiumStatus.classList.toggle('is-premium', hasPremium());
   if (el.premiumCodeInput) {
     el.premiumCodeInput.value = '';
-    el.premiumCodeInput.placeholder = hasPremium() ? 'Lifetime Premium is active' : 'Enter 62-character lifetime code';
+    el.premiumCodeInput.placeholder = hasPremium() ? 'Premium is active' : 'Enter 62-character license code';
     el.premiumCodeInput.disabled = hasPremium();
   }
   if (el.premiumActivateButton) {
@@ -825,20 +836,46 @@ function localPremiumDeviceBinding() {
 async function activatePremiumCode() {
   const code = (el.premiumCodeInput?.value || '').trim();
   if (code.length !== PREMIUM_CODE_LENGTH) {
-    el.premiumCodeStatus.textContent = `Premium codes must be exactly ${PREMIUM_CODE_LENGTH} characters.`;
+    el.premiumCodeStatus.textContent = `License codes must be exactly ${PREMIUM_CODE_LENGTH} characters.`;
+    return;
+  }
+  el.premiumActivateButton.disabled = true;
+  el.premiumCodeStatus.textContent = 'Validating license...';
+  let license;
+  try {
+    const response = await fetch(LICENSE_ACTIVATION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        code,
+        deviceId: localPremiumDeviceBinding(),
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || 'License validation failed.');
+    license = payload.license;
+  } catch (error) {
+    el.premiumActivateButton.disabled = false;
+    el.premiumCodeStatus.textContent = error.message || 'License validation failed.';
+    appendStatus('Premium activation failed.', 'error');
     return;
   }
   state.settings.license = {
-    tier: 'lifetime',
+    tier: 'premium',
+    type: license.type,
     code,
-    activatedAt: new Date().toISOString(),
+    activatedAt: license.activatedAt || new Date().toISOString(),
     deviceBinding: localPremiumDeviceBinding(),
+    expiresAt: license.expiresAt || null,
+    validatedAt: new Date().toISOString(),
   };
   await saveSettings();
   hydrateSettings();
   renderAll();
-  el.premiumCodeStatus.textContent = 'Lifetime Premium activated on this computer.';
-  appendStatus('Lifetime Premium activated.', 'success');
+  el.premiumCodeStatus.textContent = license.type === 'trial'
+    ? 'Premium trial activated on this computer.'
+    : 'Lifetime Premium activated on this computer.';
+  appendStatus('Premium activated.', 'success');
 }
 
 async function importSettingsAndApply({ fromOnboarding = false } = {}) {
